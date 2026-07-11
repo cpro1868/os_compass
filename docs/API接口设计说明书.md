@@ -1748,6 +1748,14 @@ interface RadarItem {
 | PLATFORM_NOT_SUPPORTED | 平台不支持 | "该平台暂不支持 Releases" |
 | PROJECT_INFO_INSUFFICIENT | 项目信息不足 | "项目信息不足，无法分类" |
 | NO_CATEGORIES | 无可用分类 | "系统中暂无分类，请先创建分类" |
+| PLUGIN_NOT_REGISTERED | 插件未注册 | "插件未注册" |
+| PLUGIN_NOT_ENABLED | 插件未启用 | "请先启用该插件" |
+| PLUGIN_INIT_FAILED | 插件初始化失败 | "插件初始化失败，请检查配置" |
+| SOURCE_NOT_FOUND | 信息源不存在 | "信息源不存在" |
+| SOURCE_FETCH_FAILED | 信息源拉取失败 | "信息源拉取失败，请检查 URL 或网络" |
+| SOURCE_PARSE_FAILED | 内容解析失败 | "内容解析失败" |
+| SEARCH_STRATEGY_NOT_CONFIGURED | 联网搜索策略未配置 | "请先配置联网搜索策略" |
+| SEARCH_NO_RESULTS | 无搜索结果 | "未找到匹配的项目" |
 
 ### 4.2 前端错误处理示例
 
