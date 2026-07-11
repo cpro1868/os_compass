@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 列表视图</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+  <div x-data="listView()" x-init="init()">
+    <div class="flex h-full">
+      <!-- 左侧功能菜单 -->
+      <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+        <!-- Logo -->
+        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
+          <i class="fa-solid fa-compass text-xl"></i>
+        </div>
+        
+        <!-- 功能按钮 -->
+        <button onclick="location.href='import-form.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition" title="导入项目">
+          <i class="fa-solid fa-plus text-lg mb-1"></i>
+          <span class="text-xs">导入</span>
+        </button>
+        
+        <button onclick="location.href='search-view.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition" title="智能搜索">
+          <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
+          <span class="text-xs">搜索</span>
+        </button>
+        
+        <!-- 视图切换 -->
+        <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+          <button onclick="location.href='main-interface.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition" title="看板视图">
+            <i class="fa-solid fa-table-columns"></i>
+          </button>
+          <button class="w-12 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-white" title="列表视图">
+            <i class="fa-solid fa-list"></i>
+          </button>
+        </div>
+        
+        <!-- 分类管理 -->
+        <button onclick="location.href='category-manager.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition mt-auto" title="分类管理">
+          <i class="fa-solid fa-folder-tree text-lg mb-1"></i>
+          <span class="text-xs">分类</span>
+        </button>
+        
+        <!-- 底部 -->
+        <div class="border-t border-gray-700 pt-4 mt-4 w-full flex flex-col items-center gap-3">
+          <button onclick="location.href='settings.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition" title="设置">
+            <i class="fa-solid fa-gear"></i>
+          </button>
+          <button onclick="location.href='plugin-manager.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition" title="插件">
+            <i class="fa-solid fa-plug"></i>
+          </button>
+        </div>
+      </aside>
+
+      <!-- 主内容区 -->
+      <main class="flex-1 flex flex-col min-w-0">
+        <!-- 批量操作栏（选中后显示） -->
+        <div x-show="selectedIds.size > 0" x-transition class="bg-blue-600 text-white px-6 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <span x-text="`已选中 ${selectedIds.size} 项`"></span>
+            <button @click="selectAll()" class="text-sm underline hover:text-blue-100">全选</button>
+            <button @click="clearSelection()" class="text-sm underline hover:text-blue-100">取消选择</button>
+          </div>
+          <div class="flex items-center gap-3">
+            <button @click="showMoveModal = true" class="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm flex items-center gap-2">
+              <i class="fa-solid fa-folder"></i>移动到分类
+            </button>
+            <button @click="batchArchive()" class="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm flex items-center gap-2">
+              <i class="fa-solid fa-box-archive"></i>批量归档
+            </button>
+            <button @click="showExportModal = true" class="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm flex items-center gap-2">
+              <i class="fa-solid fa-download"></i>导出
+            </button>
+          </div>
+        </div>
+
+        <!-- 顶部栏 - 搜索和筛选 -->
+        <header class="bg-white border-b border-gray-200 px-6 py-4">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-4">
+              <h1 class="text-xl font-bold">全部项目</h1>
+              <span class="text-sm text-gray-500">共 <span x-text="projects.length"></span> 个</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="location.href='archive.html'" class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                <i class="fa-solid fa-box-archive"></i>归档列表
+              </button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <!-- 搜索框 -->
+            <div class="flex-1 max-w-md relative">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+              <input type="text" x-model="searchQuery" @input="filterProjects()" placeholder="搜索项目名称..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            
+            <!-- 分类筛选 -->
+            <select x-model="filters.category" @change="filterProjects()" class="px-3 py-2 border rounded-lg text-sm">
+              <option value="">全部分类</option>
+              <option value="frontend">前端框架</option>
+              <option value="backend">后端服务</option>
+              <option value="db">数据库</option>
+              <option value="ai">AI / ML</option>
+              <option value="tool">工具类</option>
+            </select>
+            
+            <!-- 语言筛选（多选） -->
+            <div class="relative" x-data="{ open: false }">
+              <button @click="open = !open" class="px-3 py-2 border rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50">
+                <span>语言</span>
+                <span x-show="filters.languages.length > 0" class="px-1.5 py-0.5 bg-blue-100 text-blue-600 text-xs rounded" x-text="filters.languages.length"></span>
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+              </button>
+              <div x-show="open" @click.away="open = false" class="absolute z-10 mt-1 bg-white border rounded-lg shadow-lg p-2 min-w-[160px]">
+                <template x-for="lang in ['TypeScript', 'Python', 'Rust', 'JavaScript', 'Go']" :key="lang">
+                  <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded text-sm cursor-pointer">
+                    <input type="checkbox" :value="lang" x-model="filters.languages" @change="filterProjects()" class="rounded"> <span x-text="lang"></span>
+                  </label>
+                </template>
+              </div>
+            </div>
+            
+            <!-- 标签筛选（多选） -->
+            <div class="relative" x-data="{ open: false }">
+              <button @click="open = !open" class="px-3 py-2 border rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50">
+                <span>标签</span>
+                <span x-show="filters.tags.length > 0" class="px-1.5 py-0.5 bg-purple-100 text-purple-600 text-xs rounded" x-text="filters.tags.length"></span>
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+              </button>
+              <div x-show="open" @click.away="open = false" class="absolute z-10 mt-1 bg-white border rounded-lg shadow-lg p-2 min-w-[160px]">
+                <template x-for="tag in ['前端', '后端', 'AI', '数据库', '工具类']" :key="tag">
+                  <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded text-sm cursor-pointer">
+                    <input type="checkbox" :value="tag" x-model="filters.tags" @change="filterProjects()" class="rounded"> <span x-text="tag"></span>
+                  </label>
+                </template>
+              </div>
+            </div>
+            
+            <!-- 状态筛选（lifecycle_status） -->
+            <select x-model="filters.lifecycle_status" @change="filterProjects()" class="px-3 py-2 border rounded-lg text-sm">
+              <option value="">全部状态</option>
+              <option value="TO_EXPLORE">💡 待探索</option>
+              <option value="DIVING">🔬 深度研究中</option>
+              <option value="IN_USE">✅ 已落地</option>
+              <option value="ABANDONED">🗑️ 弃用/避坑</option>
+            </select>
+          </div>
+        </header>
+        
+        <!-- 列表内容 -->
+        <div class="flex-1 overflow-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50 sticky top-0">
+              <tr class="text-left text-sm text-gray-500 border-b">
+                <th class="px-6 py-3 w-8">
+                  <input type="checkbox" @change="toggleSelectAll($event)" :checked="selectedIds.size === filteredProjects.length && filteredProjects.length > 0" class="rounded">
+                </th>
+                <th class="px-6 py-3">项目名称</th>
+                <th class="px-6 py-3">分类</th>
+                <th class="px-6 py-3">Stars</th>
+                <th class="px-6 py-3">语言</th>
+                <th class="px-6 py-3">标签</th>
+                <th class="px-6 py-3">状态</th>
+                <th class="px-6 py-3">更新时间</th>
+                <th class="px-6 py-3">操作</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+              <template x-for="project in filteredProjects" :key="project.id">
+                <tr class="hover:bg-gray-50" :class="{ 'bg-blue-50': selectedIds.has(project.id) }">
+                  <td class="px-6 py-3">
+                    <input type="checkbox" :value="project.id" x-model="selectedArray" @change="syncSelection()" class="rounded">
+                  </td>
+                  <td class="px-6 py-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600">
+                        <i class="fa-brands fa-react text-sm"></i>
+                      </div>
+                      <div>
+                        <a :href="'project-detail.html?id=' + project.id" class="font-medium text-blue-600 hover:underline" x-text="project.name"></a>
+                        <p class="text-xs text-gray-500" x-text="project.url"></p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-3 text-sm" x-text="project.category"></td>
+                  <td class="px-6 py-3 text-sm" x-text="project.stars"></td>
+                  <td class="px-6 py-3">
+                    <div class="flex flex-wrap gap-1">
+                      <template x-for="lang in project.languages" :key="lang">
+                        <span class="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded" x-text="lang"></span>
+                      </template>
+                    </div>
+                  </td>
+                  <td class="px-6 py-3">
+                    <div class="flex flex-wrap gap-1">
+                      <template x-for="tag in project.tags" :key="tag">
+                        <span class="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs rounded" x-text="tag"></span>
+                      </template>
+                    </div>
+                  </td>
+                  <td class="px-6 py-3">
+                    <span class="px-2 py-1 text-xs rounded" :class="statusClass[project.lifecycle_status] || ''" x-text="statusText[project.lifecycle_status]"></span>
+                  </td>
+                  <td class="px-6 py-3 text-sm text-gray-500" x-text="project.updated"></td>
+                  <td class="px-6 py-3">
+                    <div class="relative" x-data="{ open: false }">
+                      <button @click="open = !open" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-ellipsis"></i>
+                      </button>
+                      <div x-show="open" @click.away="open = false" class="absolute right-0 mt-1 bg-white border rounded-lg shadow-lg py-1 min-w-[120px] z-10">
+                        <button @click="archiveProject(project.id); open = false" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                          <i class="fa-solid fa-box-archive"></i>归档
+                        </button>
+                        <button class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                          <i class="fa-solid fa-pen"></i>编辑
+                        </button>
+                        <button @click="deleteProject(project.id); open = false" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600 flex items-center gap-2">
+                          <i class="fa-solid fa-trash"></i>删除
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          
+          <!-- 空状态 -->
+          <div x-show="filteredProjects.length === 0" class="text-center py-12">
+            <i class="fa-solid fa-folder-open text-4xl mb-4 text-gray-300"></i>
+            <p class="text-gray-500">没有找到匹配的项目</p>
+            <p class="text-sm text-gray-400 mt-1">尝试调整筛选条件</p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- 移动分类弹窗 -->
+    <div x-show="showMoveModal" x-transition class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div @click.away="showMoveModal = false" class="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+        <h3 class="font-semibold text-lg mb-4">移动到分类</h3>
+        <p class="text-sm text-gray-500 mb-4">将选中的 <span x-text="selectedIds.size"></span> 个项目移动到：</p>
+        <select class="w-full px-3 py-2 border rounded-lg mb-4">
+          <option value="">选择分类...</option>
+          <option value="frontend">前端框架</option>
+          <option value="backend">后端服务</option>
+          <option value="db">数据库</option>
+          <option value="ai">AI / ML</option>
+          <option value="tool">工具类</option>
+        </select>
+        <div class="flex justify-end gap-3">
+          <button @click="showMoveModal = false" class="px-4 py-2 border rounded-lg hover:bg-gray-50">取消</button>
+          <button @click="batchMove()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">确认移动</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 导出弹窗 -->
+    <div x-show="showExportModal" x-transition class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div @click.away="showExportModal = false" class="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+        <h3 class="font-semibold text-lg mb-4">导出项目</h3>
+        <p class="text-sm text-gray-500 mb-4">导出选中的 <span x-text="selectedIds.size"></span> 个项目</p>
+        <div class="space-y-2 mb-4">
+          <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input type="radio" name="exportFormat" value="json" x-model="exportFormat" class="rounded"> 
+            <div>
+              <p class="font-medium">JSON</p>
+              <p class="text-xs text-gray-500">完整数据，包含所有字段</p>
+            </div>
+          </label>
+          <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <input type="radio" name="exportFormat" value="csv" x-model="exportFormat" class="rounded"> 
+            <div>
+              <p class="font-medium">CSV</p>
+              <p class="text-xs text-gray-500">表格格式，适合 Excel 分析</p>
+            </div>
+          </label>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button @click="showExportModal = false" class="px-4 py-2 border rounded-lg hover:bg-gray-50">取消</button>
+          <button @click="exportProjects()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">导出</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function listView() {
+      return {
+        projects: [
+          { id: '1', name: 'facebook/react', url: 'https://github.com/facebook/react', category: '前端框架', stars: '220k', languages: ['TypeScript', 'JavaScript'], tags: ['UI框架', '组件库'], lifecycle_status: 'IN_USE', updated: '2024-03-15' },
+          { id: '2', name: 'vuejs/core', url: 'https://github.com/vuejs/core', category: '前端框架', stars: '45k', languages: ['TypeScript', 'JavaScript'], tags: ['UI框架'], lifecycle_status: 'IN_USE', updated: '2024-03-10' },
+          { id: '3', name: 'tauri-apps/tauri', url: 'https://github.com/tauri-apps/tauri', category: '桌面框架', stars: '85k', languages: ['Rust', 'TypeScript'], tags: ['桌面应用', '跨平台'], lifecycle_status: 'DIVING', updated: '2024-03-08' },
+          { id: '4', name: 'django/django', url: 'https://github.com/django/django', category: '后端服务', stars: '78k', languages: ['Python'], tags: ['Web框架', 'ORM'], lifecycle_status: 'TO_EXPLORE', updated: '2024-03-05' },
+          { id: '5', name: 'postgres/postgres', url: 'https://github.com/postgres/postgres', category: '数据库', stars: '15k', languages: ['C'], tags: ['关系型'], lifecycle_status: 'TO_EXPLORE', updated: '2024-03-01' },
+        ],
+        filteredProjects: [],
+        selectedIds: new Set(),
+        selectedArray: [],
+        searchQuery: '',
+        filters: {
+          category: '',
+          languages: [],
+          tags: [],
+          lifecycle_status: ''
+        },
+        showMoveModal: false,
+        showExportModal: false,
+        exportFormat: 'json',
+        statusText: {
+          'TO_EXPLORE': '💡 待探索',
+          'DIVING': '🔬 深度研究中',
+          'IN_USE': '✅ 已落地',
+          'ABANDONED': '🗑️ 弃用/避坑'
+        },
+        statusClass: {
+          'TO_EXPLORE': 'bg-blue-100 text-blue-700',
+          'DIVING': 'bg-yellow-100 text-yellow-700',
+          'IN_USE': 'bg-green-100 text-green-700',
+          'ABANDONED': 'bg-gray-100 text-gray-700'
+        },
+        init() {
+          this.filterProjects();
+        },
+        filterProjects() {
+          this.filteredProjects = this.projects.filter(p => {
+            const matchSearch = !this.searchQuery || p.name.toLowerCase().includes(this.searchQuery.toLowerCase());
+            const matchCategory = !this.filters.category || p.category === this.filters.category;
+            const matchLanguages = this.filters.languages.length === 0 || this.filters.languages.some(l => p.languages.includes(l));
+            const matchTags = this.filters.tags.length === 0 || this.filters.tags.some(t => p.tags.includes(t));
+            const matchStatus = !this.filters.lifecycle_status || p.lifecycle_status === this.filters.lifecycle_status;
+            return matchSearch && matchCategory && matchLanguages && matchTags && matchStatus;
+          });
+        },
+        syncSelection() {
+          this.selectedIds = new Set(this.selectedArray);
+        },
+        selectAll() {
+          this.selectedArray = this.filteredProjects.map(p => p.id);
+          this.selectedIds = new Set(this.selectedArray);
+        },
+        clearSelection() {
+          this.selectedArray = [];
+          this.selectedIds = new Set();
+        },
+        toggleSelectAll(event) {
+          if (event.target.checked) {
+            this.selectAll();
+          } else {
+            this.clearSelection();
+          }
+        },
+        archiveProject(id) {
+          this.projects = this.projects.filter(p => p.id !== id);
+          this.filterProjects();
+          alert('项目已归档');
+        },
+        deleteProject(id) {
+          if (confirm('确定要删除此项目吗？')) {
+            this.projects = this.projects.filter(p => p.id !== id);
+            this.filterProjects();
+          }
+        },
+        batchArchive() {
+          if (confirm(`确定要归档选中的 ${this.selectedIds.size} 个项目吗？`)) {
+            this.projects = this.projects.filter(p => !this.selectedIds.has(p.id));
+            this.filterProjects();
+            this.clearSelection();
+            alert('批量归档成功');
+          }
+        },
+        batchMove() {
+          this.showMoveModal = false;
+          alert('已移动到目标分类');
+          this.clearSelection();
+        },
+        exportProjects() {
+          this.showExportModal = false;
+          alert(`正在导出 ${this.selectedIds.size} 个项目为 ${this.exportFormat.toUpperCase()} 格式`);
+          this.clearSelection();
+        }
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+[package]
+name = "os-compass"
+version = "0.1.0"
+description = "OS-Compass: 开源项目全生命周期管理与决策系统"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "os_compass_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+directories = "5"
+rusqlite = { version = "0.32", features = ["bundled"] }
+lazy_static = "1.4"
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "socks", "blocking"], default-features = false }
+tokio = { version = "1", features = ["rt-multi-thread"] }
+aes-gcm = "0.10"
+rand = "0.8"
+base64 = "0.22"
+urlencoding = "2"
+chrono = "0.4"
+
+[dev-dependencies]
+tempfile = "3"

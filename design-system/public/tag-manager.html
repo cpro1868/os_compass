@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 标签管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <!-- 左侧功能菜单 -->
+    <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
+        <i class="fa-solid fa-compass text-xl"></i>
+      </div>
+      
+      <button onclick="location.href='import-form.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-plus text-lg mb-1"></i>
+        <span class="text-xs">导入</span>
+      </button>
+      
+      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition opacity-50 cursor-not-allowed">
+        <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
+        <span class="text-xs">搜索</span>
+      </button>
+      
+      <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+        <button onclick="location.href='main-interface.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-table-columns"></i>
+        </button>
+        <button onclick="location.href='list-view.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-list"></i>
+        </button>
+      </div>
+      
+      <button class="w-12 h-12 rounded-xl bg-blue-600 flex flex-col items-center justify-center text-white mt-auto">
+        <i class="fa-solid fa-tags text-lg mb-1"></i>
+        <span class="text-xs">标签</span>
+      </button>
+      
+      <div class="border-t border-gray-700 pt-4 mt-4 w-full flex flex-col items-center gap-3">
+        <button onclick="location.href='settings.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+        <button onclick="location.href='plugin-manager.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-plug"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col min-w-0">
+      <!-- 顶部栏 -->
+      <header class="bg-white border-b border-gray-200 px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <button onclick="location.href='main-interface.html'" class="text-gray-500 hover:text-gray-700">
+              <i class="fa-solid fa-arrow-left mr-2"></i>返回
+            </button>
+            <h1 class="text-xl font-bold">标签管理</h1>
+          </div>
+          <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <i class="fa-solid fa-plus mr-2"></i>新建标签
+          </button>
+        </div>
+      </header>
+      
+      <!-- 内容区 -->
+      <div class="flex-1 overflow-auto p-6">
+        <!-- 筛选器 -->
+        <div class="flex gap-4 mb-6">
+          <div class="flex-1">
+            <input type="text" placeholder="搜索标签..." class="w-full px-4 py-2 border rounded-lg">
+          </div>
+          <select class="px-4 py-2 border rounded-lg">
+            <option value="">全部分类</option>
+            <option value="ai">AI 提取</option>
+            <option value="user">用户添加</option>
+            <option value="preset">预设</option>
+          </select>
+        </div>
+        
+        <!-- 标签列表 -->
+        <div class="space-y-3">
+          <!-- AI 提取的标签 -->
+          <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-medium text-gray-700">
+                <i class="fa-solid fa-robot text-blue-500 mr-2"></i>AI 提取标签
+                <span class="text-sm font-normal text-gray-400 ml-2">（由 LLM 智能分析提取）</span>
+              </h3>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <span class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm flex items-center gap-2">
+                <i class="fa-solid fa-robot text-xs"></i>
+                前端框架
+                <span class="text-xs bg-purple-200 px-1.5 rounded">12</span>
+              </span>
+              <span class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm flex items-center gap-2">
+                <i class="fa-solid fa-robot text-xs"></i>
+                组件库
+                <span class="text-xs bg-green-200 px-1.5 rounded">8</span>
+              </span>
+              <span class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center gap-2">
+                <i class="fa-solid fa-robot text-xs"></i>
+                虚拟DOM
+                <span class="text-xs bg-blue-200 px-1.5 rounded">5</span>
+              </span>
+              <span class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm flex items-center gap-2">
+                <i class="fa-solid fa-robot text-xs"></i>
+                Web框架
+                <span class="text-xs bg-amber-200 px-1.5 rounded">6</span>
+              </span>
+              <span class="px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-sm flex items-center gap-2">
+                <i class="fa-solid fa-robot text-xs"></i>
+                ORM
+                <span class="text-xs bg-red-200 px-1.5 rounded">3</span>
+              </span>
+            </div>
+          </div>
+          
+          <!-- 用户添加的标签 -->
+          <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-medium text-gray-700">
+                <i class="fa-solid fa-user text-green-500 mr-2"></i>用户添加标签
+                <span class="text-sm font-normal text-gray-400 ml-2">（手动添加的标签）</span>
+              </h3>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <span class="px-3 py-1.5 bg-pink-100 text-pink-700 rounded-full text-sm flex items-center gap-2">
+                正在学习
+                <span class="text-xs bg-pink-200 px-1.5 rounded">2</span>
+                <button class="hover:text-pink-900"><i class="fa-solid fa-times text-xs"></i></button>
+              </span>
+              <span class="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-sm flex items-center gap-2">
+                收藏
+                <span class="text-xs bg-indigo-200 px-1.5 rounded">5</span>
+                <button class="hover:text-indigo-900"><i class="fa-solid fa-times text-xs"></i></button>
+              </span>
+            </div>
+          </div>
+          
+          <!-- 预设标签 -->
+          <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-medium text-gray-700">
+                <i class="fa-solid fa-star text-amber-500 mr-2"></i>预设标签
+                <span class="text-sm font-normal text-gray-400 ml-2">（系统预设的常用标签）</span>
+              </h3>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <span class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm flex items-center gap-2">
+                开源
+                <span class="text-xs bg-gray-200 px-1.5 rounded">15</span>
+              </span>
+              <span class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm flex items-center gap-2">
+                MIT许可
+                <span class="text-xs bg-gray-200 px-1.5 rounded">20</span>
+              </span>
+              <span class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm flex items-center gap-2">
+                活跃维护
+                <span class="text-xs bg-gray-200 px-1.5 rounded">18</span>
+              </span>
+              <span class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm flex items-center gap-2">
+                新兴项目
+                <span class="text-xs bg-gray-200 px-1.5 rounded">7</span>
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 新建标签表单 -->
+        <div class="bg-white rounded-xl border border-gray-200 p-4 mt-6">
+          <h3 class="font-medium text-gray-700 mb-4">新建标签</h3>
+          <div class="flex gap-4">
+            <div class="flex-1">
+              <input type="text" placeholder="输入标签名称" class="w-full px-4 py-2 border rounded-lg">
+            </div>
+            <div class="w-32">
+              <select class="w-full px-4 py-2 border rounded-lg">
+                <option value="ai">AI 提取</option>
+                <option value="user">用户添加</option>
+                <option value="preset">预设</option>
+              </select>
+            </div>
+            <button class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              创建
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

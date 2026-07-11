@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 确认导入</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+  <style>
+    .editor-toolbar { border-radius: 0.5rem 0.5rem 0 0; }
+    .CodeMirror { border-radius: 0 0 0.5rem 0.5rem; height: 300px; }
+    .editor-preview { height: 300px; overflow-y: auto; }
+    .hljs { background: #f8f8f8; padding: 0.5rem; border-radius: 0.25rem; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <!-- 左侧功能菜单 -->
+    <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
+        <i class="fa-solid fa-compass text-xl"></i>
+      </div>
+      
+      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 transition opacity-50 cursor-not-allowed">
+        <i class="fa-solid fa-plus text-lg mb-1"></i>
+        <span class="text-xs">导入</span>
+      </button>
+      
+      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 transition opacity-50 cursor-not-allowed">
+        <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
+        <span class="text-xs">搜索</span>
+      </button>
+      
+      <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+        <button onclick="location.href='main-interface.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-table-columns"></i>
+        </button>
+        <button onclick="location.href='list-view.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-list"></i>
+        </button>
+      </div>
+      
+      <button onclick="location.href='category-manager.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition mt-auto">
+        <i class="fa-solid fa-folder-tree text-lg mb-1"></i>
+        <span class="text-xs">分类</span>
+      </button>
+      
+      <div class="border-t border-gray-700 pt-4 mt-4 w-full flex flex-col items-center gap-3">
+        <button onclick="location.href='settings.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+        <button onclick="location.href='plugin-manager.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-plug"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex items-center justify-center p-6">
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-8 w-full max-w-3xl max-h-[90vh] overflow-auto">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold">确认导入</h1>
+          <button onclick="location.href='import-form.html'" class="text-sm text-gray-500 hover:text-gray-700">
+            <i class="fa-solid fa-xmark mr-1"></i>返回
+          </button>
+        </div>
+        
+        <div class="space-y-5">
+          <!-- 提示 -->
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+              <i class="fa-solid fa-exclamation-triangle text-amber-500 text-xl mt-0.5"></i>
+              <div>
+                <h3 class="font-medium text-amber-800">未知平台检测</h3>
+                <p class="text-sm text-amber-700 mt-1">
+                  系统无法识别该平台，将通过爬虫获取页面内容。此类项目<strong>无法计算健康度评分</strong>。
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- URL 信息 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">来源 URL</label>
+            <div class="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200 font-mono text-sm">
+              https://gitlab.com/example/project
+            </div>
+          </div>
+          
+          <!-- 项目名称 -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-medium text-gray-700">
+                项目名称 <span class="text-red-500">*</span>
+              </label>
+              <button id="smartNameBtn" class="text-xs text-blue-600 hover:underline">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>从标题提取
+              </button>
+            </div>
+            <div class="relative">
+              <input type="text" id="projectName" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+              <div id="nameHint" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hidden">
+                <i class="fa-solid fa-sparkles mr-1"></i>已提取
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">从页面标题智能截取的项目名称</p>
+          </div>
+          
+          <!-- 分类 -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-medium text-gray-700">分类</label>
+              <button class="text-xs text-blue-600 hover:underline">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>自动分类
+              </button>
+            </div>
+            <select class="w-full px-4 py-2 border rounded-lg">
+              <option value="">自动选择（AI 判定）</option>
+              <option value="1">前端框架</option>
+              <option value="2">后端服务</option>
+              <option value="3">AI / ML</option>
+              <option value="4">数据库</option>
+            </select>
+          </div>
+          
+          <!-- 标签 -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-medium text-gray-700">标签</label>
+              <button class="text-xs text-blue-600 hover:underline">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>自动提取标签
+              </button>
+            </div>
+            <div class="min-h-[42px] px-4 py-2 border rounded-lg bg-white">
+              <div class="flex flex-wrap gap-2">
+                <span class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm flex items-center gap-1">
+                  前端框架
+                  <button class="hover:text-purple-900"><i class="fa-solid fa-times text-xs"></i></button>
+                </span>
+                <span class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm flex items-center gap-1">
+                  组件库
+                  <button class="hover:text-green-900"><i class="fa-solid fa-times text-xs"></i></button>
+                </span>
+              </div>
+              <input type="text" placeholder="输入标签后按回车添加" class="mt-2 w-full text-sm border-0 focus:ring-0 p-0">
+            </div>
+          </div>
+          
+          <!-- Markdown 编辑器 -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-medium text-gray-700">README 内容（可编辑）</label>
+              <div class="flex gap-2">
+                <button id="previewToggle" class="text-xs text-gray-500 hover:text-gray-700">
+                  <i class="fa-solid fa-eye mr-1"></i>预览
+                </button>
+                <button class="text-xs text-amber-600 hover:underline">
+                  <i class="fa-solid fa-spider mr-1"></i>重新获取
+                </button>
+              </div>
+            </div>
+            <div class="border rounded-lg overflow-hidden">
+              <div class="bg-gray-100 px-4 py-2 border-b flex items-center justify-between">
+                <span class="text-sm text-gray-600">README.md</span>
+                <span class="text-xs text-amber-600">
+                  <i class="fa-solid fa-spider mr-1"></i>由爬虫转换
+                </span>
+              </div>
+              <div id="editorWrapper" class="flex">
+                <div class="flex-1">
+                  <textarea id="mdEditor"></textarea>
+                </div>
+                <div id="previewPane" class="hidden w-1/2 border-l bg-white p-4 overflow-auto">
+                  <div id="mdPreview" class="prose prose-sm max-w-none"></div>
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">
+              <i class="fa-solid fa-info-circle mr-1"></i>
+              可修正爬虫转换后的内容，支持实时预览
+            </p>
+          </div>
+          
+          <!-- 警告提示 -->
+          <div class="bg-orange-50 border border-orange-200 rounded-lg p-3">
+            <p class="text-xs text-orange-700">
+              <i class="fa-solid fa-info-circle mr-1"></i>
+              <strong>注意：</strong>由于无法获取平台数据，该项目将标记为"未评分"，无法使用健康度评分功能。
+            </p>
+          </div>
+          
+          <!-- 操作按钮 -->
+          <div class="flex gap-4">
+            <button onclick="location.href='import-form.html'" class="flex-1 px-4 py-3 border rounded-lg hover:bg-gray-50">
+              取消
+            </button>
+            <button onclick="location.href='main-interface.html'" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              确认导入
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
+<script>
+  // 模拟从页面 title 提取项目名称
+  const mockPageTitle = 'example-project - 简洁优雅的开源项目管理系统';
+
+  document.getElementById('smartNameBtn').addEventListener('click', () => {
+    const input = document.getElementById('projectName');
+    const hint = document.getElementById('nameHint');
+    
+    // 智能截取：取标题第一部分，去除冗余字符
+    const name = mockPageTitle
+      .split(/[-–—]/)[0]
+      .replace(/[【】\[\]（）\(\)]/g, '')
+      .trim();
+    
+    input.value = name;
+    hint.classList.remove('hidden');
+    
+    setTimeout(() => hint.classList.add('hidden'), 2000);
+  });
+
+  // 页面加载时自动提取一次
+  document.getElementById('smartNameBtn').click();
+
+  // Markdown 编辑器初始化
+  const initialMarkdown = `# Example Project
+
+这是一个示例项目，用于演示 Markdown 编辑器功能。
+
+## 功能特性
+
+- 功能一：简洁易用的界面设计
+- 功能二：支持实时预览
+- 功能三：自动保存草稿
+
+## 快速开始
+
+\`\`\`bash
+git clone https://gitlab.com/example/project
+cd project
+npm install
+npm run dev
+\`\`\`
+
+## 许可证
+
+MIT License
+`;
+
+  const easyMDE = new EasyMDE({
+    element: document.getElementById('mdEditor'),
+    initialValue: initialMarkdown,
+    spellChecker: false,
+    autofocus: true,
+    status: false,
+    toolbar: [
+      'bold', 'italic', 'heading', '|',
+      'code', 'quote', '|',
+      'unordered-list', 'ordered-list', '|',
+      'link', 'image', '|',
+      'preview', 'side-by-side', 'fullscreen'
+    ],
+  });
+
+  // 预览功能
+  const previewToggle = document.getElementById('previewToggle');
+  const previewPane = document.getElementById('previewPane');
+  const mdPreview = document.getElementById('mdPreview');
+  let isPreviewVisible = false;
+
+  function updatePreview() {
+    const markdown = easyMDE.value();
+    const html = marked.parse(markdown);
+    mdPreview.innerHTML = DOMPurify.sanitize(html);
+  }
+
+  previewToggle.addEventListener('click', () => {
+    isPreviewVisible = !isPreviewVisible;
+    if (isPreviewVisible) {
+      previewPane.classList.remove('hidden');
+      previewToggle.innerHTML = '<i class="fa-solid fa-eye-slash mr-1"></i>隐藏预览';
+      updatePreview();
+    } else {
+      previewPane.classList.add('hidden');
+      previewToggle.innerHTML = '<i class="fa-solid fa-eye mr-1"></i>预览';
+    }
+  });
+
+  // 实时更新预览（编辑器变化时）
+  easyMDE.codemirror.on('change', () => {
+    if (isPreviewVisible) {
+      updatePreview();
+    }
+  });
+</script>

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 项目详情</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <!-- 左侧功能菜单 -->
+    <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
+        <i class="fa-solid fa-compass text-xl"></i>
+      </div>
+      
+      <button onclick="location.href='import-form.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-plus text-lg mb-1"></i>
+        <span class="text-xs">导入</span>
+      </button>
+      
+      <button onclick="location.href='search-view.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
+        <span class="text-xs">搜索</span>
+      </button>
+      
+      <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+        <button onclick="location.href='main-interface.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-table-columns"></i>
+        </button>
+        <button onclick="location.href='list-view.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-list"></i>
+        </button>
+      </div>
+      
+      <button onclick="location.href='category-manager.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition mt-auto">
+        <i class="fa-solid fa-folder-tree text-lg mb-1"></i>
+        <span class="text-xs">分类</span>
+      </button>
+      
+      <div class="border-t border-gray-700 pt-4 mt-4 w-full flex flex-col items-center gap-3">
+        <button onclick="location.href='settings.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+        <button onclick="location.href='plugin-manager.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-plug"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col min-w-0">
+      <!-- 顶部栏 -->
+      <header class="bg-white border-b border-gray-200 px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <button onclick="location.href='main-interface.html'" class="text-gray-500 hover:text-gray-700">
+              <i class="fa-solid fa-arrow-left mr-2"></i>返回
+            </button>
+            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600">
+              <i class="fa-brands fa-react text-2xl"></i>
+            </div>
+            <div>
+              <h1 class="text-xl font-bold">facebook/react</h1>
+              <p class="text-sm text-gray-500">https://github.com/facebook/react</p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+              <i class="fa-solid fa-pen mr-1"></i>编辑
+            </button>
+            <button class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50">
+              <i class="fa-solid fa-trash mr-1"></i>删除
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- 分类栏 -->
+      <div class="px-6 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-2 text-sm">
+        <span class="text-gray-500">分类：</span>
+        <span class="px-3 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">
+          <i class="fa-solid fa-folder mr-1"></i>前端 / 框架 / React
+        </span>
+        <button id="ai-classify-btn" class="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center gap-1">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>AI 分类
+        </button>
+      </div>
+
+      <!-- 状态栏 -->
+      <div class="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-4">
+        <div class="flex items-center gap-2 text-sm">
+          <span class="text-gray-500">状态：</span>
+          <button class="px-3 py-1 text-xs rounded bg-indigo-600 text-white">✅ 已落地</button>
+          <button class="px-3 py-1 text-xs rounded bg-white text-gray-700 border border-gray-300 hover:bg-gray-50">💡 待探索</button>
+          <button class="px-3 py-1 text-xs rounded bg-white text-gray-700 border border-gray-300 hover:bg-gray-50">🔬 深度研究</button>
+          <button class="px-3 py-1 text-xs rounded bg-white text-gray-700 border border-gray-300 hover:bg-gray-50">🗑️ 弃用</button>
+        </div>
+      </div>
+
+      <!-- 标签页导航 -->
+      <div class="bg-white border-b border-gray-200 px-6">
+        <nav class="flex gap-1">
+          <button class="tab-btn px-4 py-3 border-b-2 border-blue-600 text-blue-600 font-medium text-sm" data-tab="overview">概览</button>
+          <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="ai-report">AI 报告</button>
+          <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="runbook">Runbook</button>
+          <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="readme">README</button>
+          <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="clone">
+            <i class="fa-solid fa-code-branch mr-1"></i>克隆
+          </button>
+          <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="releases">
+            <i class="fa-solid fa-tag mr-1"></i>Releases
+          </button>
+          <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="notes">本地笔记</button>
+          <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="user-info">
+            <i class="fa-solid fa-lock mr-1"></i>用户信息
+          </button>
+        </nav>
+      </div>
+
+      <!-- 标签页内容 -->
+      <div class="flex-1 overflow-auto p-6">
+        <!-- 概览 -->
+        <div id="content-overview" class="tab-content">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-6">
+              <!-- AI 一句话总结 -->
+              <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+                <div class="flex items-center gap-2 mb-2">
+                  <i class="fa-solid fa-wand-magic-sparkles text-blue-600"></i>
+                  <h2 class="text-lg font-bold text-blue-900">AI 一句话总结</h2>
+                </div>
+                <p class="text-blue-800 text-lg leading-relaxed">用于构建用户界面的 JavaScript 库，组件化开发模式，虚拟 DOM 高性能，广泛应用于 SPA、移动端和 SSR 场景。</p>
+              </div>
+              
+              <!-- 项目简介 -->
+              <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 class="text-lg font-bold mb-3">项目简介</h2>
+                <p class="text-gray-600 leading-relaxed">React 是一个用于构建用户界面的 JavaScript 库。它由 Facebook 开发和维护，采用组件化开发模式，通过虚拟 DOM 提高渲染性能。React 广泛应用于单页应用、移动应用和服务器端渲染场景。</p>
+              </div>
+              
+              <!-- 适用场景 -->
+              <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 class="text-lg font-bold mb-3">
+                  <i class="fa-solid fa-lightbulb text-yellow-500 mr-2"></i>适用场景
+                </h2>
+                <div class="flex flex-wrap gap-2">
+                  <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">中大型 Web 应用</span>
+                  <span class="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm">需要高度交互的 UI</span>
+                  <span class="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm">移动端跨平台开发</span>
+                </div>
+              </div>
+              
+              <!-- AI 评估摘要 -->
+              <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 class="text-lg font-bold mb-3">AI 评估摘要</h2>
+                <div class="space-y-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-24 text-sm text-gray-500">成熟度</div>
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2">
+                        <div class="flex-1 bg-gray-200 rounded-full h-2">
+                          <div class="bg-green-500 h-2 rounded-full" style="width: 95%"></div>
+                        </div>
+                        <span class="text-sm font-medium text-green-600">极高</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <div class="w-24 text-sm text-gray-500">学习曲线</div>
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2">
+                        <div class="flex-1 bg-gray-200 rounded-full h-2">
+                          <div class="bg-yellow-500 h-2 rounded-full" style="width: 60%"></div>
+                        </div>
+                        <span class="text-sm font-medium text-yellow-600">中等</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-6">
+              <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 class="text-lg font-bold mb-3">元数据</h2>
+                <ul class="space-y-3 text-sm">
+                  <li class="flex justify-between"><span class="text-gray-500">Stars</span><span>220k</span></li>
+                  <li class="flex justify-between"><span class="text-gray-500">Forks</span><span>45k</span></li>
+                  <li class="flex justify-between"><span class="text-gray-500">License</span><span class="text-green-600">MIT</span></li>
+                  <li class="flex justify-between items-start"><span class="text-gray-500">语言</span>
+                    <div class="flex flex-wrap gap-1 justify-end">
+                      <span class="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">TypeScript</span>
+                      <span class="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">JavaScript</span>
+                    </div>
+                  </li>
+                  <li class="flex justify-between"><span class="text-gray-500">分类</span><span>前端框架</span></li>
+                  <li class="flex justify-between"><span class="text-gray-500">状态</span><span class="text-green-600">已落地</span></li>
+                  <li class="flex justify-between"><span class="text-gray-500">更新时间</span><span>2024-03-15</span></li>
+                </ul>
+              </div>
+              
+              <!-- 标签管理 -->
+              <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-3">
+                  <h2 class="text-lg font-bold">标签</h2>
+                  <button class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg">
+                    <i class="fa-solid fa-plus mr-1"></i>添加标签
+                  </button>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <span class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm flex items-center gap-1">
+                    UI框架
+                    <button class="hover:text-purple-900"><i class="fa-solid fa-times text-xs"></i></button>
+                  </span>
+                  <span class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm flex items-center gap-1">
+                    组件库
+                    <button class="hover:text-green-900"><i class="fa-solid fa-times text-xs"></i></button>
+                  </span>
+                  <span class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center gap-1">
+                    虚拟DOM
+                    <button class="hover:text-blue-900"><i class="fa-solid fa-times text-xs"></i></button>
+                  </span>
+                  <span class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm flex items-center gap-1">
+                    <i class="fa-solid fa-robot text-xs"></i>SSR
+                    <button class="hover:text-amber-900"><i class="fa-solid fa-times text-xs"></i></button>
+                  </span>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">
+                  <i class="fa-solid fa-info-circle mr-1"></i>
+                  标签由 AI 提取或手动添加，点击 × 删除
+                </p>
+              </div>
+              <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 class="text-lg font-bold mb-3">快速操作</h2>
+                <div class="space-y-2">
+                  <button class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>重新分析（全部）
+                  </button>
+                  <p class="text-xs text-gray-500 text-center">更新数据、AI报告、Runbook</p>
+                  <button class="w-full px-4 py-2 border rounded-lg hover:bg-gray-50">
+                    <i class="fa-solid fa-language mr-1"></i>翻译 README
+                  </button>
+                  <button class="w-full px-4 py-2 border rounded-lg hover:bg-gray-50">
+                    <i class="fa-solid fa-code mr-1"></i>在 IDE 中打开
+                  </button>
+                  <button class="w-full px-4 py-2 border rounded-lg hover:bg-gray-50 text-red-600">
+                    <i class="fa-solid fa-trash mr-1"></i>删除项目
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- AI 报告 -->
+        <div id="content-ai-report" class="tab-content hidden">
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-lg font-bold">AI 深度体检报告</h2>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-gray-500">生成于 2024-03-15 14:30</span>
+                <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>重新分析
+                </button>
+              </div>
+            </div>
+            <div class="space-y-6">
+              <div>
+                <h3 class="font-medium text-green-600 mb-2">✓ 健康度分析</h3>
+                <ul class="list-disc list-inside text-sm text-gray-600 space-y-1 pl-4">
+                  <li>团队活跃：过去 30 天有 200+ 次提交</li>
+                  <li>Issue 处理：平均响应时间 2 小时</li>
+                  <li>版本迭代：最近 3 个月发布 5 个版本</li>
+                </ul>
+              </div>
+              <div>
+                <h3 class="font-medium text-blue-600 mb-2">🔒 License 合规</h3>
+                <p class="text-sm text-gray-600">MIT 许可证，商业友好，无需担心开源合规问题。</p>
+              </div>
+              <div>
+                <h3 class="font-medium text-yellow-600 mb-2">⚠️ 安全提示</h3>
+                <p class="text-sm text-gray-600">建议定期更新依赖版本，关注 CVE 漏洞报告。</p>
+              </div>
+              <div>
+                <h3 class="font-medium text-purple-600 mb-2">💬 用户口碑</h3>
+                <p class="text-sm text-gray-600">社区评价极高，GitHub Star 排名全球前 5。主流前端框架首选。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Runbook -->
+        <div id="content-runbook" class="tab-content hidden">
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-lg font-bold">场景化指导手册</h2>
+              <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>重新生成
+              </button>
+            </div>
+            <div class="space-y-6">
+              <div>
+                <h3 class="font-medium mb-3 flex items-center gap-2">
+                  <span class="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm">1</span>
+                  环境要求
+                </h3>
+                <div class="bg-gray-50 rounded-lg p-4 text-sm">
+                  <ul class="list-disc list-inside space-y-1 text-gray-600">
+                    <li>Node.js >= 18.0.0</li>
+                    <li>npm >= 9.0.0 或 yarn >= 1.22.0</li>
+                  </ul>
+                </div>
+              </div>
+              <div>
+                <h3 class="font-medium mb-3 flex items-center gap-2">
+                  <span class="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm">2</span>
+                  安装步骤
+                </h3>
+                <div class="bg-gray-50 rounded-lg p-4 text-sm">
+                  <code class="text-gray-800">npm install react react-dom</code>
+                  <p class="text-gray-500 mt-2">或使用 Create React App</p>
+                  <code class="text-gray-800">npx create-react-app my-app</code>
+                </div>
+              </div>
+              <div>
+                <h3 class="font-medium mb-3 flex items-center gap-2">
+                  <span class="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm">3</span>
+                  运行项目
+                </h3>
+                <div class="bg-gray-50 rounded-lg p-4 text-sm">
+                  <code class="text-gray-800">npm start</code>
+                </div>
+              </div>
+              <div>
+                <h3 class="font-medium mb-3 flex items-center gap-2">
+                  <span class="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm">4</span>
+                  二次开发入口
+                </h3>
+                <div class="bg-gray-50 rounded-lg p-4 text-sm space-y-1 text-gray-600">
+                  <p><code class="text-gray-800">src/</code> - 源代码目录</p>
+                  <p><code class="text-gray-800">src/components/</code> - 组件目录</p>
+                  <p><code class="text-gray-800">src/App.js</code> - 主应用入口</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- README -->
+        <div id="content-readme" class="tab-content hidden">
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <h2 class="text-lg font-bold">README</h2>
+                <!-- 多语言版本选择 -->
+                <select class="px-3 py-1 border rounded-lg text-sm">
+                  <option value="zh">中文版（README_zh.md）</option>
+                  <option value="en">English（README.md）</option>
+                  <option value="ja">日本語（README_ja.md）</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="px-3 py-1 text-sm border rounded-lg hover:bg-gray-50">
+                  <i class="fa-solid fa-rotate mr-1"></i>刷新 README
+                </button>
+                <button class="px-3 py-1 text-sm border rounded-lg hover:bg-gray-50 text-gray-600">
+                  <i class="fa-solid fa-language mr-1"></i>重新翻译
+                </button>
+              </div>
+            </div>
+            
+            <!-- 原文/翻译切换 -->
+            <div class="flex items-center gap-2 mb-4">
+              <button class="px-3 py-1 text-sm bg-blue-100 text-blue-600 border border-blue-200 rounded-lg">翻译</button>
+              <button class="px-3 py-1 text-sm border rounded-lg hover:bg-gray-50">原文</button>
+              <span class="text-xs text-gray-500 ml-2">当前显示：翻译版本</span>
+            </div>
+            
+            <div class="prose max-w-none text-sm border rounded-lg p-4 bg-gray-50">
+              <p><strong>React</strong></p>
+              <p>用于构建用户界面的 JavaScript 库。</p>
+              <p>React 使创建交互式 UI 变得轻而易举。为您应用程序中的每个状态设计简单的视图，当数据更改时，React 将高效地更新和渲染正确的组件。</p>
+              <p>声明式视图使您的代码更可预测，更容易调试。</p>
+            </div>
+            
+            <!-- 更新信息 -->
+            <div class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+              <div class="flex items-center gap-4 text-xs text-gray-500">
+                <span><i class="fa-solid fa-file-lines mr-1"></i>来源：README_zh.md</span>
+                <span><i class="fa-solid fa-clock mr-1"></i>最后更新：2024-03-15 14:30</span>
+                <span class="text-green-600"><i class="fa-solid fa-check-circle mr-1"></i>已是最新</span>
+              </div>
+              <p class="text-xs text-gray-500">
+                <i class="fa-solid fa-info-circle"></i>
+                翻译包含：语言转换 + 内容提炼 + 简化 + 结构化
+              </p>
+            </div>
+
+            <!-- README 加载说明 -->
+            <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p class="text-xs text-amber-700">
+                <i class="fa-solid fa-exclamation-circle mr-1"></i>
+                README 仅加载前 6000 字符用于 AI 分析，完整内容请查看上方文档或访问项目仓库。
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 克隆 -->
+        <div id="content-clone" class="tab-content hidden">
+          <div class="max-w-3xl space-y-6">
+            <!-- 克隆设置（持久化到系统） -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 class="text-lg font-bold mb-4">
+                <i class="fa-solid fa-code-branch mr-2 text-blue-600"></i>克隆设置
+              </h2>
+              <div class="space-y-4">
+                <!-- 克隆目录 -->
+                <div>
+                  <label class="block text-sm font-medium mb-1">克隆目录</label>
+                  <div class="flex gap-2">
+                    <input
+                      type="text"
+                      id="clone-path"
+                      value="D:\Projects"
+                      readonly
+                      placeholder="选择克隆目录..."
+                      class="flex-1 px-3 py-2 border rounded-lg bg-gray-50 text-sm"
+                    />
+                    <button id="select-clone-path" class="px-4 py-2 border rounded-lg hover:bg-gray-50 text-sm whitespace-nowrap">
+                      <i class="fa-solid fa-folder-open mr-1"></i>选择
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">项目将克隆到此目录下的以项目名命名的子文件夹</p>
+                </div>
+
+                <!-- 代理设置（复用系统下载代理） -->
+                <div class="border-t border-gray-100 pt-4">
+                  <div class="flex items-center justify-between mb-3">
+                    <label class="flex items-center gap-2">
+                      <input type="checkbox" id="clone-proxy-enabled" class="rounded" />
+                      <span class="text-sm font-medium">启用代理</span>
+                    </label>
+                    <span class="text-xs text-gray-400">可前往设置中心修改系统下载代理</span>
+                  </div>
+                  <div id="clone-proxy-config" class="pl-6 space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-sm font-medium mb-1">协议</label>
+                        <select id="clone-proxy-protocol" class="w-full px-3 py-2 border rounded-lg text-sm">
+                          <option value="http">HTTP</option>
+                          <option value="https">HTTPS</option>
+                          <option value="socks5">SOCKS5</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium mb-1">端口</label>
+                        <input type="number" id="clone-proxy-port" value="7890" placeholder="7890" class="w-full px-3 py-2 border rounded-lg text-sm" />
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-1">代理地址</label>
+                      <input type="text" id="clone-proxy-host" value="127.0.0.1" placeholder="127.0.0.1" class="w-full px-3 py-2 border rounded-lg text-sm" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-sm font-medium mb-1">用户名（可选）</label>
+                        <input type="text" id="clone-proxy-username" placeholder="username" class="w-full px-3 py-2 border rounded-lg text-sm" />
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium mb-1">密码（可选）</label>
+                        <input type="password" id="clone-proxy-password" placeholder="password" class="w-full px-3 py-2 border rounded-lg text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 保存按钮 -->
+              <div class="mt-6 flex justify-end">
+                <button id="save-clone-settings" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                  <i class="fa-solid fa-floppy-disk"></i>保存设置
+                </button>
+              </div>
+            </div>
+
+            <!-- 克隆操作（一次性执行，不记录状态） -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 class="text-lg font-bold mb-4">
+                <i class="fa-solid fa-terminal mr-2 text-green-600"></i>克隆命令
+              </h2>
+              <div class="space-y-4">
+                <div class="bg-gray-900 text-gray-100 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                  <code id="clone-command">git clone https://github.com/facebook/react</code>
+                </div>
+                <div class="flex gap-3">
+                  <button id="copy-clone-command" class="px-4 py-2 border rounded-lg hover:bg-gray-50 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-copy"></i>复制命令
+                  </button>
+                  <button id="execute-clone" class="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
+                    <i class="fa-solid fa-play"></i>执行克隆
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 本地笔记 -->
+        <div id="content-notes" class="tab-content hidden">
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold">本地笔记</h2>
+              <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <i class="fa-solid fa-plus mr-1"></i>添加笔记
+              </button>
+            </div>
+            <div class="space-y-4">
+              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-medium text-yellow-800">2024-03-10</span>
+                  <button class="text-yellow-600 hover:text-yellow-800"><i class="fa-solid fa-pen text-sm"></i></button>
+                </div>
+                <p class="text-sm text-yellow-900">注意：React 18 的新特性需要配合新的状态管理方案，建议使用 Zustand 替代 Redux。</p>
+              </div>
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-medium text-gray-600">2024-03-05</span>
+                  <button class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-pen text-sm"></i></button>
+                </div>
+                <p class="text-sm text-gray-700">项目使用 TypeScript + React，建议使用 Vite 作为构建工具。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Releases -->
+        <div id="content-releases" class="tab-content hidden">
+          <div class="max-w-4xl">
+            <div class="bg-white rounded-xl border border-gray-200 p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">
+                  <i class="fa-solid fa-tag mr-2 text-purple-600"></i>Releases
+                </h2>
+                <div class="flex items-center gap-2">
+                  <button id="translate-releases" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                    <i class="fa-solid fa-language"></i>翻译
+                  </button>
+                  <button id="refresh-releases" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <i class="fa-solid fa-rotate"></i>刷新
+                  </button>
+                </div>
+              </div>
+
+              <!-- Release 列表 -->
+              <div class="space-y-4">
+                <!-- Release 项 1 -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                  <div class="bg-gray-50 px-4 py-3 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                      <span class="px-2 py-1 bg-green-100 text-green-700 rounded font-mono text-sm font-medium">v19.0.0</span>
+                      <span class="text-sm text-gray-500">2026-06-15</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <div class="relative">
+                        <button class="download-btn px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-100 flex items-center gap-2">
+                          <i class="fa-solid fa-download"></i>下载
+                          <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="download-menu hidden absolute right-0 mt-1 w-64 bg-white border rounded-lg shadow-lg z-10">
+                          <a href="#" class="block px-4 py-2 text-sm hover:bg-gray-50 border-b">
+                            <div class="font-medium">react-dom.zip</div>
+                            <div class="text-xs text-gray-500">Source code (zip)</div>
+                          </a>
+                          <a href="#" class="block px-4 py-2 text-sm hover:bg-gray-50 border-b">
+                            <div class="font-medium">react-dom.tar.gz</div>
+                            <div class="text-xs text-gray-500">Source code (tar.gz)</div>
+                          </a>
+                          <a href="#" class="block px-4 py-2 text-sm hover:bg-gray-50">
+                            <div class="font-medium">react-v19.0.0.zip</div>
+                            <div class="text-xs text-gray-500">Build artifacts</div>
+                          </a>
+                        </div>
+                      </div>
+                      <button class="copy-url-btn px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-100" title="复制下载链接">
+                        <i class="fa-solid fa-copy"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="p-4">
+                    <div class="prose prose-sm max-w-none text-gray-600">
+                      <p><strong>Breaking Changes</strong></p>
+                      <ul>
+                        <li>Removed legacy APIs (createFactory, PropTypes)</li>
+                        <li>Updated render behavior for better performance</li>
+                        <li>New concurrent features enabled by default</li>
+                      </ul>
+                      <p><strong>New Features</strong></p>
+                      <ul>
+                        <li>Native support for custom elements</li>
+                        <li>Improved error boundaries</li>
+                        <li>Better TypeScript integration</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Release 项 2 -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                  <div class="bg-gray-50 px-4 py-3 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                      <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded font-mono text-sm font-medium">v18.3.1</span>
+                      <span class="text-sm text-gray-500">2026-05-20</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-100 flex items-center gap-2">
+                        <i class="fa-solid fa-download"></i>下载
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                      </button>
+                      <button class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-100" title="复制下载链接">
+                        <i class="fa-solid fa-copy"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="p-4">
+                    <div class="prose prose-sm max-w-none text-gray-600">
+                      <p><strong>Bug Fixes</strong></p>
+                      <ul>
+                        <li>Fixed useEffect cleanup timing</li>
+                        <li>Resolved memory leak in StrictMode</li>
+                        <li>Fixed hydration mismatch in SSR</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Release 项 3 (预发布版) -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden opacity-75">
+                  <div class="bg-amber-50 px-4 py-3 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                      <span class="px-2 py-1 bg-amber-100 text-amber-700 rounded font-mono text-sm font-medium">v19.0.0-beta.3</span>
+                      <span class="text-xs px-2 py-0.5 bg-amber-200 text-amber-800 rounded">Pre-release</span>
+                      <span class="text-sm text-gray-500">2026-07-01</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-100 flex items-center gap-2">
+                        <i class="fa-solid fa-download"></i>下载
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                      </button>
+                      <button class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-100" title="复制下载链接">
+                        <i class="fa-solid fa-copy"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="p-4">
+                    <div class="prose prose-sm max-w-none text-gray-600">
+                      <p>Beta release with experimental features. Not recommended for production use.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 空状态（隐藏，当无数据时显示） -->
+              <div id="releases-empty" class="hidden text-center py-12">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i class="fa-solid fa-inbox text-3xl text-gray-400"></i>
+                </div>
+                <p class="text-gray-500">暂无 Releases 信息</p>
+                <p class="text-xs text-gray-400 mt-1">该仓库可能从未发布过版本</p>
+              </div>
+
+              <!-- 抓取信息 -->
+              <div class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+                <span><i class="fa-solid fa-clock mr-1"></i>数据来源：GitHub</span>
+                <span><i class="fa-solid fa-sync mr-1"></i>最后更新：2026-07-07 10:30</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 用户信息（数据保险箱） -->
+        <div id="content-user-info" class="tab-content hidden">
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h2 class="text-lg font-bold">用户信息</h2>
+                <p class="text-sm text-gray-500 mt-1">敏感信息已加密存储，点击复制即可使用</p>
+              </div>
+              <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <i class="fa-solid fa-plus mr-1"></i>添加
+              </button>
+            </div>
+            <div class="space-y-3">
+              <!-- 密码项 -->
+              <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-medium">NPM Token</span>
+                    <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">敏感</span>
+                  </div>
+                  <p class="text-sm text-gray-500 font-mono">npm_xxxxxxxxxxxx</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button class="p-2 text-blue-600 hover:bg-blue-50 rounded" title="复制">
+                    <i class="fa-solid fa-copy"></i>
+                  </button>
+                  <button class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="编辑">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="删除">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- 普通项 -->
+              <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-medium">Demo 账户</span>
+                  </div>
+                  <p class="text-sm text-gray-500">admin@example.com</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button class="p-2 text-blue-600 hover:bg-blue-50 rounded" title="复制">
+                    <i class="fa-solid fa-copy"></i>
+                  </button>
+                  <button class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="编辑">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="删除">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- API Key -->
+              <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-medium">GitHub PAT</span>
+                    <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">敏感</span>
+                  </div>
+                  <p class="text-sm text-gray-500 font-mono">ghp_xxxxxxxxxxxx</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button class="p-2 text-blue-600 hover:bg-blue-50 rounded" title="复制">
+                    <i class="fa-solid fa-copy"></i>
+                  </button>
+                  <button class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="编辑">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="删除">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 添加表单 -->
+            <div class="mt-6 p-4 bg-gray-100 rounded-lg border border-gray-300">
+              <h4 class="font-medium mb-3">快速添加</h4>
+              <div class="grid grid-cols-2 gap-3">
+                <input type="text" placeholder="键名（如：API Token）" class="px-3 py-2 border rounded-lg text-sm">
+                <input type="text" placeholder="值" class="px-3 py-2 border rounded-lg text-sm">
+              </div>
+              <div class="flex items-center gap-4 mt-3">
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" class="rounded"> 敏感信息（加密存储）
+                </label>
+                <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <script>
+    // 标签页切换
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabName = btn.dataset.tab;
+        
+        tabBtns.forEach(b => {
+          b.classList.remove('border-blue-600', 'text-blue-600');
+          b.classList.add('border-transparent', 'text-gray-500');
+        });
+        
+        tabContents.forEach(c => c.classList.add('hidden'));
+        
+        btn.classList.add('border-blue-600', 'text-blue-600');
+        btn.classList.remove('border-transparent', 'text-gray-500');
+        document.getElementById('content-' + tabName).classList.remove('hidden');
+      });
+    });
+  </script>
+
+  <!-- 删除确认弹框 -->
+  <div id="delete-modal" class="hidden fixed inset-0 bg-black/50 items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+      <div class="flex items-start gap-4 mb-4">
+        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 flex-shrink-0">
+          <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-900 mb-1">确认删除项目？</h3>
+          <p class="text-sm text-gray-600">项目 <span class="font-medium text-gray-900">"facebook/react"</span> 及其所有数据（AI 分析、翻译、笔记、标签）将被永久删除。</p>
+          <p class="text-sm text-red-600 mt-2 font-medium">此操作不可恢复！</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 border rounded-lg hover:bg-gray-50">取消</button>
+        <button onclick="confirmDelete()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+          <i class="fa-solid fa-trash mr-1"></i>确认删除
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showDeleteModal() {
+      const modal = document.getElementById('delete-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+    function closeDeleteModal() {
+      const modal = document.getElementById('delete-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    function confirmDelete() {
+      closeDeleteModal();
+      alert('项目已删除（原型演示）');
+    }
+
+    // 克隆页面交互
+    document.addEventListener('DOMContentLoaded', function() {
+      const deleteBtn = document.querySelector('button.border-red-300');
+      if (deleteBtn) deleteBtn.onclick = showDeleteModal;
+
+      // 代理启用切换
+      const proxyEnabled = document.getElementById('clone-proxy-enabled');
+      const proxyConfig = document.getElementById('clone-proxy-config');
+      if (proxyEnabled && proxyConfig) {
+        proxyEnabled.addEventListener('change', function() {
+          proxyConfig.style.opacity = this.checked ? '1' : '0.5';
+          proxyConfig.style.pointerEvents = this.checked ? 'auto' : 'none';
+        });
+      }
+
+      // 保存设置按钮
+      const saveBtn = document.getElementById('save-clone-settings');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+          alert('克隆设置已保存（原型演示）');
+        });
+      }
+
+      // 复制命令按钮
+      const copyBtn = document.getElementById('copy-clone-command');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+          const command = document.getElementById('clone-command');
+          if (command) {
+            navigator.clipboard.writeText(command.textContent);
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fa-solid fa-check"></i>已复制';
+            setTimeout(() => {
+              this.innerHTML = originalText;
+            }, 2000);
+          }
+        });
+      }
+
+      // 执行克隆按钮
+      const executeBtn = document.getElementById('execute-clone');
+      if (executeBtn) {
+        executeBtn.addEventListener('click', function() {
+          alert('开始执行克隆（原型演示）');
+        });
+      }
+
+      // 选择目录按钮（原型演示）
+      const selectPathBtn = document.getElementById('select-clone-path');
+      if (selectPathBtn) {
+        selectPathBtn.addEventListener('click', function() {
+          const pathInput = document.getElementById('clone-path');
+          if (pathInput) {
+            pathInput.value = 'E:\\MyProjects';
+            alert('已选择目录（原型演示）');
+          }
+        });
+      }
+
+      // Releases 刷新按钮
+      const refreshBtn = document.getElementById('refresh-releases');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+          const icon = this.querySelector('i');
+          icon.classList.add('animate-spin');
+          this.disabled = true;
+          this.classList.add('opacity-75');
+
+          setTimeout(() => {
+            icon.classList.remove('animate-spin');
+            this.disabled = false;
+            this.classList.remove('opacity-75');
+          }, 1500);
+        });
+      }
+
+      // Releases 翻译按钮
+      const translateBtn = document.getElementById('translate-releases');
+      if (translateBtn) {
+        translateBtn.addEventListener('click', function() {
+          const icon = this.querySelector('i');
+          icon.classList.add('animate-spin');
+          this.disabled = true;
+
+          setTimeout(() => {
+            icon.classList.remove('animate-spin');
+            this.disabled = false;
+            alert('Releases 内容已翻译（原型演示）');
+          }, 1500);
+        });
+      }
+
+      // 下载按钮下拉菜单
+      document.querySelectorAll('.download-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const menu = this.nextElementSibling;
+          document.querySelectorAll('.download-menu').forEach(m => {
+            if (m !== menu) m.classList.add('hidden');
+          });
+          menu.classList.toggle('hidden');
+        });
+      });
+
+      // 点击其他地方关闭下拉菜单
+      document.addEventListener('click', function() {
+        document.querySelectorAll('.download-menu').forEach(m => m.classList.add('hidden'));
+      });
+
+      // 复制链接按钮
+      document.querySelectorAll('.copy-url-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          navigator.clipboard.writeText('https://github.com/facebook/react/releases/download/v19.0.0/react-dom.zip');
+          const originalHTML = this.innerHTML;
+          this.innerHTML = '<i class="fa-solid fa-check text-green-600"></i>';
+          setTimeout(() => {
+            this.innerHTML = originalHTML;
+          }, 2000);
+        });
+      });
+
+      // AI 分类按钮
+      const aiClassifyBtn = document.getElementById('ai-classify-btn');
+      if (aiClassifyBtn) {
+        aiClassifyBtn.addEventListener('click', function() {
+          const icon = this.querySelector('i');
+          icon.classList.add('animate-spin');
+          this.disabled = true;
+          this.classList.add('opacity-75');
+
+          setTimeout(() => {
+            icon.classList.remove('animate-spin');
+            this.disabled = false;
+            this.classList.remove('opacity-75');
+
+            // 模拟分类结果
+            const categorySpan = document.querySelector('.bg-indigo-100');
+            if (categorySpan) {
+              categorySpan.innerHTML = '<i class="fa-solid fa-folder mr-1"></i>前端 / UI框架';
+              categorySpan.classList.remove('bg-indigo-100', 'text-indigo-700');
+              categorySpan.classList.add('bg-purple-100', 'text-purple-700');
+            }
+
+            alert('AI 分类完成：前端 / UI框架（置信度 92%）');
+          }, 2000);
+        });
+      }
+    });
+  </script>
+</body>
+</html>

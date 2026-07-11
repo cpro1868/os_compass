@@ -1,0 +1,125 @@
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { getCurrentVault } from "../api";
+
+interface SidebarProps {
+  onSettings: () => void;
+  onOpenVault: () => void;
+  onOpenCategory: () => void;
+  onOpenTag: () => void;
+  currentView: string;
+  onViewChange: (view: "kanban" | "list" | "archive" | "category" | "tag") => void;
+}
+
+export function Sidebar({ onSettings, onOpenVault, onOpenCategory, onOpenTag, currentView, onViewChange }: SidebarProps) {
+  const { t } = useTranslation();
+  const [vaultName, setVaultName] = useState<string>("");
+
+  useEffect(() => {
+    getCurrentVault().then((v) => {
+      if (v) setVaultName(v.name);
+    }).catch(() => {});
+    const handler = () => {
+      getCurrentVault().then((v) => {
+        if (v) setVaultName(v.name);
+      }).catch(() => {});
+    };
+    window.addEventListener("vault-changed", handler);
+    return () => window.removeEventListener("vault-changed", handler);
+  }, []);
+
+  return (
+    <aside className="w-16 bg-gray-900 dark:bg-gray-950 flex flex-col items-center py-4 gap-2 flex-shrink-0">
+      {/* Logo */}
+      <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center mb-2">
+        <i className="fa-solid fa-compass text-white text-lg"></i>
+      </div>
+
+      {/* 导入 */}
+      <button
+        className="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition"
+        title={t("sidebar.import")}
+      >
+        <i className="fa-solid fa-plus text-lg mb-0.5"></i>
+        <span className="text-xs">{t("sidebar.import")}</span>
+      </button>
+
+      {/* 搜索 */}
+      <button
+        className="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition"
+        title={t("sidebar.search")}
+      >
+        <i className="fa-solid fa-magnifying-glass text-lg mb-0.5"></i>
+        <span className="text-xs">{t("sidebar.search")}</span>
+      </button>
+
+      {/* 视图切换 */}
+      <div className="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+        <button
+          onClick={() => onViewChange("kanban")}
+          className={`w-12 h-10 rounded-lg flex items-center justify-center transition ${
+            currentView === "kanban" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+          }`}
+          title={t("nav.kanban")}
+        >
+          <i className="fa-solid fa-table-columns"></i>
+        </button>
+        <button
+          onClick={() => onViewChange("list")}
+          className={`w-12 h-10 rounded-lg flex items-center justify-center transition ${
+            currentView === "list" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+          }`}
+          title={t("nav.list")}
+        >
+          <i className="fa-solid fa-list"></i>
+        </button>
+      </div>
+
+      {/* 分类/标签 */}
+      <button
+        onClick={onOpenCategory}
+        className={`w-12 h-10 rounded-lg flex items-center justify-center transition mt-auto ${
+          currentView === "category" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+        }`}
+        title={t("sidebar.category")}
+      >
+        <i className="fa-solid fa-folder-tree"></i>
+      </button>
+      <button
+        onClick={onOpenTag}
+        className={`w-12 h-10 rounded-lg flex items-center justify-center transition ${
+          currentView === "tag" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+        }`}
+        title={t("sidebar.tag")}
+      >
+        <i className="fa-solid fa-tag"></i>
+      </button>
+
+      {/* 当前仓库信息 */}
+      {vaultName && (
+        <div className="mt-2 px-1 py-2 bg-gray-800 rounded-lg text-center" title={vaultName}>
+          <i className="fa-solid fa-database text-amber-500 text-sm"></i>
+          <p className="text-[10px] text-gray-400 mt-1 truncate w-12">{vaultName}</p>
+        </div>
+      )}
+
+      {/* 底部按钮 */}
+      <div className="border-t border-gray-700 pt-4 mt-2 flex flex-col gap-1 w-full items-center">
+        <button
+          onClick={onOpenVault}
+          className="w-12 h-10 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-800 hover:text-white transition"
+          title={t("sidebar.vault")}
+        >
+          <i className="fa-solid fa-folder-open"></i>
+        </button>
+        <button
+          onClick={onSettings}
+          className="w-12 h-10 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-800 hover:text-white transition"
+          title={t("sidebar.settings")}
+        >
+          <i className="fa-solid fa-gear"></i>
+        </button>
+      </div>
+    </aside>
+  );
+}

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 设计系统入口</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 text-gray-900 min-h-screen flex items-center justify-center">
+  <div class="text-center max-w-3xl px-6">
+    <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-2xl text-white text-4xl mb-6 shadow-lg">
+      <i class="fa-solid fa-compass"></i>
+    </div>
+    <h1 class="text-5xl font-bold mb-4">OS-Compass</h1>
+    <p class="text-xl text-gray-600 mb-10">开源罗盘 · AI 开源资产智能管家</p>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-left mb-6">
+      <a href="main-interface.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-table-columns text-blue-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">看板视图</h3>
+        <p class="text-xs text-gray-500">项目看板</p>
+      </a>
+      <a href="list-view.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-list text-blue-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">列表视图</h3>
+        <p class="text-xs text-gray-500">高级筛选</p>
+      </a>
+      <a href="project-detail.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-file-lines text-blue-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">项目详情</h3>
+        <p class="text-xs text-gray-500">6 个标签页</p>
+      </a>
+      <a href="category-manager.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-folder-tree text-blue-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">分类管理</h3>
+        <p class="text-xs text-gray-500">多层级树形</p>
+      </a>
+    </div>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-left mb-6">
+      <a href="import-form.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-plus-circle text-green-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">导入项目</h3>
+        <p class="text-xs text-gray-500">URL 自动解析</p>
+      </a>
+      <a href="manual-add.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-pen text-green-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">手动录入</h3>
+        <p class="text-xs text-gray-500">私有/内网项目</p>
+      </a>
+      <a href="search-view.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-magnifying-glass text-purple-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">搜索</h3>
+        <p class="text-xs text-gray-500">全文检索</p>
+      </a>
+      <a href="settings.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-gear text-gray-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">设置</h3>
+        <p class="text-xs text-gray-500">通用/下载/LLM</p>
+      </a>
+    </div>
+    
+    <div class="grid grid-cols-2 gap-4 text-left">
+      <a href="vault-manager.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-folder-open text-amber-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">仓库管理</h3>
+        <p class="text-xs text-gray-500">多仓库/导入已有仓库</p>
+      </a>
+      <a href="plugin-manager.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-plug text-orange-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">插件管理</h3>
+        <p class="text-xs text-gray-500">情报雷达（二期）</p>
+      </a>
+    </div>
+    
+    <p class="mt-10 text-sm text-gray-400">设计系统原型 · 使用 Tailwind CSS 构建</p>
+  </div>
+</body>
+</html>

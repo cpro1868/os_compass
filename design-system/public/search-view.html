@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 智能搜索</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .chat-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .chat-container::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 3px;
+    }
+    .typing-indicator span {
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <!-- 左侧边栏 - 历史记录 -->
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <div class="p-4 border-b border-gray-200">
+        <h2 class="font-semibold text-sm text-gray-500 uppercase tracking-wide">搜索历史</h2>
+      </div>
+      <div class="flex-1 overflow-auto p-2">
+        <div class="space-y-1">
+          <button class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 text-gray-700 truncate">
+            <i class="fa-regular fa-clock mr-2 text-gray-400"></i>前端框架推荐
+          </button>
+          <button class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 text-gray-700 truncate">
+            <i class="fa-regular fa-clock mr-2 text-gray-400"></i>Rust Web 框架
+          </button>
+          <button class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 text-gray-700 truncate">
+            <i class="fa-regular fa-clock mr-2 text-gray-400"></i>Python 机器学习库
+          </button>
+          <button class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 text-gray-700 truncate">
+            <i class="fa-regular fa-clock mr-2 text-gray-400"></i>数据库 ORM 框架
+          </button>
+        </div>
+      </div>
+      <div class="p-3 border-t border-gray-200">
+        <button class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 text-gray-500">
+          <i class="fa-solid fa-plus mr-2"></i>新建搜索
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主聊天区域 -->
+    <main class="flex-1 flex flex-col bg-white">
+      <!-- 顶部栏 -->
+      <header class="h-14 border-b border-gray-200 flex items-center justify-between px-6">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <i class="fa-solid fa-robot text-white text-sm"></i>
+          </div>
+          <div>
+            <h1 class="font-semibold">智能项目推荐</h1>
+            <p class="text-xs text-gray-500">二期功能：输入您的需求，AI 将推荐相关开源项目</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="p-2 hover:bg-gray-100 rounded-lg" title="清除对话">
+            <i class="fa-solid fa-trash-can text-gray-500"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- 聊天消息区域 -->
+      <div id="chatContainer" class="flex-1 overflow-auto p-6 space-y-6">
+        <!-- 欢迎消息 -->
+        <div class="flex gap-4 max-w-3xl mx-auto">
+          <div class="w-8 h-8 bg-blue-600 rounded-lg flex-shrink-0 flex items-center justify-center">
+            <i class="fa-solid fa-robot text-white text-sm"></i>
+          </div>
+          <div class="flex-1">
+            <div class="bg-gray-100 rounded-2xl rounded-tl-sm p-4">
+              <p class="text-gray-700">
+                您好！我是您的开源项目助手。请告诉我您想要解决的问题或场景，我将为您推荐合适的开源项目。
+              </p>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button onclick="sendSuggestion('我想找一个 React 状态管理库')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
+                React 状态管理库
+              </button>
+              <button onclick="sendSuggestion('推荐一些 Python Web 框架')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
+                Python Web 框架
+              </button>
+              <button onclick="sendSuggestion('有哪些好用的 Rust Web 框架？')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
+                Rust Web 框架
+              </button>
+              <button onclick="sendSuggestion('帮我找一个人脸识别开源项目')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
+                人脸识别项目
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 搜索输入框 -->
+      <div class="border-t border-gray-200 p-4">
+        <div class="max-w-3xl mx-auto">
+          <div class="relative bg-white border border-gray-300 rounded-2xl shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition">
+            <textarea id="chatInput" rows="1" placeholder="描述您的需求..." 
+              class="w-full px-4 py-3 pr-12 rounded-2xl resize-none focus:outline-none"
+              onkeydown="handleKeyDown(event)"
+              oninput="autoResize(this)"></textarea>
+            <button id="sendBtn" onclick="sendMessage()" 
+              class="absolute right-2 bottom-2 w-8 h-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+              <i class="fa-solid fa-paper-plane text-sm"></i>
+            </button>
+          </div>
+          <div class="flex items-center justify-between mt-2 px-1">
+            <p class="text-xs text-gray-400">AI 助手可帮助您找到合适的开源项目</p>
+            <p class="text-xs text-gray-400"><kbd class="px-1 py-0.5 bg-gray-100 rounded">Enter</kbd> 发送</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 结果预览弹窗 -->
+  <div id="resultModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-xl">
+      <div class="flex items-center justify-between p-4 border-b border-gray-200">
+        <h3 class="font-semibold">推荐项目</h3>
+        <button onclick="closeModal()" class="p-1 hover:bg-gray-100 rounded-lg">
+          <i class="fa-solid fa-xmark text-gray-500"></i>
+        </button>
+      </div>
+      <div class="p-4 max-h-[60vh] overflow-auto space-y-3">
+        <!-- 项目卡片 -->
+        <div class="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition cursor-pointer">
+          <div class="flex items-start gap-3">
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+              <i class="fa-brands fa-react text-xl"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold">facebook/react</h4>
+                <span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">健康度 92</span>
+              </div>
+              <p class="text-sm text-gray-500 mt-1">用于构建用户界面的 JavaScript 库</p>
+              <div class="flex items-center gap-2 mt-2">
+                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">TypeScript</span>
+                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">220k Stars</span>
+              </div>
+            </div>
+            <button onclick="importProject('facebook/react')" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              导入
+            </button>
+          </div>
+        </div>
+        
+        <div class="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition cursor-pointer">
+          <div class="flex items-start gap-3">
+            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
+              <i class="fa-solid fa-code text-xl"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold">pmndrs/zustand</h4>
+                <span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">健康度 95</span>
+              </div>
+              <p class="text-sm text-gray-500 mt-1">简洁、直观的状态管理解决方案</p>
+              <div class="flex items-center gap-2 mt-2">
+                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">TypeScript</span>
+                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">35k Stars</span>
+              </div>
+            </div>
+            <button onclick="importProject('pmndrs/zustand')" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              导入
+            </button>
+          </div>
+        </div>
+
+        <div class="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition cursor-pointer">
+          <div class="flex items-start gap-3">
+            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600">
+              <i class="fa-solid fa-layer-group text-xl"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold">tanstack/query</h4>
+                <span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">健康度 94</span>
+              </div>
+              <p class="text-sm text-gray-500 mt-1">强大的异步状态管理与数据获取库</p>
+              <div class="flex items-center gap-2 mt-2">
+                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">TypeScript</span>
+                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">42k Stars</span>
+              </div>
+            </div>
+            <button onclick="importProject('tanstack/query')" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              导入
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatContainer = document.getElementById('chatContainer');
+
+    // 自动调整输入框高度
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+      sendBtn.disabled = !el.value.trim();
+    }
+
+    // 处理键盘事件
+    function handleKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (chatInput.value.trim()) {
+          sendMessage();
+        }
+      }
+    }
+
+    // 发送消息
+    function sendMessage() {
+      const message = chatInput.value.trim();
+      if (!message) return;
+
+      // 添加用户消息
+      addMessage('user', message);
+      chatInput.value = '';
+      chatInput.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      // 模拟 AI 思考
+      showTypingIndicator();
+
+      // 模拟 AI 回复
+      setTimeout(() => {
+        hideTypingIndicator();
+        addMessage('assistant', getAIResponse(message));
+        // 显示结果弹窗
+        document.getElementById('resultModal').classList.remove('hidden');
+        document.getElementById('resultModal').classList.add('flex');
+      }, 1500);
+    }
+
+    // 添加消息到聊天区域
+    function addMessage(role, content) {
+      const isUser = role === 'user';
+      const avatar = isUser 
+        ? '<div class="w-8 h-8 bg-gray-200 rounded-lg flex-shrink-0 flex items-center justify-center"><i class="fa-solid fa-user text-gray-600 text-sm"></i></div>'
+        : '<div class="w-8 h-8 bg-blue-600 rounded-lg flex-shrink-0 flex items-center justify-center"><i class="fa-solid fa-robot text-white text-sm"></i></div>';
+
+      const messageHtml = `
+        <div class="flex gap-4 max-w-3xl mx-auto">
+          ${avatar}
+          <div class="flex-1">
+            <div class="${isUser ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm' : 'bg-gray-100 rounded-2xl rounded-tl-sm'} rounded-2xl ${isUser ? 'rounded-tr-sm' : 'rounded-tl-sm'} p-4">
+              <p class="${isUser ? '' : 'text-gray-700'}">${content}</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      chatContainer.insertAdjacentHTML('beforeend', messageHtml);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // 显示打字指示器
+    function showTypingIndicator() {
+      const typingHtml = `
+        <div id="typingIndicator" class="flex gap-4 max-w-3xl mx-auto">
+          <div class="w-8 h-8 bg-blue-600 rounded-lg flex-shrink-0 flex items-center justify-center">
+            <i class="fa-solid fa-robot text-white text-sm"></i>
+          </div>
+          <div class="flex-1">
+            <div class="bg-gray-100 rounded-2xl rounded-tl-sm p-4">
+              <div class="typing-indicator flex gap-1">
+                <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      chatContainer.insertAdjacentHTML('beforeend', typingHtml);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // 隐藏打字指示器
+    function hideTypingIndicator() {
+      const indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+    }
+
+    // 获取 AI 响应（模拟）
+    function getAIResponse(message) {
+      return `根据您的需求"${message}"，我为您找到了以下推荐项目。这些项目都是业界广泛使用、社区活跃且文档完善的开源项目。`;
+    }
+
+    // 发送建议
+    function sendSuggestion(text) {
+      chatInput.value = text;
+      sendBtn.disabled = false;
+      sendMessage();
+    }
+
+    // 关闭弹窗
+    function closeModal() {
+      document.getElementById('resultModal').classList.add('hidden');
+      document.getElementById('resultModal').classList.remove('flex');
+    }
+
+    // 导入项目（模拟）
+    function importProject(name) {
+      alert(`正在导入: ${name}`);
+      closeModal();
+    }
+
+    // 点击弹窗外部关闭
+    document.getElementById('resultModal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+  </script>
+</body>
+</html>

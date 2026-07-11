@@ -1,0 +1,50 @@
+# === Rust / Tauri ===
+os-compass/src-tauri/target/
+os-compass/src-tauri/gen/schemas/
+
+# === Node / Frontend ===
+os-compass/node_modules/
+os-compass/dist/
+
+# === Database & Sensitive Files ===
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.cryptokey
+.env
+.env.*
+config.json
+vault-index.json
+last-vault.txt
+
+# === Build Output ===
+Previous/
+Previous/logs/
+Previous/scripts/
+
+# === Crawler ===
+crawler/webtomd/.gopath/
+crawler/webtomd/test-output/
+crawler/webtomd/*.exe
+crawler/webtomd/web2md.exe
+
+# === Logs ===
+*.log
+logs/
+
+# === OS / Editor ===
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/*.log
+
+# === Session Temp Files ===
+session-*.md
+
+# === Tauri Build Artifacts ===
+*.msi
+*-setup.exe

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 插件管理器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <!-- 左侧功能菜单 -->
+    <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
+        <i class="fa-solid fa-compass text-xl"></i>
+      </div>
+      
+      <button onclick="location.href='import-form.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-plus text-lg mb-1"></i>
+        <span class="text-xs">导入</span>
+      </button>
+      
+      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
+        <span class="text-xs">搜索</span>
+      </button>
+      
+      <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+        <button onclick="location.href='main-interface.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-table-columns"></i>
+        </button>
+        <button onclick="location.href='list-view.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-list"></i>
+        </button>
+      </div>
+      
+      <button onclick="location.href='category-manager.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition mt-auto">
+        <i class="fa-solid fa-folder-tree text-lg mb-1"></i>
+        <span class="text-xs">分类</span>
+      </button>
+      
+      <div class="border-t border-gray-700 pt-4 mt-4 w-full flex flex-col items-center gap-3">
+        <button onclick="location.href='settings.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+        <!-- 当前页面高亮 -->
+        <button class="w-12 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-white">
+          <i class="fa-solid fa-plug"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col min-w-0">
+      <!-- 顶部栏 -->
+      <header class="bg-white border-b border-gray-200 px-6 py-4">
+        <div class="flex items-center gap-4">
+          <button onclick="location.href='main-interface.html'" class="text-gray-500 hover:text-gray-700">
+            <i class="fa-solid fa-arrow-left mr-2"></i>返回
+          </button>
+          <h1 class="text-xl font-bold">插件管理器</h1>
+        </div>
+      </header>
+      
+      <!-- 插件列表 -->
+      <div class="flex-1 overflow-auto p-6">
+        <div class="max-w-4xl">
+          <!-- 内置插件：情报雷达 -->
+          <div class="bg-white rounded-xl border border-gray-200 p-6 mb-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+                  <i class="fa-solid fa-satellite-dish text-xl"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-bold">情报雷达</h3>
+                    <span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">内置</span>
+                  </div>
+                  <p class="text-sm text-gray-500">自动跟踪已关注项目的 Release、Issue、Star 变化</p>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+              </label>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-100">
+              <div class="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span class="text-gray-500">订阅源</span>
+                  <p class="font-medium">GitHub Releases</p>
+                </div>
+                <div>
+                  <span class="text-gray-500">检查频率</span>
+                  <p class="font-medium">每天</p>
+                </div>
+                <div>
+                  <span class="text-gray-500">跟踪项目</span>
+                  <p class="font-medium">12 个</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 内置插件：意图搜索 -->
+          <div class="bg-white rounded-xl border border-gray-200 p-6 mb-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
+                  <i class="fa-solid fa-brain text-xl"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-bold">意图搜索</h3>
+                    <span class="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded">内置</span>
+                  </div>
+                  <p class="text-sm text-gray-500">基于自然语言需求，RAG 联网检索开源方案对比</p>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+              </label>
+            </div>
+          </div>
+          
+          <!-- 第三方插件 -->
+          <div class="bg-white rounded-xl border border-gray-200 p-6 opacity-60">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
+                  <i class="fa-solid fa-puzzle-piece text-xl"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-bold">第三方插件</h3>
+                    <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">二期</span>
+                  </div>
+                  <p class="text-sm text-gray-500">从插件市场安装扩展（预计二期开放）</p>
+                </div>
+              </div>
+              <span class="text-sm text-gray-400">敬请期待</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

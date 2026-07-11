@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 导入项目</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <!-- 左侧功能菜单 -->
+    <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
+        <i class="fa-solid fa-compass text-xl"></i>
+      </div>
+      
+      <!-- 当前页面高亮 -->
+      <button class="w-12 h-12 rounded-xl bg-blue-600 flex flex-col items-center justify-center text-white">
+        <i class="fa-solid fa-plus text-lg mb-1"></i>
+        <span class="text-xs">导入</span>
+      </button>
+      
+      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
+        <span class="text-xs">搜索</span>
+      </button>
+      
+      <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+        <button onclick="location.href='main-interface.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-table-columns"></i>
+        </button>
+        <button onclick="location.href='list-view.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-list"></i>
+        </button>
+      </div>
+      
+      <button onclick="location.href='category-manager.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition mt-auto">
+        <i class="fa-solid fa-folder-tree text-lg mb-1"></i>
+        <span class="text-xs">分类</span>
+      </button>
+      
+      <div class="border-t border-gray-700 pt-4 mt-4 w-full flex flex-col items-center gap-3">
+        <button onclick="location.href='settings.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+        <button onclick="location.href='plugin-manager.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-plug"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex items-center justify-center">
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-8 w-full max-w-xl">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold">导入项目</h1>
+          <button onclick="location.href='manual-add.html'" class="text-sm text-blue-600 hover:underline">
+            <i class="fa-solid fa-pen mr-1"></i>手动录入
+          </button>
+        </div>
+
+        <!-- 错误提示区域 -->
+        <div id="errorAlert" class="hidden mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div class="flex items-start gap-3">
+            <i class="fa-solid fa-circle-exclamation text-red-500 mt-0.5"></i>
+            <div>
+              <p id="errorTitle" class="font-medium text-red-700">导入失败</p>
+              <p id="errorMessage" class="text-sm text-red-600 mt-1">请检查网络连接后重试</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+
+          <div>
+            <label class="block text-sm font-medium mb-2">URL</label>
+            <input id="url" type="text" placeholder="https://github.com/facebook/react" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            <p id="url-hint" class="text-xs text-gray-500 mt-1">系统将自动识别 GitHub / Gitee 等平台</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">分类</label>
+            <select class="w-full px-3 py-2 border rounded-lg">
+              <option value="">自动选择（AI 判定）</option>
+              <option value="1">前端框架</option>
+              <option value="2">前端框架 / React 生态</option>
+              <option value="3">前端框架 / Vue 生态</option>
+              <option value="4">后端服务</option>
+              <option value="5">数据库</option>
+              <option value="6">AI / ML</option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">留空则由 AI 根据分类说明自动匹配</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="ai" class="rounded" checked>
+            <label for="ai" class="text-sm">导入后自动生成 AI 报告（包含健康度评分）</label>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="translate" class="rounded" checked>
+            <label for="translate" class="text-sm">自动翻译 README（如原文语言 ≠ 阅读语言）</label>
+          </div>
+          <div class="flex gap-3 pt-4">
+            <button onclick="location.href='main-interface.html'" class="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">取消</button>
+            <button onclick="handleImport()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">导入</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <script>
+    // 错误提示函数
+    function showError(title, message) {
+      const alert = document.getElementById('errorAlert');
+      const errorTitle = document.getElementById('errorTitle');
+      const errorMessage = document.getElementById('errorMessage');
+      errorTitle.textContent = title;
+      errorMessage.textContent = message;
+      alert.classList.remove('hidden');
+    }
+
+    function hideError() {
+      document.getElementById('errorAlert').classList.add('hidden');
+    }
+
+    // 导入处理函数
+    function handleImport() {
+      const url = document.getElementById('url').value.trim();
+      if (!url) {
+        showError('请输入 URL', '请输入要导入的项目地址');
+        return;
+      }
+      hideError();
+
+      // 模拟网络请求和错误处理
+      // 实际场景中根据平台识别结果调用对应 API
+      const isGitHub = url.includes('github.com');
+      const isGitee = url.includes('gitee.com');
+      const isNpm = url.includes('npmjs.com') || url.includes('@');
+
+      if (isGitHub || isGitee || isNpm) {
+        // 已知平台，正常导入流程
+        alert('正在识别平台...');
+        // 实际场景：调用后端 API 导入
+      } else {
+        // 未知平台，尝试爬虫
+        // 模拟爬虫失败场景
+        const crawlerEnabled = false; // 模拟爬虫未启用或失败
+        if (!crawlerEnabled) {
+          showError('导入失败：平台不支持且爬虫不可用', '系统无法识别该平台，且爬虫服务不可用。请尝试手动录入或检查爬虫服务配置。');
+          return;
+        }
+      }
+    }
+
+    // 输入时隐藏错误提示
+    document.getElementById('url').addEventListener('input', hideError);
+  </script>
+</body>
+</html>
