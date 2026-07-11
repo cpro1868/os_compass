@@ -1,0 +1,578 @@
+# M13: 系统插件管理 + 意图搜索 + 情报雷达 实施计划
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 实现二期 M13 功能：系统插件管理基础设施、信息源引擎、情报雷达插件（RSS/网站/TG 监控 + 收件箱）、意图搜索插件（三层优先级搜索 + ChatGPT 对话 UI）。
+
+**Architecture:** 三层架构——底层是插件管理基础设施（FeaturePlugin trait + PluginRegistry + PluginManager），中层是信息源引擎（SourceAdapter trait + 四种适配器 + LLM 解析流水线），上层是两个功能插件实现（RadarPlugin + SearchPlugin）。插件数据使用独立 .db 文件，跟随仓库隔离。前端新增雷达收件箱视图和意图搜索视图。
+
+**Tech Stack:** Rust + Tauri 2.0 + React 19 + TypeScript + Tailwind CSS 4 + SQLite + Tokio + feed-rs + reqwest
+
+## Global Constraints
+
+- **二期功能标记**：所有代码和文档必须标注为二期（Phase 2）功能
+- **Rust 编译检查**：`cargo test` 因 Tauri GUI 依赖无法在 CLI 运行，使用 `cargo check --lib` 验证编译
+- **构建命令**：`$env:PATH="D:\Soft\msys64\ucrt64\bin;D:\Soft\msys64\usr\bin;$env:PATH"; cd "G:\Projects\kimicode\os_compass\os-compass"; pnpm tauri build`
+- **前端测试**：`cd os-compass; pnpm test`（vitest）
+- **类型检查**：`cd os-compass; pnpm tsc --noEmit`
+- **提交前检查**：`cd G:\Projects\kimicode\os_compass; powershell -ExecutionPolicy Bypass -File scripts\pre-commit.ps1`
+- **插件数据库策略**：系统提供独立 .db API 和主库读写 API，插件开发者自行决定
+- **仓库隔离**：插件 .db 文件跟随仓库目录（与 os_compass.db 同级）
+- **暗色模式**：所有新增 UI 必须包含 `dark:` 样式
+- **i18n**：所有新增 UI 字符串必须使用 `useTranslation` + t() 调用
+- **不添加注释**：代码中不添加任何注释（除非用户要求）
+
+---
+
+## File Structure
+
+### Rust 后端新增文件
+
+| 文件 | 职责 |
+|------|------|
+| `src-tauri/src/feature_plugin.rs` | FeaturePlugin trait + FeaturePluginType 枚举 + PluginContext + PluginError |
+| `src-tauri/src/plugin_manager.rs` | PluginRegistry + PluginManager（注册、启停、配置管理） |
+| `src-tauri/src/source_engine/mod.rs` | SourceAdapter trait + RawContent + SourceError + get_adapter 工厂函数 |
+| `src-tauri/src/source_engine/rss_adapter.rs` | RssAdapter（feed-rs 解析 RSS/Atom） |
+| `src-tauri/src/source_engine/webcrawl_adapter.rs` | WebCrawlAdapter（调用 web2md HTTP API） |
+| `src-tauri/src/source_engine/telegram_adapter.rs` | TelegramAdapter（爬取 t.me/s/ 频道网页版） |
+| `src-tauri/src/source_engine/platform_preset.rs` | PlatformPresetAdapter（GitHub/Gitee Trending 预设 RSS） |
+| `src-tauri/src/source_engine/llm_parser.rs` | LLM 解析：原始内容 -> 结构化项目信息 |
+| `src-tauri/src/plugins/radar.rs` | RadarPlugin 实现（FeaturePlugin trait + 定时扫描 + 去重 + 通知） |
+| `src-tauri/src/plugins/search.rs` | SearchPlugin 实现（FeaturePlugin trait + 三层搜索） |
+| `src-tauri/src/commands/plugin_cmd.rs` | 插件管理 Tauri 命令（list/enable/config/db_path） |
+| `src-tauri/src/commands/radar_cmd.rs` | 情报雷达 Tauri 命令（信息源 CRUD + 收件箱 + 扫描 + 通知） |
+| `src-tauri/src/commands/search_cmd.rs` | 意图搜索 Tauri 命令（intent_search + 历史 + 信息源 CRUD + 导入） |
+
+### Rust 后端修改文件
+
+| 文件 | 修改内容 |
+|------|----------|
+| `src-tauri/src/lib.rs` | 注册新模块 + 启动时初始化 PluginManager + 注册新命令 |
+| `src-tauri/src/commands/mod.rs` | 添加 plugin_cmd/radar_cmd/search_cmd 模块声明 |
+| `src-tauri/src/plugins/mod.rs` | 添加 radar/search 模块声明 |
+| `src-tauri/src/db.rs` | 添加 feature_plugins 表初始化 + plugin_get_db_path 函数 |
+| `src-tauri/Cargo.toml` | 添加 feed-rs + async-trait 依赖 |
+
+### 前端新增文件
+
+| 文件 | 职责 |
+|------|------|
+| `src/api/plugin.ts` | 插件管理 API（list/enable/config） |
+| `src/api/radar.ts` | 情报雷达 API（信息源 CRUD + 收件箱 + 扫描） |
+| `src/api/search.ts` | 意图搜索 API（intent_search + 历史 + 信息源 + 导入） |
+| `src/components/RadarInbox.tsx` | 情报雷达收件箱视图 |
+| `src/components/SearchView.tsx` | 意图搜索对话式视图 |
+| `src/components/PluginSettings.tsx` | 插件管理设置面板（在 SettingsDialog 中新增标签页） |
+
+### 前端修改文件
+
+| 文件 | 修改内容 |
+|------|----------|
+| `src/App.tsx` | 新增 radar/search 视图模式 + 插件初始化 |
+| `src/components/Sidebar.tsx` | 新增雷达/搜索导航按钮 + 未读徽标 |
+| `src/components/SettingsDialog.tsx` | 新增插件管理标签页 |
+| `src/locales/zh.json` | 新增 radar/search/plugin 命名空间翻译键 |
+| `src/locales/en.json` | 同步英文翻译键 |
+
+---
+
+## Task 依赖关系
+
+```
+Task 1 (FeaturePlugin trait) ──> Task 3 (PluginManager) ──> Task 4 (插件命令)
+Task 2 (DB 表) ────────────────────────────────────────────> Task 4
+Task 3 ──> Task 5 (SourceAdapter) ──> Task 6 (LLM Parser) ──> Task 7 (RadarPlugin)  ──> Task 9 (RadarCmd)  ──> Task 11 (RadarInbox UI)
+Task 3 ──> Task 5 (SourceAdapter) ──> Task 6 (LLM Parser) ──> Task 8 (SearchPlugin) ──> Task 10 (SearchCmd) ──> Task 12 (SearchView UI)
+Task 4 ──> Task 13 (前端集成 + Sidebar + Settings)
+Task 11 + Task 12 ──> Task 13
+Task 13 ──> Task 14 (i18n + 暗色模式 + 构建)
+```
+
+---
+
+## Task 1: FeaturePlugin Trait + 类型定义
+
+**Files:**
+- Create: `os-compass/src-tauri/src/feature_plugin.rs`
+- Modify: `os-compass/src-tauri/src/lib.rs`（添加 `pub mod feature_plugin;`）
+- Modify: `os-compass/src-tauri/Cargo.toml`（添加 async-trait + feed-rs 依赖）
+
+**Interfaces:**
+- Produces: `FeaturePlugin` trait, `FeaturePluginType` enum, `PluginContext` struct, `PluginError` enum, `FeatureResult` struct, `ResultStatus` enum, `PluginInfo` struct
+
+- [ ] **Step 1: 添加 Cargo 依赖**
+
+在 `os-compass/src-tauri/Cargo.toml` 的 `[dependencies]` 末尾添加 `async-trait = "0.1"` 和 `feed-rs = "2"`。
+
+- [ ] **Step 2: 创建 feature_plugin.rs**
+
+创建文件，包含：`FeaturePluginType` 枚举（Radar/Search/Webhook/Importer，含 as_str/from_str 方法）、`ResultStatus` 枚举、`FeatureResult` 结构体、`PluginInfo` 结构体（Serialize）、`PluginContext` 结构体（含 vault_dir/config/llm_config + get_db_path 方法）、`PluginError` 枚举（NotSupported/NotFound/InitFailed/ExecutionFailed/DbError，实现 Display 和 Error）、`FeaturePlugin` async trait（id/name/plugin_type/version + init/on_enable/on_disable/execute 方法）。使用 `#[async_trait]` 宏。`PluginContext` 不直接持有 Database 连接，而是通过 `get_db_path(plugin_id)` 返回 .db 文件路径，插件自行打开连接。
+
+- [ ] **Step 3: 在 lib.rs 中注册模块**
+
+在 `os-compass/src-tauri/src/lib.rs` 模块声明区添加 `pub mod feature_plugin;`。
+
+- [ ] **Step 4: 编译检查**
+
+Run: `$env:PATH="D:\Soft\msys64\ucrt64\bin;D:\Soft\msys64\usr\bin;$env:PATH"; cd "G:\Projects\kimicode\os_compass\os-compass\src-tauri"; cargo check --lib 2>&1 | Select-String "error"`
+
+Expected: 无 error（可能有 unused warning）
+
+- [ ] **Step 5: 提交**
+
+```bash
+cd "G:\Projects\kimicode\os_compass"
+git add os-compass/src-tauri/src/feature_plugin.rs os-compass/src-tauri/src/lib.rs os-compass/src-tauri/Cargo.toml os-compass/src-tauri/Cargo.lock
+git commit -m "feat(M13): add FeaturePlugin trait and type definitions"
+```
+
+---
+
+## Task 2: feature_plugins 数据库表 + 插件 .db 路径管理
+
+**Files:**
+- Modify: `os-compass/src-tauri/src/db.rs`
+
+**Interfaces:**
+- Produces: `db::plugin_get_db_path(vault_dir, plugin_id)` 函数, `db::open_plugin_db(vault_dir, plugin_id)` 函数, feature_plugins 表在 INIT_SCHEMA_SQL 中创建
+
+- [ ] **Step 1: 在 INIT_SCHEMA_SQL 末尾添加 feature_plugins 表**
+
+在 `os-compass/src-tauri/src/db.rs` 的 `INIT_SCHEMA_SQL` 常量中，在 `DELETE FROM system_variables WHERE key LIKE 'settings.%';` 之后添加：`CREATE TABLE IF NOT EXISTS feature_plugins (...)`, `CREATE INDEX IF NOT EXISTS idx_feature_plugins_enabled ON feature_plugins(enabled);`, `INSERT OR IGNORE INTO feature_plugins (id, name, plugin_type, enabled, version) VALUES ('radar', '情报雷达', 'radar', 0, '1.0.0'), ('search', '意图搜索', 'search', 0, '1.0.0');`
+
+表结构：id TEXT PK, name TEXT NOT NULL, plugin_type TEXT NOT NULL, enabled INTEGER DEFAULT 0, config TEXT, version TEXT, created_at TEXT DEFAULT datetime, updated_at TEXT DEFAULT datetime。
+
+- [ ] **Step 2: 在 db.rs 末尾添加 plugin db 函数**
+
+添加 `pub fn plugin_get_db_path(vault_dir: &std::path::Path, plugin_id: &str) -> std::path::PathBuf`（返回 `vault_dir.join(format!("plugin_{}.db", plugin_id))`）和 `pub fn open_plugin_db(vault_dir: &std::path::Path, plugin_id: &str) -> Result<Connection, String>`（打开连接 + PRAGMA WAL + foreign_keys）。
+
+- [ ] **Step 3: 编译检查**
+
+Run: `cargo check --lib 2>&1 | Select-String "error"`
+
+Expected: 无 error
+
+- [ ] **Step 4: 提交**
+
+```bash
+git add os-compass/src-tauri/src/db.rs
+git commit -m "feat(M13): add feature_plugins table and plugin db path management"
+```
+
+---
+
+## Task 3: PluginManager + 占位插件
+
+**Files:**
+- Create: `os-compass/src-tauri/src/plugin_manager.rs`
+- Create: `os-compass/src-tauri/src/plugins/radar.rs`（占位）
+- Create: `os-compass/src-tauri/src/plugins/search.rs`（占位）
+- Modify: `os-compass/src-tauri/src/lib.rs`（添加 `pub mod plugin_manager;`）
+- Modify: `os-compass/src-tauri/src/plugins/mod.rs`（添加 `pub mod radar; pub mod search;`）
+
+**Interfaces:**
+- Consumes: `FeaturePlugin` trait from Task 1, `DATABASE` from db.rs
+- Produces: `PluginRegistry` struct, `PluginManager` struct, `PLUGIN_MANAGER` lazy_static global
+
+- [ ] **Step 1: 创建 plugin_manager.rs**
+
+包含：`PluginRegistry`（plugins: Vec\<Box\<dyn FeaturePlugin\>\>，方法 new/register/register_builtin/find/list）、`PluginManager`（持有 registry，方法 new/list_plugins/get_config/save_config/set_enabled/is_enabled，通过 DATABASE 全局访问主库 feature_plugins 表）、`PLUGIN_MANAGER` lazy_static Mutex。
+
+list_plugins 查询 feature_plugins 表获取 enabled/config/version，与 registry 中的 id/name/plugin_type 合并为 PluginInfo。
+
+- [ ] **Step 2: 创建占位 radar.rs 和 search.rs**
+
+两个占位插件实现 FeaturePlugin trait，所有方法返回 Ok(()) 或占位 FeatureResult，message 为 "not implemented"。RadarPlugin id="radar" name="情报雷达"，SearchPlugin id="search" name="意图搜索"。
+
+- [ ] **Step 3: 注册模块**
+
+lib.rs 添加 `pub mod plugin_manager;`，plugins/mod.rs 添加 `pub mod radar; pub mod search;`。
+
+- [ ] **Step 4: 编译检查**
+
+Run: `cargo check --lib 2>&1 | Select-String "error"`
+
+Expected: 无 error
+
+- [ ] **Step 5: 提交**
+
+```bash
+git add os-compass/src-tauri/src/plugin_manager.rs os-compass/src-tauri/src/plugins/radar.rs os-compass/src-tauri/src/plugins/search.rs os-compass/src-tauri/src/plugins/mod.rs os-compass/src-tauri/src/lib.rs
+git commit -m "feat(M13): add PluginManager + placeholder RadarPlugin and SearchPlugin"
+```
+
+---
+
+## Task 4: 插件管理 Tauri 命令
+
+**Files:**
+- Create: `os-compass/src-tauri/src/commands/plugin_cmd.rs`
+- Modify: `os-compass/src-tauri/src/commands/mod.rs`
+- Modify: `os-compass/src-tauri/src/lib.rs`（注册命令）
+
+**Interfaces:**
+- Produces: `list_feature_plugins`, `set_plugin_enabled`, `get_plugin_config`, `save_plugin_config`, `plugin_get_db_path_cmd` Tauri 命令
+
+- [ ] **Step 1: 创建 plugin_cmd.rs**
+
+5 个 #[tauri::command] 函数：
+- `list_feature_plugins() -> Result<Vec<PluginInfo>, String>`：通过 PLUGIN_MANAGER.list_plugins()
+- `set_plugin_enabled(plugin_id: String, enabled: bool) -> Result<(), String>`：通过 PLUGIN_MANAGER.set_enabled()
+- `get_plugin_config(plugin_id: String) -> Result<Option<String>, String>`
+- `save_plugin_config(plugin_id: String, config: String) -> Result<(), String>`
+- `plugin_get_db_path_cmd(plugin_id: String) -> Result<String, String>`：通过 CURRENT_VAULT_CONFIG 获取 vault 路径，调用 db::plugin_get_db_path
+
+- [ ] **Step 2: 注册模块和命令**
+
+commands/mod.rs 添加 `pub mod plugin_cmd; pub use plugin_cmd::*;`。lib.rs invoke_handler 添加 5 个命令注册。
+
+- [ ] **Step 3: 编译检查 + 提交**
+
+```bash
+cargo check --lib 2>&1 | Select-String "error"
+git add os-compass/src-tauri/src/commands/plugin_cmd.rs os-compass/src-tauri/src/commands/mod.rs os-compass/src-tauri/src/lib.rs
+git commit -m "feat(M13): add plugin management Tauri commands"
+```
+
+---
+
+## Task 5: 信息源引擎 - SourceAdapter Trait + 四种适配器
+
+**Files:**
+- Create: `os-compass/src-tauri/src/source_engine/mod.rs`
+- Create: `os-compass/src-tauri/src/source_engine/rss_adapter.rs`
+- Create: `os-compass/src-tauri/src/source_engine/webcrawl_adapter.rs`
+- Create: `os-compass/src-tauri/src/source_engine/telegram_adapter.rs`
+- Create: `os-compass/src-tauri/src/source_engine/platform_preset.rs`
+- Modify: `os-compass/src-tauri/src/lib.rs`（添加 `pub mod source_engine;`）
+
+**Interfaces:**
+- Produces: `SourceAdapter` trait, `RawContent` struct, `SourceError`, `get_adapter(source_type)` 工厂函数, `build_client(proxy)` 工具函数, 四种适配器 struct
+
+- [ ] **Step 1: 创建 source_engine/mod.rs**
+
+包含：`RawContent` 结构体（title/url/content/published_at）、`SourceError`（实现 Display/Error/From\<String\>/From\<reqwest::Error\>）、`SourceAdapter` async trait（adapter_type + fetch(url, proxy)）、`get_adapter(source_type) -> Box<dyn SourceAdapter>` 工厂函数（匹配 rss/atom/web_crawl/telegram/platform_preset）、`build_client(proxy: Option<&str>) -> reqwest::Client` 工具函数（含代理支持和 30s 超时）。
+
+- [ ] **Step 2: 创建 rss_adapter.rs**
+
+`RssAdapter` 实现 SourceAdapter。fetch 方法：用 build_client 发 GET 请求获取 RSS body，用 `feed_rs::parser::parse()` 解析，遍历 feed.entries 提取 title/links/content/published/updated，构建 RawContent 列表。跳过无 link 的条目。
+
+- [ ] **Step 3: 创建 webcrawl_adapter.rs**
+
+`WebCrawlAdapter` 实现 SourceAdapter。fetch 方法：从 settings::get_settings() 获取 crawler_api_url（默认 http://localhost:8080/crawl），POST JSON `{ "url": url }` 到爬虫服务，解析返回的 JSON 中的 markdown 字段，构建单个 RawContent。
+
+- [ ] **Step 4: 创建 telegram_adapter.rs**
+
+`TelegramAdapter` 实现 SourceAdapter。fetch 方法：将 URL 转换为 t.me/s/{channel} 格式，通过 web2md 爬虫服务获取页面 Markdown，逐行扫描提取包含 github.com/ 或 gitee.com/ 的链接，每条链接构建一个 RawContent。
+
+- [ ] **Step 5: 创建 platform_preset.rs**
+
+`PlatformPresetAdapter` 实现 SourceAdapter。内部维护预设 RSS URL 映射（如 github_trending -> "https://rsshub.app/github/trending/daily"），fetch 时根据 URL 中的 platform 标识查找预设 URL，然后委托 RssAdapter.fetch() 解析。
+
+- [ ] **Step 6: 注册模块 + 编译 + 提交**
+
+lib.rs 添加 `pub mod source_engine;`。注意 mod.rs 中声明所有子模块。编译检查通过后提交。
+
+```bash
+git add os-compass/src-tauri/src/source_engine/ os-compass/src-tauri/src/lib.rs
+git commit -m "feat(M13): add source engine with 4 adapters (RSS/WebCrawl/Telegram/PlatformPreset)"
+```
+
+---
+
+## Task 6: LLM 解析器
+
+**Files:**
+- Create: `os-compass/src-tauri/src/source_engine/llm_parser.rs`
+
+**Interfaces:**
+- Consumes: `RawContent` from Task 5, `crate::llm` for LLM API calls
+- Produces: `ParsedProjectInfo` struct, `parse_content_with_llm(content, settings) -> Result<Vec<ParsedProjectInfo>, String>`
+
+- [ ] **Step 1: 创建 llm_parser.rs**
+
+`ParsedProjectInfo` 结构体（project_name/project_url/description/language/keywords: Vec\<String\>）。`parse_content_with_llm(raw_content: &RawContent, settings: &AppSettings) -> Result<Vec<ParsedProjectInfo>, String>` 函数：构建 prompt（按详细设计说明书 §4.1.8.4 的模板），调用 crate::llm 的 chat_json 方法，解析 LLM 返回的 JSON 为 Vec\<ParsedProjectInfo\>。如果 LLM 未配置或调用失败，返回空 Vec（降级处理，不阻断流程）。
+
+- [ ] **Step 2: 编译 + 提交**
+
+```bash
+cargo check --lib 2>&1 | Select-String "error"
+git add os-compass/src-tauri/src/source_engine/llm_parser.rs
+git commit -m "feat(M13): add LLM parser for source content extraction"
+```
+
+---
+
+## Task 7: RadarPlugin 完整实现
+
+**Files:**
+- Modify: `os-compass/src-tauri/src/plugins/radar.rs`（替换占位实现）
+- Create: `os-compass/src-tauri/src/commands/radar_cmd.rs`（雷达命令）
+
+**Interfaces:**
+- Consumes: FeaturePlugin trait, SourceAdapter, LLM parser, db::open_plugin_db
+- Produces: RadarPlugin 完整实现 + radar_sources/radar_items/radar_blacklist 表初始化 + 雷达 Tauri 命令
+
+- [ ] **Step 1: 实现雷达插件独立库表初始化**
+
+在 radar.rs 中添加 `init_radar_db(vault_dir)` 函数：打开 plugin_radar.db，创建 radar_sources/radar_items/radar_blacklist 三张表（SQL 按数据库设计说明书 §9.2.1），创建索引。在 FeaturePlugin::init 中调用。
+
+- [ ] **Step 2: 实现 RadarPlugin 核心逻辑**
+
+RadarPlugin 持有 `scan_task: Mutex<Option<JoinHandle<()>>>`。on_enable：调用 init_radar_db，启动 tokio::spawn 定时扫描循环。on_disable：abort 扫描任务。execute：手动触发 radar_scan_all。
+
+`radar_scan_all(context)` 函数：查询所有 enabled 的 radar_sources，对每个源调用 get_adapter(source_type).fetch(url, proxy)，获取 RawContent 列表，对每条内容计算 url_hash（sha256），查重，新条目调用 parse_content_with_llm 提取结构化信息，存入 radar_items 表（status='unread'），通过 Tauri notification API 推送通知。返回 {scanned, new_items, errors} 统计。
+
+- [ ] **Step 3: 创建 radar_cmd.rs**
+
+Tauri 命令：
+- `list_radar_sources() -> Result<Vec<RadarSource>, String>`
+- `add_radar_source(name, source_type, url, platform?, check_interval?) -> Result<RadarSource, String>`
+- `update_radar_source(id, name?, url?, enabled?, check_interval?) -> Result<(), String>`
+- `delete_radar_source(id) -> Result<(), String>`
+- `get_radar_items(status?, limit?) -> Result<Vec<RadarItem>, String>`
+- `radar_item_action(item_id, action: 'import'|'blacklist'|'ignore', category_id?) -> Result<{projectId?}, String>`
+- `trigger_radar_scan(source_id?) -> Result<{scanned, newItems, errors}, String>`
+- `get_radar_unread_count() -> Result<i64, String>`
+- `clear_radar_cache(before_days?) -> Result<i64, String>`
+
+所有命令通过 CURRENT_VAULT_CONFIG 获取 vault 路径，open_plugin_db 打开 plugin_radar.db 操作。radar_item_action 的 import 动作内部调用 commands::import_project 导入主库。
+
+- [ ] **Step 4: 注册命令**
+
+commands/mod.rs 添加 radar_cmd 模块。lib.rs invoke_handler 添加所有雷达命令注册。
+
+- [ ] **Step 5: 编译 + 提交**
+
+```bash
+cargo check --lib 2>&1 | Select-String "error"
+git add os-compass/src-tauri/src/plugins/radar.rs os-compass/src-tauri/src/commands/radar_cmd.rs os-compass/src-tauri/src/commands/mod.rs os-compass/src-tauri/src/lib.rs
+git commit -m "feat(M13): implement RadarPlugin with scan loop, inbox, and Tauri commands"
+```
+
+---
+
+## Task 8: SearchPlugin 完整实现
+
+**Files:**
+- Modify: `os-compass/src-tauri/src/plugins/search.rs`（替换占位实现）
+- Create: `os-compass/src-tauri/src/commands/search_cmd.rs`
+
+**Interfaces:**
+- Consumes: FeaturePlugin trait, SourceAdapter, LLM parser, db
+- Produces: SearchPlugin 完整实现 + search_sources/search_cache/search_history 表 + 搜索 Tauri 命令
+
+- [ ] **Step 1: 实现搜索插件独立库表初始化**
+
+在 search.rs 中添加 `init_search_db(vault_dir)` 函数：打开 plugin_search.db，创建 search_sources/search_cache/search_history 三张表（SQL 按数据库设计说明书 §9.2.2），创建索引。在 FeaturePlugin::init 中调用。
+
+- [ ] **Step 2: 实现 SearchPlugin 核心逻辑**
+
+`three_layer_search(query, context)` 函数：
+1. 调用 LLM 提取关键词（构建 prompt，调用 crate::llm，解析返回的关键词列表）
+2. 第一层：在主库 projects 表中按关键词 LIKE 搜索，构建 ProjectMatch（source='local'）
+3. 如果本地结果 < 5，第二层：在 plugin_search.db 的 search_cache 表中按关键词搜索，构建 ProjectMatch（source='cache'）
+4. 如果总结果 < 5，第三层：根据用户配置的联网策略调用 web_search（GitHubSearch/Tavily/Perplexity/WebCrawl/Disabled），构建 ProjectMatch（source='web'）
+5. 合并三层结果，按 match_score 排序，保存搜索历史
+
+`WebSearchStrategy` 枚举 + `web_search(query, strategy)` 函数：GitHub Search API 方案用 reqwest 调用 `https://api.github.com/search/repositories?q={query}`，Tavily 方案调用 Tavily API，WebCrawl 方案调用 web2md 爬取搜索引擎，Disabled 返回空 Vec。
+
+- [ ] **Step 3: 创建 search_cmd.rs**
+
+Tauri 命令：
+- `intent_search(query, conversation_id?) -> Result<SearchResult, String>`
+- `get_search_history(limit?) -> Result<Vec<SearchHistoryItem>, String>`
+- `clear_search_history() -> Result<(), String>`
+- `list_search_sources() / add_search_source(...) / update_search_source(...) / delete_search_source(...)`
+- `refresh_search_cache(source_id?) -> Result<i64, String>`
+- `import_search_result(project_url, project_name, category_id?) -> Result<{projectId}, String>`
+
+- [ ] **Step 4: 注册命令**
+
+commands/mod.rs 添加 search_cmd 模块。lib.rs invoke_handler 添加所有搜索命令注册。
+
+- [ ] **Step 5: 编译 + 提交**
+
+```bash
+cargo check --lib 2>&1 | Select-String "error"
+git add os-compass/src-tauri/src/plugins/search.rs os-compass/src-tauri/src/commands/search_cmd.rs os-compass/src-tauri/src/commands/mod.rs os-compass/src-tauri/src/lib.rs
+git commit -m "feat(M13): implement SearchPlugin with 3-layer search and Tauri commands"
+```
+
+---
+
+## Task 9: 启动时初始化插件 + 前端 API 层
+
+**Files:**
+- Modify: `os-compass/src-tauri/src/lib.rs`（setup 中初始化插件）
+- Create: `os-compass/src/api/plugin.ts`
+- Create: `os-compass/src/api/radar.ts`
+- Create: `os-compass/src/api/search.ts`
+
+- [ ] **Step 1: 在 lib.rs setup 中添加插件初始化**
+
+在 `cleanup_undecryptable_secrets()` 调用之后，添加：获取 PLUGIN_MANAGER 锁，遍历所有已注册插件，对每个 enabled 的插件调用 on_enable 启动后台任务。用 tokio::spawn 包装 async 调用。
+
+- [ ] **Step 2: 创建前端 API 文件**
+
+`src/api/plugin.ts`：listFeaturePlugins/setPluginEnabled/getPluginConfig/savePluginConfig/pluginGetDbPath 函数，调用对应 Tauri 命令。导出 FeaturePluginInfo 类型。
+
+`src/api/radar.ts`：listRadarSources/addRadarSource/updateRadarSource/deleteRadarSource/getRadarItems/radarItemAction/triggerRadarScan/getRadarUnreadCount/clearRadarCache 函数。导出 RadarSource/RadarItem 类型。
+
+`src/api/search.ts`：intentSearch/getSearchHistory/clearSearchHistory/listSearchSources/addSearchSource/updateSearchSource/deleteSearchSource/refreshSearchCache/importSearchResult 函数。导出 SearchResult/ProjectMatch/SearchSource 类型。
+
+- [ ] **Step 3: 类型检查 + 提交**
+
+```bash
+cd os-compass; pnpm tsc --noEmit 2>&1 | Select-String "error TS"
+git add os-compass/src-tauri/src/lib.rs os-compass/src/api/plugin.ts os-compass/src/api/radar.ts os-compass/src/api/search.ts
+git commit -m "feat(M13): add plugin init on startup + frontend API layer"
+```
+
+---
+
+## Task 10: RadarInbox 前端视图
+
+**Files:**
+- Create: `os-compass/src/components/RadarInbox.tsx`
+
+- [ ] **Step 1: 创建 RadarInbox 组件**
+
+参考 `design-system/public/radar-inbox.html` 原型实现。暗色主题（bg-gray-900/bg-gray-800）。使用 useTranslation。布局：顶部栏（标题 + "立即扫描"按钮 + "信息源管理"按钮），主内容区（筛选标签：全部/未读/已导入/不感兴趣 + 条目列表），右侧边栏（信息源列表 + 添加按钮 + 启用/禁用 toggle）。
+
+组件状态：sources 列表、items 列表、activeTab、scanning 状态。useEffect 加载数据。条目操作（导入/不感兴趣）调用 radar API。扫描按钮调用 triggerRadarScan。未读数量通过 getRadarUnreadCount 获取。
+
+所有 className 包含 dark: 变体。所有文本用 t() 调用。
+
+- [ ] **Step 2: 类型检查 + 提交**
+
+```bash
+cd os-compass; pnpm tsc --noEmit 2>&1 | Select-String "error TS"
+git add os-compass/src/components/RadarInbox.tsx
+git commit -m "feat(M13): add RadarInbox frontend component"
+```
+
+---
+
+## Task 11: SearchView 前端视图
+
+**Files:**
+- Create: `os-compass/src/components/SearchView.tsx`
+
+- [ ] **Step 1: 创建 SearchView 组件**
+
+参考 `design-system/public/search-view.html` 原型实现。暗色主题。ChatGPT 风格对话界面。使用 useTranslation。布局：主聊天区（消息列表 + 输入框），右侧边栏（搜索历史 + 新建搜索按钮）。
+
+组件状态：messages 列表、input 文本、loading 状态、历史列表。sendMessage 调用 intentSearch API，显示打字指示器，返回结果后渲染结果卡片（含来源徽标：蓝色"本地库"/绿色"缓存"/紫色"联网"）。结果卡片"导入"按钮调用 importSearchResult。搜索历史从 getSearchHistory 加载，点击历史项重新搜索。
+
+所有 className 包含 dark: 变体。所有文本用 t() 调用。
+
+- [ ] **Step 2: 类型检查 + 提交**
+
+```bash
+cd os-compass; pnpm tsc --noEmit 2>&1 | Select-String "error TS"
+git add os-compass/src/components/SearchView.tsx
+git commit -m "feat(M13): add SearchView frontend component"
+```
+
+---
+
+## Task 12: 前端集成 - Sidebar + App + SettingsDialog
+
+**Files:**
+- Modify: `os-compass/src/components/Sidebar.tsx`
+- Modify: `os-compass/src/App.tsx`
+- Modify: `os-compass/src/components/SettingsDialog.tsx`
+
+- [ ] **Step 1: Sidebar 添加雷达和搜索导航按钮**
+
+在 Sidebar.tsx 的视图切换区域，添加两个新按钮：雷达（satellite-dish 图标）和搜索（magnifying-glass 图标已有但当前未连接）。雷达按钮显示未读徽标（红点 + 数字），通过 getRadarUnreadCount API 获取。新增 onViewChange 支持 "radar" 和 "search" 视图模式。
+
+- [ ] **Step 2: App.tsx 集成新视图**
+
+ViewMode 类型添加 "radar" | "search"。import RadarInbox 和 SearchView。在视图渲染区域添加条件渲染。搜索按钮点击切换到 search 视图。
+
+- [ ] **Step 3: SettingsDialog 添加插件管理标签页**
+
+新增 "plugins" 标签页。显示插件列表（从 listFeaturePlugins 获取），每个插件显示名称、类型、版本、启用/禁用 toggle。toggle 切换调用 setPluginEnabled。插件配置区域（如雷达的检测频率、TTL 开关等）通过 getPluginConfig/savePluginConfig 管理。
+
+- [ ] **Step 4: 类型检查 + 提交**
+
+```bash
+cd os-compass; pnpm tsc --noEmit 2>&1 | Select-String "error TS"
+git add os-compass/src/components/Sidebar.tsx os-compass/src/App.tsx os-compass/src/components/SettingsDialog.tsx
+git commit -m "feat(M13): integrate radar and search views into app navigation"
+```
+
+---
+
+## Task 13: i18n + 暗色模式 + 构建验证
+
+**Files:**
+- Modify: `os-compass/src/locales/zh.json`
+- Modify: `os-compass/src/locales/en.json`
+
+- [ ] **Step 1: 添加翻译键**
+
+在 zh.json 和 en.json 中添加以下命名空间：
+- `plugin`：title/plugins/enable/disable/config/radarSettings/searchSettings/checkInterval/ttlEnabled/ttlDays/webSearchStrategy 等
+- `radar`：title/subtitle/scanNow/sourceManage/sources/addSource/sourceName/sourceUrl/sourceType/rss/webCrawl/telegram/platformPreset/all/unread/imported/ignored/import/notInterested/health/clearCache/language/publishedAt/fetchAgo 等
+- `search`：title/subtitle/welcomeMessage/suggestions/inputPlaceholder/send/history/newSearch/local/cache/web/import/imported/matchScore/noResults/searching/aiAssistant 等
+
+- [ ] **Step 2: 运行 i18n 一致性测试**
+
+```bash
+cd os-compass; pnpm test 2>&1 | Select-Object -Last 10
+```
+
+Expected: i18n.test.ts 的 zh/en 键一致性测试通过。如果失败，根据错误信息修复缺失的键。
+
+- [ ] **Step 3: 运行类型检查**
+
+```bash
+cd os-compass; pnpm tsc --noEmit 2>&1 | Select-String "error TS"
+```
+
+Expected: 无 error
+
+- [ ] **Step 4: 构建验证**
+
+```bash
+$env:PATH="D:\Soft\msys64\ucrt64\bin;D:\Soft\msys64\usr\bin;$env:PATH"; cd "G:\Projects\kimicode\os_compass\os-compass"; pnpm tauri build 2>&1 | Select-String "error\[E|Finished|Built application"
+```
+
+Expected: Built application 成功
+
+- [ ] **Step 5: 复制到 Previous + 提交**
+
+```bash
+Copy-Item "os-compass\src-tauri\target\release\os-compass.exe" "Previous\os-compass.exe" -Force
+Copy-Item "os-compass\src-tauri\target\release\WebView2Loader.dll" "Previous\WebView2Loader.dll" -Force
+git add os-compass/src/locales/zh.json os-compass/src/locales/en.json
+git commit -m "feat(M13): add i18n keys for radar/search/plugin + build verification"
+```
+
+---
+
+## Self-Review Checklist
+
+实现完成后，对照以下检查项验证：
+
+- [ ] feature_plugins 表在主库创建，预设 radar/search 两条记录，enabled=0
+- [ ] plugin_radar.db 和 plugin_search.db 跟随仓库目录，切换仓库时加载对应数据
+- [ ] PluginManager 启动时初始化，enabled 的插件自动启动后台任务
+- [ ] 四种信息源适配器（RSS/WebCrawl/Telegram/PlatformPreset）都能 fetch 并返回 RawContent
+- [ ] LLM 解析器能从原始内容提取项目名称/URL/描述/语言/关键词
+- [ ] RadarPlugin 定时扫描循环按 check_interval 运行，发现新条目时推送通知
+- [ ] radar_items URL 去重（url_hash UNIQUE），同一项目多来源合并 source_urls
+- [ ] 收件箱三种操作（import/blacklist/ignore）正确更新 status
+- [ ] SearchPlugin 三层搜索依次执行：本地库 -> 缓存 -> 联网
+- [ ] 联网搜索策略用户可选（GitHubSearch/Tavily/Perplexity/WebCrawl/Disabled）
+- [ ] 搜索历史持久化存储，右侧边栏显示
+- [ ] RadarInbox 视图信息源在右侧，暗色主题，i18n 全覆盖
+- [ ] SearchView 视图搜索历史在右侧，暗色主题，ChatGPT 风格，来源徽标
+- [ ] Sidebar 雷达按钮显示未读徽标
+- [ ] SettingsDialog 插件管理标签页可启用/禁用插件、配置参数
+- [ ] zh.json 和 en.json 键一致（i18n 测试通过）
+- [ ] release 构建成功
