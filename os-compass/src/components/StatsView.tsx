@@ -49,8 +49,8 @@ export function StatsView({ onBack }: StatsViewProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-2"></div>
-          <p className="text-sm text-gray-500">{t("stats.loading")}</p>
+          <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 dark:border-blue-400 mb-2"></div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t("stats.loading")}</p>
         </div>
       </div>
     );
@@ -71,12 +71,12 @@ export function StatsView({ onBack }: StatsViewProps) {
   if (stats.total_projects === 0) {
     return (
       <div className="flex flex-col h-full">
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center gap-4">
-            <button onClick={onBack} className="text-gray-500 hover:text-gray-700">
+            <button onClick={onBack} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
               <i className="fa-solid fa-arrow-left mr-2"></i>{t("stats.return")}
             </button>
-            <h1 className="text-xl font-bold">{t("stats.title")}</h1>
+            <h1 className="text-xl font-bold dark:text-gray-100">{t("stats.title")}</h1>
           </div>
         </header>
         <div className="flex-1 flex items-center justify-center">
@@ -100,72 +100,72 @@ export function StatsView({ onBack }: StatsViewProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="text-gray-500 hover:text-gray-700">
+          <button onClick={onBack} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
             <i className="fa-solid fa-arrow-left mr-2"></i>{t("stats.return")}
           </button>
-          <h1 className="text-xl font-bold">{t("stats.title")}</h1>
-          <span className="text-sm text-gray-500">{t("stats.totalProjects", { count: stats.total_projects })}</span>
+          <h1 className="text-xl font-bold dark:text-gray-100">{t("stats.title")}</h1>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{t("stats.totalProjects", { count: stats.total_projects })}</span>
         </div>
       </header>
 
       <div className="flex-1 overflow-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 状态分布 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-lg font-bold mb-4">
-              <i className="fa-solid fa-chart-bar mr-2 text-blue-600"></i>{t("stats.statusDist")}
+              <i className="fa-solid fa-chart-bar mr-2 text-blue-600 dark:text-blue-400"></i>{t("stats.statusDist")}
             </h2>
             <div className="space-y-3">
               {stats.status_distribution.map((item) => (
                 <div key={item.status}>
                   <div className="flex justify-between text-sm mb-1">
                     <span>{STATUS_LABELS[item.status] || item.status}</span>
-                    <span className="text-gray-500">{item.count}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{item.count}</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-3">
+                  <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3">
                     <div
-                      className={`${STATUS_COLORS[item.status] || "bg-gray-400"} h-3 rounded-full transition-all`}
+                      className={`${STATUS_COLORS[item.status] || "bg-gray-400 dark:bg-gray-500"} h-3 rounded-full transition-all`}
                       style={{ width: `${(item.count / maxStatusCount) * 100}%` }}
                     />
                   </div>
                 </div>
               ))}
               {stats.status_distribution.length === 0 && (
-                <p className="text-gray-400 text-sm">{t("stats.noData")}</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm">{t("stats.noData")}</p>
               )}
             </div>
           </div>
 
           {/* 健康度分布 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-lg font-bold mb-4">
-              <i className="fa-solid fa-heart-pulse mr-2 text-green-600"></i>{t("stats.healthDist")}
+              <i className="fa-solid fa-heart-pulse mr-2 text-green-600 dark:text-green-400"></i>{t("stats.healthDist")}
             </h2>
             <div className="space-y-3">
               {stats.health_distribution.map((item, i) => (
                 <div key={item.label}>
                   <div className="flex justify-between text-sm mb-1">
                     <span>{item.label}</span>
-                    <span className="text-gray-500">{item.count}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{item.count}</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-3">
+                  <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3">
                     <div
-                      className={`${HEALTH_COLORS[i] || "bg-gray-400"} h-3 rounded-full transition-all`}
+                      className={`${HEALTH_COLORS[i] || "bg-gray-400 dark:bg-gray-500"} h-3 rounded-full transition-all`}
                       style={{ width: `${(item.count / maxHealthCount) * 100}%` }}
                     />
                   </div>
                 </div>
               ))}
               {stats.health_distribution.length === 0 && (
-                <p className="text-gray-400 text-sm">{t("stats.noRatingData")}</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm">{t("stats.noRatingData")}</p>
               )}
             </div>
           </div>
 
           {/* 分类分布 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-lg font-bold mb-4">
               <i className="fa-solid fa-folder-tree mr-2 text-indigo-600"></i>{t("stats.categoryDist")}
             </h2>
@@ -174,9 +174,9 @@ export function StatsView({ onBack }: StatsViewProps) {
                 <div key={item.category_id ?? "none"}>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="truncate">{item.category_name}</span>
-                    <span className="text-gray-500">{item.count}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{item.count}</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-3">
+                  <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3">
                     <div
                       className="bg-indigo-500 h-3 rounded-full transition-all"
                       style={{ width: `${(item.count / maxCategoryCount) * 100}%` }}
@@ -185,13 +185,13 @@ export function StatsView({ onBack }: StatsViewProps) {
                 </div>
               ))}
               {stats.category_distribution.length === 0 && (
-                <p className="text-gray-400 text-sm">{t("stats.noData")}</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm">{t("stats.noData")}</p>
               )}
             </div>
           </div>
 
           {/* 语言分布 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-lg font-bold mb-4">
               <i className="fa-solid fa-code mr-2 text-orange-600"></i>{t("stats.languageDist")}
             </h2>
@@ -199,23 +199,23 @@ export function StatsView({ onBack }: StatsViewProps) {
               {stats.language_distribution.map((item) => (
                 <div key={item.language} className="flex items-center gap-3">
                   <span className="text-sm w-32 truncate">{item.language}</span>
-                  <div className="flex-1 bg-gray-100 rounded-full h-2.5">
+                  <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2.5">
                     <div
                       className="bg-orange-500 h-2.5 rounded-full transition-all"
                       style={{ width: `${(item.count / maxLangCount) * 100}%` }}
                     />
                   </div>
-                  <span className="text-xs text-gray-500 w-8 text-right">{item.count}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 w-8 text-right">{item.count}</span>
                 </div>
               ))}
               {stats.language_distribution.length === 0 && (
-                <p className="text-gray-400 text-sm">{t("stats.noData")}</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm">{t("stats.noData")}</p>
               )}
             </div>
           </div>
 
           {/* 标签分布 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 lg:col-span-2">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 lg:col-span-2">
             <h2 className="text-lg font-bold mb-4">
               <i className="fa-solid fa-tags mr-2 text-purple-600"></i>{t("stats.tagDist")}
             </h2>
@@ -225,15 +225,15 @@ export function StatsView({ onBack }: StatsViewProps) {
                 return (
                   <span
                     key={item.tag_id}
-                    className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full"
+                    className="px-3 py-1.5 bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 rounded-full"
                     style={{ fontSize: `${size}rem` }}
                   >
-                    {item.tag_name} <span className="text-purple-400">({item.count})</span>
+                    {item.tag_name} <span className="text-purple-400 dark:text-purple-500">({item.count})</span>
                   </span>
                 );
               })}
               {stats.tag_distribution.length === 0 && (
-                <p className="text-gray-400 text-sm">{t("stats.noTagData")}</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm">{t("stats.noTagData")}</p>
               )}
             </div>
           </div>

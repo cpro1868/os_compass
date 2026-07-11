@@ -154,7 +154,7 @@ export function ReleasesPanel({ project }: { project: Project }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+        <div className="animate-spin h-8 w-8 border-4 border-blue-500 dark:border-blue-400 border-t-transparent rounded-full"></div>
       </div>
     );
   }
@@ -164,23 +164,23 @@ export function ReleasesPanel({ project }: { project: Project }) {
       <div className="max-w-4xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">
-            <i className="fa-solid fa-tag mr-2 text-purple-600"></i>Releases
+            <i className="fa-solid fa-tag mr-2 text-purple-600 dark:text-purple-400"></i>Releases
           </h2>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-75"
+            className="px-3 py-1.5 text-sm bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 flex items-center gap-2 disabled:opacity-75"
           >
             <i className={`fa-solid fa-rotate ${refreshing ? "animate-spin" : ""}`}></i>
             {t("releases.refresh")}
           </button>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i className="fa-solid fa-inbox text-3xl text-gray-400"></i>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i className="fa-solid fa-inbox text-3xl text-gray-400 dark:text-gray-500"></i>
           </div>
-          <p className="text-gray-500">{t("releases.noReleases")}</p>
-          <p className="text-xs text-gray-400 mt-1">{t("releases.noReleasesHint")}</p>
+          <p className="text-gray-500 dark:text-gray-400">{t("releases.noReleases")}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t("releases.noReleasesHint")}</p>
         </div>
         
         {/* Toast Container */}
@@ -213,13 +213,13 @@ export function ReleasesPanel({ project }: { project: Project }) {
     <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold">
-          <i className="fa-solid fa-tag mr-2 text-purple-600"></i>Releases
+          <i className="fa-solid fa-tag mr-2 text-purple-600 dark:text-purple-400"></i>Releases
         </h2>
         <div className="flex items-center gap-2">
           <button
             onClick={handleTranslate}
             disabled={translating}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 disabled:opacity-75"
+            className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-75"
           >
             <i className={`fa-solid fa-language ${translating ? "animate-spin" : ""}`}></i>
             {t("releases.translate")}
@@ -227,7 +227,7 @@ export function ReleasesPanel({ project }: { project: Project }) {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-75"
+            className="px-3 py-1.5 text-sm bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 flex items-center gap-2 disabled:opacity-75"
           >
             <i className={`fa-solid fa-rotate ${refreshing ? "animate-spin" : ""}`}></i>
             {t("releases.refresh")}
@@ -235,7 +235,7 @@ export function ReleasesPanel({ project }: { project: Project }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <div className="space-y-4">
           {releases.map((release) => {
             const body = release.body_zh || release.body || "";
@@ -244,13 +244,13 @@ export function ReleasesPanel({ project }: { project: Project }) {
             const displayBody = isLongBody && !isExpanded ? body.slice(0, 500) + "..." : body;
 
             return (
-              <div key={release.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-4 py-3 flex items-center justify-between">
+              <div key={release.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 dark:bg-gray-900 px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded font-mono text-sm font-medium">
+                    <span className="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded font-mono text-sm font-medium">
                       {release.tag_name}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
                       {formatDate(release.published_at)}
                     </span>
                   </div>
@@ -259,22 +259,22 @@ export function ReleasesPanel({ project }: { project: Project }) {
                       <div className="relative">
                         <button
                           onClick={() => setDownloadMenuOpen(downloadMenuOpen === release.id ? null : release.id)}
-                          className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-100 flex items-center gap-2"
+                          className="px-3 py-1.5 text-sm border dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                         >
                           <i className="fa-solid fa-download"></i>
                           {t("releases.download")}
                           <i className="fa-solid fa-chevron-down text-xs"></i>
                         </button>
                         {downloadMenuOpen === release.id && (
-                          <div className="absolute right-0 mt-1 w-64 bg-white border rounded-lg shadow-lg z-10">
+                          <div className="absolute right-0 mt-1 w-64 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg z-10">
                             {release.download_urls.map((item, idx) => (
                               <div key={idx}>
                                 <button
                                   onClick={() => handleDownload(item.url)}
-                                  className="w-full px-4 py-2 text-sm hover:bg-gray-50 text-left border-b last:border-b-0"
+                                  className="w-full px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-left border-b dark:border-gray-700 last:border-b-0"
                                 >
                                   <div className="font-medium">{item.name}</div>
-                                  <div className="text-xs text-gray-500 truncate">{item.url}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.url}</div>
                                 </button>
                               </div>
                             ))}
@@ -285,7 +285,7 @@ export function ReleasesPanel({ project }: { project: Project }) {
                     {release.download_urls.length > 0 && (
                       <button
                         onClick={() => handleCopyLink(release.download_urls[0].url)}
-                        className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-100"
+                        className="px-3 py-1.5 text-sm border dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                         title={t("releases.copyLink")}
                       >
                         <i className="fa-solid fa-copy"></i>
@@ -294,13 +294,13 @@ export function ReleasesPanel({ project }: { project: Project }) {
                   </div>
                 </div>
                 <div className="p-4">
-                  <div className="prose prose-sm max-w-none text-gray-600">
+                  <div className="prose prose-sm max-w-none text-gray-600 dark:text-gray-400">
                     {isLongBody && !isExpanded ? (
                       <>
                         <div dangerouslySetInnerHTML={{ __html: displayBody.replace(/\n/g, "<br>") }} />
                         <button
                           onClick={() => toggleBody(release.id)}
-                          className="text-blue-600 hover:text-blue-800 text-sm mt-2"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm mt-2"
                         >
                           {t("releases.expandAll")}
                         </button>
@@ -311,7 +311,7 @@ export function ReleasesPanel({ project }: { project: Project }) {
                         {isLongBody && (
                           <button
                             onClick={() => toggleBody(release.id)}
-                            className="text-blue-600 hover:text-blue-800 text-sm mt-2"
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm mt-2"
                           >
                             {t("releases.collapse")}
                           </button>
@@ -325,7 +325,7 @@ export function ReleasesPanel({ project }: { project: Project }) {
           })}
         </div>
 
-        <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
           <span>
             <i className="fa-solid fa-globe mr-1"></i>
             {t("releases.dataSource")}：{releases[0]?.source === "github" ? "GitHub" : releases[0]?.source === "gitee" ? "Gitee" : releases[0]?.source}

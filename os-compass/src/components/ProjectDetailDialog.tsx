@@ -114,7 +114,7 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
               risks: freshProject.ai_risks || null,
               dependencies: freshProject.ai_dependencies || null,
               health_score: freshProject.health_score || null,
-              health_rating: freshProject.health_score ? `${Math.round(freshProject.health_score)}分` : null,
+              health_rating: freshProject.health_score ? `${Math.round(freshProject.health_score)}${t("detail.points")}` : null,
               error: null,
             };
             setAiResult(result);
@@ -203,7 +203,7 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
                 risks: freshProject.ai_risks || null,
                 dependencies: freshProject.ai_dependencies || null,
                 health_score: freshProject.health_score || null,
-                health_rating: freshProject.health_score ? `${Math.round(freshProject.health_score)}分` : null,
+                health_rating: freshProject.health_score ? `${Math.round(freshProject.health_score)}${t("detail.points")}` : null,
                 error: null,
               });
             }
@@ -275,7 +275,7 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
                 risks: freshProject.ai_risks || null,
                 dependencies: freshProject.ai_dependencies || null,
                 health_score: freshProject.health_score || null,
-                health_rating: freshProject.health_score ? `${Math.round(freshProject.health_score)}分` : null,
+                health_rating: freshProject.health_score ? `${Math.round(freshProject.health_score)}${t("detail.points")}` : null,
                 error: null,
               });
             }
@@ -439,7 +439,7 @@ const handleAnalyze = useCallback(async () => {
       const result = await invoke<AiResult>("analyze_project", { id: project.id });
       setAiResult(result);
     } catch (e) {
-      showToast("重新分析失败: " + String(e), "error");
+      showToast(`${t("detail.reanalyzeFailed")}: ${String(e)}`, "error");
     } finally {
       setAnalyzing(false);
     }
@@ -473,15 +473,15 @@ const handleAnalyze = useCallback(async () => {
       const result = await invoke<{ category_id: number; category_path: string; confidence: number }>("ai_classify_project", { projectId: project.id });
       setProject({ ...project, category_id: result.category_id });
       if (onUpdate) onUpdate();
-      showToast(`AI 分类完成：${result.category_path}（置信度 ${result.confidence}%）`, "success");
+      showToast(t("detail.aiClassifyDone", { category: result.category_path, confidence: result.confidence }), "success");
     } catch (e) {
       const error = String(e);
       if (error.includes("NO_CATEGORIES")) {
-        showToast("系统中暂无分类，请先创建分类", "error");
+        showToast(t("detail.noCategories"), "error");
       } else if (error.includes("PROJECT_INFO_INSUFFICIENT")) {
-        showToast("项目信息不足，无法分类", "error");
+        showToast(t("detail.insufficientInfo"), "error");
       } else {
-        showToast(`分类失败: ${e}`, "error");
+        showToast(`${t("detail.classifyFailed")}: ${e}`, "error");
       }
     } finally {
       setIsClassifying(false);
@@ -514,7 +514,7 @@ const handleAnalyze = useCallback(async () => {
         onClose();
       }
     } catch (e) {
-      showToast("删除失败: " + String(e), "error");
+      showToast(`${t("detail.deleteFailed")}: ${String(e)}`, "error");
     }
   };
 
@@ -527,7 +527,7 @@ const handleAnalyze = useCallback(async () => {
   const handleSave = async () => {
     const trimmedName = editName.trim();
     if (!trimmedName) {
-      showToast("项目名称不能为空", "error");
+      showToast(t("detail.nameRequired"), "error");
       return;
       return;
     }
@@ -595,7 +595,7 @@ const handleAnalyze = useCallback(async () => {
     return result;
   };
 
-  const categoryOptions = buildCategoryOptions(categories.filter((c) => c.name !== "未分类" || c.parent_id !== null));
+  const categoryOptions = buildCategoryOptions(categories.filter((c) => c.name !== t("detail.uncategorized") || c.parent_id !== null));
 
   if (!open) return null;
 
@@ -612,18 +612,18 @@ const handleAnalyze = useCallback(async () => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-7xl max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-7xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={onClose}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               >
-                <i className="fa-solid fa-arrow-left mr-2"></i>返回
+                <i className="fa-solid fa-arrow-left mr-2"></i>{t("detail.back")}
               </button>
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600">
+              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-xl flex items-center justify-center text-orange-600 dark:text-orange-400">
                 <i className="fa-solid fa-code text-2xl"></i>
               </div>
               <div className="flex-1 min-w-0">
@@ -632,21 +632,21 @@ const handleAnalyze = useCallback(async () => {
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="text-xl font-bold border rounded-lg px-2 py-1 w-full max-w-md"
+                    className="text-xl font-bold border dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 rounded-lg px-2 py-1 w-full max-w-md"
                     placeholder={t("detail.projectName")}
                     autoFocus
                   />
                 ) : (
-                  <h1 className="text-xl font-bold">{project.name}</h1>
+                  <h1 className="text-xl font-bold dark:text-gray-100">{project.name}</h1>
                 )}
-                <p className="text-sm text-gray-500">{project.url}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{project.url}</p>
               </div>
             </div>
             <div className="flex gap-2">
               {(project as any).is_downloaded && (project as any).local_path ? (
                 <div className="flex items-center gap-2">
                   {localPathExists === false && (
-                    <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded flex items-center gap-1" title={t("detail.localFileMissingDesc")}>
+                    <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs rounded flex items-center gap-1" title={t("detail.localFileMissingDesc")}>
                       <i className="fa-solid fa-triangle-exclamation"></i>{t("detail.localFileMissing")}
                     </span>
                   )}
@@ -672,37 +672,37 @@ const handleAnalyze = useCallback(async () => {
                   <button
                     onClick={handleCancelEdit}
                     disabled={saving}
-                    className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                    className="px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                   >
-                    取消
+                    {t("detail.cancel")}
                   </button>
                 </>
               ) : (
                 <button
                   onClick={handleStartEdit}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <i className="fa-solid fa-pen mr-1"></i>{t("detail.editProject")}
                 </button>
               )}
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+                className="px-4 py-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950"
               >
-                <i className="fa-solid fa-trash mr-1"></i>删除
+                <i className="fa-solid fa-trash mr-1"></i>{t("detail.delete")}
               </button>
             </div>
           </div>
         </header>
 
         {/* Category Bar */}
-        <div className="px-6 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-2 text-sm">
-          <span className="text-gray-500">{t("detail.category")}：</span>
+        <div className="px-6 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 text-sm">
+          <span className="text-gray-500 dark:text-gray-400">{t("detail.category")}：</span>
           {editing ? (
             <select
               value={editCategoryId ?? ""}
               onChange={(e) => setEditCategoryId(e.target.value ? Number(e.target.value) : null)}
-              className="px-3 py-1 border rounded text-xs"
+              className="px-3 py-1 border dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 rounded text-xs"
             >
               <option value="">{t("detail.uncategorized")}</option>
               {categoryOptions.map((opt) => (
@@ -720,14 +720,14 @@ const handleAnalyze = useCallback(async () => {
             className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center gap-1 disabled:opacity-75"
           >
             <i className={`fa-solid fa-wand-magic-sparkles ${isClassifying ? "animate-spin" : ""}`}></i>
-            AI 分类
+            {t("detail.aiClassify")}
           </button>
         </div>
 
         {/* Status Bar */}
-        <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-4">
+        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-500">{t("list.status")}：</span>
+            <span className="text-gray-500 dark:text-gray-400">{t("list.status")}：</span>
             {Object.entries(STATUS_CONFIG).map(([key, config]) => (
               <button
                 key={key}
@@ -745,7 +745,7 @@ const handleAnalyze = useCallback(async () => {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white border-b border-gray-200 px-6">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6">
           <nav className="flex gap-1">
             {tabs.map((t) => (
               <button
@@ -775,8 +775,8 @@ const handleAnalyze = useCallback(async () => {
                   <div className="flex items-center justify-center py-8">
                     <div className="text-center">
                       <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-3"></div>
-                      <p className="text-blue-700 font-medium">{t("detail.analyzing")}</p>
-                      <p className="text-blue-600 text-sm mt-1">正在生成项目分析报告</p>
+                      <p className="text-blue-700 dark:text-blue-300 font-medium">{t("detail.analyzing")}</p>
+                      <p className="text-blue-600 dark:text-blue-400 text-sm mt-1">{t("detail.generatingReport")}</p>
                     </div>
                   </div>
                 </div>
@@ -788,52 +788,52 @@ const handleAnalyze = useCallback(async () => {
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <i className="fa-solid fa-wand-magic-sparkles text-blue-600"></i>
-                    <h2 className="text-lg font-bold text-blue-900">AI 一句话总结</h2>
+                    <i className="fa-solid fa-wand-magic-sparkles text-blue-600 dark:text-blue-400"></i>
+                    <h2 className="text-lg font-bold text-blue-900 dark:text-blue-200">{t("detail.aiOneLineSummary")}</h2>
                   </div>
                   {translatingFields.has("summary") ? (
-                    <span className="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded">
+                    <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900 px-2 py-0.5 rounded">
                       <i className="fa-solid fa-spinner fa-spin mr-1"></i>{t("detail.translating")}
                     </span>
                   ) : translatedSummary ? (
-                    <span className="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded">{t("detail.translated")}</span>
+                    <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900 px-2 py-0.5 rounded">{t("detail.translated")}</span>
                   ) : null}
                 </div>
-                <p className="text-blue-800 leading-relaxed">
+                <p className="text-blue-800 dark:text-blue-300 leading-relaxed">
                   {translatingFields.has("summary") ? (
-                    <span className="text-gray-400"><i className="fa-solid fa-spinner fa-spin mr-2"></i>{t("detail.translating")}</span>
+                    <span className="text-gray-400 dark:text-gray-500"><i className="fa-solid fa-spinner fa-spin mr-2"></i>{t("detail.translating")}</span>
                   ) : (
-                    (isOverviewTranslated && translatedSummary) || aiResult?.summary || project.description || "暂无总结"
+                    (isOverviewTranslated && translatedSummary) || aiResult?.summary || project.description || t("detail.noSummary")
                   )}
                 </p>
               </div>
 
               {/* 项目简介 */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h2 className="text-lg font-bold mb-3">项目简介</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h2 className="text-lg font-bold dark:text-gray-100 mb-3">{t("detail.projectBrief")}</h2>
                 {translatingFields.has("description") ? (
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-gray-400 dark:text-gray-500 text-sm">
                     <i className="fa-solid fa-spinner fa-spin mr-2"></i>{t("detail.translating")}
                   </p>
                 ) : (
-                  <p className="text-gray-600 leading-relaxed text-sm">
-                    {(isOverviewTranslated && translatedDescription) || project.description || "暂无描述"}
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
+                    {(isOverviewTranslated && translatedDescription) || project.description || t("detail.noDescription")}
                   </p>
                 )}
               </div>
 
               {/* 适用场景 */}
               {(aiResult?.useCases || (isOverviewTranslated && translatedUseCases)) && (
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h2 className="text-lg font-bold mb-3">
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                  <h2 className="text-lg font-bold dark:text-gray-100 mb-3">
                     <i className="fa-solid fa-lightbulb text-yellow-500 mr-2"></i>{t("detail.useCases")}
                   </h2>
                   {translatingFields.has("use_cases") ? (
-                    <p className="text-gray-400 text-sm">
+                    <p className="text-gray-400 dark:text-gray-500 text-sm">
                       <i className="fa-solid fa-spinner fa-spin mr-2"></i>{t("detail.translating")}
                     </p>
                   ) : (
-                    <p className="text-gray-600 text-sm whitespace-pre-wrap">
+                    <p className="text-gray-600 dark:text-gray-400 text-sm whitespace-pre-wrap">
                       {(isOverviewTranslated && translatedUseCases) || aiResult?.useCases}
                     </p>
                   )}
@@ -842,14 +842,14 @@ const handleAnalyze = useCallback(async () => {
 
               {/* AI 评估摘要 */}
               {aiResult && aiResult.health_score !== null && (
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h2 className="text-lg font-bold mb-3">AI 评估摘要</h2>
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                  <h2 className="text-lg font-bold dark:text-gray-100 mb-3">{t("detail.aiEvaluationSummary")}</h2>
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-24 text-sm text-gray-500">{t("detail.health")}</div>
+                      <div className="w-24 text-sm text-gray-500 dark:text-gray-400">{t("detail.health")}</div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
+                          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full ${
                                 aiResult.health_score >= 80 ? "bg-green-500" :
@@ -859,14 +859,14 @@ const handleAnalyze = useCallback(async () => {
                               style={{ width: `${aiResult.health_score}%` }}
                             ></div>
                           </div>
-                          <span className="text-sm font-medium">{Math.round(aiResult.health_score)}</span>
+                          <span className="text-sm font-medium dark:text-gray-100">{Math.round(aiResult.health_score)}</span>
                         </div>
                       </div>
                     </div>
                     {(aiResult.risks || (isOverviewTranslated && translatedRisks)) && (
                       <div className="flex items-start gap-3">
-                        <div className="w-24 text-sm text-gray-500">{t("detail.risks")}</div>
-                        <div className="flex-1 text-sm text-orange-600">
+                        <div className="w-24 text-sm text-gray-500 dark:text-gray-400">{t("detail.risks")}</div>
+                        <div className="flex-1 text-sm text-orange-600 dark:text-orange-400">
                           {translatingFields.has("risks") ? (
                             <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>{t("detail.translating")}</span>
                           ) : (
@@ -877,8 +877,8 @@ const handleAnalyze = useCallback(async () => {
                     )}
                     {(aiResult.dependencies || (isOverviewTranslated && translatedDeps)) && (
                       <div className="flex items-start gap-3">
-                        <div className="w-24 text-sm text-gray-500">{t("detail.dependencies")}</div>
-                        <div className="flex-1 text-sm text-gray-600">
+                        <div className="w-24 text-sm text-gray-500 dark:text-gray-400">{t("detail.dependencies")}</div>
+                        <div className="flex-1 text-sm text-gray-600 dark:text-gray-400">
                           {translatingFields.has("dependencies") ? (
                             <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>{t("detail.translating")}</span>
                           ) : (
@@ -897,51 +897,51 @@ const handleAnalyze = useCallback(async () => {
               {/* 右侧边栏 */}
               <div className="space-y-6">
               {/* 元数据 */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h2 className="text-lg font-bold mb-3">元数据</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h2 className="text-lg font-bold dark:text-gray-100 mb-3">{t("detail.metadata")}</h2>
                 <ul className="space-y-3 text-sm">
-                  <li className="flex justify-between"><span className="text-gray-500">{t("detail.stars")}</span><span>★ {project.stars}</span></li>
-                  {project.forks > 0 && <li className="flex justify-between"><span className="text-gray-500">{t("detail.forks")}</span><span>{project.forks}</span></li>}
-                  {project.license && <li className="flex justify-between"><span className="text-gray-500">{t("detail.license")}</span><span className="text-green-600">{project.license}</span></li>}
+                  <li className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">{t("detail.stars")}</span><span className="dark:text-gray-100">★ {project.stars}</span></li>
+                  {project.forks > 0 && <li className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">{t("detail.forks")}</span><span className="dark:text-gray-100">{project.forks}</span></li>}
+                  {project.license && <li className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">{t("detail.license")}</span><span className="text-green-600 dark:text-green-400">{project.license}</span></li>}
                   {languagesList.length > 0 && (
-                    <li className="flex justify-between items-start"><span className="text-gray-500">{t("detail.language")}</span>
+                    <li className="flex justify-between items-start"><span className="text-gray-500 dark:text-gray-400">{t("detail.language")}</span>
                       <div className="flex flex-wrap gap-1 justify-end">
                         {languagesList.slice(0, 3).map((lang, i) => (
-                          <span key={i} className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">{lang}</span>
+                          <span key={i} className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded">{lang}</span>
                         ))}
                       </div>
                     </li>
                   )}
-                  <li className="flex justify-between"><span className="text-gray-500">来源</span><span>{project.source}</span></li>
+                  <li className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">{t("detail.source")}</span><span className="dark:text-gray-100">{project.source}</span></li>
                 </ul>
               </div>
 
               {/* AI 操作 */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-bold">{t("detail.ai")}</h2>
+                  <h2 className="text-lg font-bold dark:text-gray-100">{t("detail.ai")}</h2>
                   {backgroundTasks.length > 0 && (
-                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full flex items-center gap-1">
+                    <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-2 py-1 rounded-full flex items-center gap-1">
                       <i className="fa-solid fa-spinner fa-spin"></i>
-                      后台处理中 ({backgroundTasks.length})
+                      {t("detail.backgroundTasks", { count: backgroundTasks.length })}
                     </span>
                   )}
                 </div>
                 {backgroundTasks.length > 0 && (
-                  <div className="mb-3 p-3 bg-blue-50 rounded-lg space-y-1.5">
+                  <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-1.5">
                     {backgroundTasks.map((task, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs text-blue-700">
+                      <div key={i} className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
                         <i className="fa-solid fa-spinner fa-spin"></i>
                         <span>
-                          {task.taskType === "ai_analysis" && "AI 分析中..."}
-                          {task.taskType === "generate_tags" && "生成标签中..."}
-                          {task.taskType === "description" && "翻译简介中..."}
-                          {task.taskType === "readme_translation" && "翻译 README 中..."}
-                          {!["ai_analysis", "generate_tags", "description", "readme_translation"].includes(task.taskType) && `${task.taskType} 处理中...`}
+                          {task.taskType === "ai_analysis" && t("detail.taskAiAnalysis")}
+                          {task.taskType === "generate_tags" && t("detail.taskGenerateTags")}
+                          {task.taskType === "description" && t("detail.taskDescription")}
+                          {task.taskType === "readme_translation" && t("detail.taskReadmeTranslation")}
+                          {!["ai_analysis", "generate_tags", "description", "readme_translation"].includes(task.taskType) && t("detail.taskGeneric", { type: task.taskType })}
                         </span>
                       </div>
                     ))}
-                    <p className="text-xs text-blue-500 mt-1">后台任务正在执行，完成后自动更新</p>
+                    <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">{t("detail.backgroundTaskNote")}</p>
                   </div>
                 )}
                 <div className="space-y-2">
@@ -949,11 +949,11 @@ const handleAnalyze = useCallback(async () => {
                     <i className={`fa-solid ${analyzing ? "fa-spinner fa-spin" : "fa-wand-magic-sparkles"} mr-1`}></i>
                     {analyzing ? "分析中..." : "重新分析"}
                   </button>
-                  <button onClick={handleTranslateOverview} disabled={isTranslating || (!aiResult && !project.description && !translatedDescription)} className="w-full px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                  <button onClick={handleTranslateOverview} disabled={isTranslating || (!aiResult && !project.description && !translatedDescription)} className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
                     <i className={`fa-solid ${isOverviewTranslated ? "fa-rotate-left" : "fa-language"} mr-1`}></i>
                     {isOverviewTranslated ? "显示原文" : "翻译概览"}
                   </button>
-                  <button onClick={handleGenerateTags} disabled={isGeneratingTags} className="w-full px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                  <button onClick={handleGenerateTags} disabled={isGeneratingTags} className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
                     <i className={`fa-solid ${isGeneratingTags ? "fa-spinner fa-spin" : "fa-tags"} mr-1`}></i>
                     {isGeneratingTags ? "打标签中..." : "AI打标签"}
                   </button>
@@ -961,10 +961,10 @@ const handleAnalyze = useCallback(async () => {
               </div>
 
               {/* 标签 */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-bold">{t("detail.tags")}</h2>
-                  <button onClick={() => setShowTagSelector(!showTagSelector)} className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg">
+                  <h2 className="text-lg font-bold dark:text-gray-100">{t("detail.tags")}</h2>
+                  <button onClick={() => setShowTagSelector(!showTagSelector)} className="px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg">
                     <i className="fa-solid fa-plus mr-1"></i>{t("detail.addTag")}
                   </button>
                 </div>
@@ -980,18 +980,18 @@ const handleAnalyze = useCallback(async () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-500">暂无标签，点击"添加"或"AI打标签"</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">暂无标签，点击"添加"或"AI打标签"</p>
                 )}
                 {showTagSelector && (
-                  <div className="mt-3 pt-3 border-t">
+                  <div className="mt-3 pt-3 border-t dark:border-gray-700">
                     <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
                       {allTags.filter(t => !projectTags.find(pt => pt.id === t.id)).map((tag) => (
-                        <button key={tag.id} onClick={() => handleAddTag(tag.id)} className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded">
+                        <button key={tag.id} onClick={() => handleAddTag(tag.id)} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-300 text-sm rounded">
                           <i className="fa-solid fa-plus mr-1"></i>{tag.name}
                         </button>
                       ))}
                       {allTags.filter(t => !projectTags.find(pt => pt.id === t.id)).length === 0 && (
-                        <p className="text-xs text-gray-400">{t("detail.noTags")}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{t("detail.noTags")}</p>
                       )}
                     </div>
                   </div>
@@ -999,31 +999,31 @@ const handleAnalyze = useCallback(async () => {
               </div>
 
               {/* 项目操作 */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h2 className="text-lg font-bold mb-3">{t("detail.operations")}</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h2 className="text-lg font-bold dark:text-gray-100 mb-3">{t("detail.operations")}</h2>
                 <div className="space-y-2">
                   {(project as any).local_path && (
                     <>
                       {localPathExists === false && (
-                        <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-start gap-2">
+                        <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
                           <i className="fa-solid fa-triangle-exclamation mt-0.5"></i>
                           <div>
                             <p className="font-medium">{t("detail.localFileMissing")}</p>
-                            <p className="text-amber-600 mt-0.5 break-all">{(project as any).local_path}</p>
+                            <p className="text-amber-600 dark:text-amber-400 mt-0.5 break-all">{(project as any).local_path}</p>
                           </div>
                         </div>
                       )}
                       <button
                         onClick={handleOpenInEditor}
                         disabled={localPathExists === false}
-                        className="w-full px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                        className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
                       >
                         <i className="fa-solid fa-code"></i>{t("detail.openInEditor")}
                         {localPathExists === true && <i className="fa-solid fa-circle-check text-green-500 text-xs ml-1"></i>}
                       </button>
                     </>
                   )}
-                  <button className="w-full px-4 py-2 border rounded-lg hover:bg-gray-50 text-red-600">
+                  <button className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 dark:text-red-400">
                     <i className="fa-solid fa-trash mr-1"></i>{t("detail.deleteProject")}
                   </button>
                 </div>
@@ -1037,7 +1037,7 @@ const handleAnalyze = useCallback(async () => {
               {analyzing && (
                 <div className="text-center py-12">
                   <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                  <p className="mt-4 text-gray-500">{t("detail.analyzing")}</p>
+                  <p className="mt-4 text-gray-500 dark:text-gray-400">{t("detail.analyzing")}</p>
                 </div>
               )}
 
@@ -1050,12 +1050,12 @@ const handleAnalyze = useCallback(async () => {
               )}
 
               {aiResult && (
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-bold">AI 深度体检报告</h2>
+                    <h2 className="text-lg font-bold dark:text-gray-100">AI 深度体检报告</h2>
                     <div className="flex items-center gap-2">
                       {(translatedSummary || translatedUseCases || translatedRisks) && (
-                        <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">{t("detail.translated")}</span>
+                        <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950 px-2 py-0.5 rounded">{t("detail.translated")}</span>
                       )}
                       <button
                         onClick={handleAnalyze}
@@ -1068,8 +1068,8 @@ const handleAnalyze = useCallback(async () => {
                   <div className="space-y-6">
                     {/* 健康度分析 */}
                     <div>
-                      <h3 className="font-medium text-green-600 mb-2">✓ 健康度分析</h3>
-                      <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 pl-4">
+                      <h3 className="font-medium text-green-600 dark:text-green-400 mb-2">✓ 健康度分析</h3>
+                      <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1 pl-4">
                         <li>综合评分：{aiResult.health_score}/100（{aiResult.health_rating}）</li>
                         <li>{translatedSummary || aiResult.summary || "暂无"}</li>
                       </ul>
@@ -1077,29 +1077,29 @@ const handleAnalyze = useCallback(async () => {
                     {/* License 合规 */}
                     {project.license && (
                       <div>
-                        <h3 className="font-medium text-blue-600 mb-2">🔒 License 合规</h3>
-                        <p className="text-sm text-gray-600">{project.license} 许可证，商业友好。</p>
+                        <h3 className="font-medium text-blue-600 dark:text-blue-400 mb-2">🔒 License 合规</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{project.license} 许可证，商业友好。</p>
                       </div>
                     )}
                     {/* 适用场景 */}
                     {(aiResult.useCases || translatedUseCases) && (
                       <div>
                         <h3 className="font-medium text-purple-600 mb-2">💬 {t("detail.useCases")}</h3>
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap">{translatedUseCases || aiResult.useCases}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{translatedUseCases || aiResult.useCases}</p>
                       </div>
                     )}
                     {/* 风险提示 */}
                     {(aiResult.risks || translatedRisks) && (
                       <div>
                         <h3 className="font-medium text-yellow-600 mb-2">⚠️ 安全提示</h3>
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap">{translatedRisks || aiResult.risks}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{translatedRisks || aiResult.risks}</p>
                       </div>
                     )}
                     {/* 依赖信息 */}
                     {(aiResult.dependencies || translatedDeps) && (
                       <div>
-                        <h3 className="font-medium text-gray-600 mb-2">📦 依赖信息</h3>
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap">{translatedDeps || aiResult.dependencies}</p>
+                        <h3 className="font-medium text-gray-600 dark:text-gray-400 mb-2">📦 依赖信息</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{translatedDeps || aiResult.dependencies}</p>
                       </div>
                     )}
                   </div>
@@ -1113,18 +1113,18 @@ const handleAnalyze = useCallback(async () => {
               {analyzing ? (
                 <div className="text-center py-12">
                   <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                  <p className="mt-4 text-gray-500">AI 正在生成 Runbook...</p>
+                  <p className="mt-4 text-gray-500 dark:text-gray-400">AI 正在生成 Runbook...</p>
                 </div>
               ) : backgroundTasks.some((t) => t.taskType === "runbook") ? (
                 <div className="text-center py-12">
                   <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                  <p className="mt-4 text-gray-500">后台正在生成 Runbook...</p>
-                  <p className="text-sm text-gray-400 mt-1">生成完成后自动显示</p>
+                  <p className="mt-4 text-gray-500 dark:text-gray-400">后台正在生成 Runbook...</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">生成完成后自动显示</p>
                 </div>
               ) : (
                 <>
                   <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-bold">快速上手指南</h2>
+                    <h2 className="text-lg font-bold dark:text-gray-100">快速上手指南</h2>
                     <div className="flex gap-2">
                       {isEditingRunbook ? (
                         <>
@@ -1148,7 +1148,7 @@ const handleAnalyze = useCallback(async () => {
                               setIsEditingRunbook(false);
                               setEditedRunbook(runbookContent || "");
                             }}
-                            className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"
+                            className="px-3 py-1.5 text-sm border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                           >
                             {t("common.cancel")}
                           </button>
@@ -1161,7 +1161,7 @@ const handleAnalyze = useCallback(async () => {
                                 setEditedRunbook(runbookContent || "");
                                 setIsEditingRunbook(true);
                               }}
-                              className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"
+                              className="px-3 py-1.5 text-sm border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               <i className="fa-solid fa-pen mr-1"></i>
                               {t("detail.editRunbook")}
@@ -1197,37 +1197,37 @@ const handleAnalyze = useCallback(async () => {
                   </div>
                   {runbookContent ? (
                     isEditingRunbook ? (
-                      <div className="bg-white rounded-xl border border-gray-200 p-4">
+                      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                         <textarea
                           value={editedRunbook}
                           onChange={(e) => setEditedRunbook(e.target.value)}
-                          className="w-full h-96 p-3 border rounded-lg font-mono text-sm"
+                          className="w-full h-96 p-3 border dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 rounded-lg font-mono text-sm"
                           placeholder="输入 Markdown 格式的笔记..."
                         />
                       </div>
                     ) : (
-                      <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <MarkdownRenderer content={runbookContent} className="prose prose-sm max-w-none readme-content text-sm" />
+                      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                        <MarkdownRenderer content={runbookContent} className="prose dark:prose-invert prose-sm max-w-none readme-content text-sm" />
                       </div>
                     )
                   ) : (
-                    <div className="bg-white rounded-xl border border-gray-200 p-6">
-                      <div className="space-y-4 text-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                      <div className="space-y-4 text-sm dark:text-gray-300">
                         <div>
-                          <h4 className="font-medium mb-2">1. 克隆项目</h4>
-                          <code className="block bg-gray-100 p-3 rounded font-mono">
+                          <h4 className="font-medium mb-2 dark:text-gray-100">1. 克隆项目</h4>
+                          <code className="block bg-gray-100 dark:bg-gray-700 p-3 rounded font-mono">
                             git clone {project.url || "https://github.com/user/repo"}
                           </code>
                         </div>
                         <div>
-                          <h4 className="font-medium mb-2">2. 安装依赖</h4>
-                          <code className="block bg-gray-100 p-3 rounded font-mono">
+                          <h4 className="font-medium mb-2 dark:text-gray-100">2. 安装依赖</h4>
+                          <code className="block bg-gray-100 dark:bg-gray-700 p-3 rounded font-mono">
                             npm install
                           </code>
                         </div>
                         <div>
-                          <h4 className="font-medium mb-2">3. 运行项目</h4>
-                          <code className="block bg-gray-100 p-3 rounded font-mono">
+                          <h4 className="font-medium mb-2 dark:text-gray-100">3. 运行项目</h4>
+                          <code className="block bg-gray-100 dark:bg-gray-700 p-3 rounded font-mono">
                             npm run dev
                           </code>
                         </div>
@@ -1243,9 +1243,9 @@ const handleAnalyze = useCallback(async () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-bold">README</h2>
+                  <h2 className="text-lg font-bold dark:text-gray-100">README</h2>
                   <select
-                    className="px-3 py-1 border rounded-lg text-sm"
+                    className="px-3 py-1 border dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 rounded-lg text-sm"
                     value={selectedVariant || "original"}
                     onChange={(e) => setSelectedVariant(e.target.value === "original" ? null : e.target.value)}
                   >
@@ -1273,17 +1273,17 @@ const handleAnalyze = useCallback(async () => {
                     } finally {
                       setRefreshing(false);
                     }
-                  }} className="px-3 py-1 text-sm border rounded-lg hover:bg-gray-50" disabled={refreshing}>
+                  }} className="px-3 py-1 text-sm border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700" disabled={refreshing}>
                     <i className={`fa-solid fa-rotate ${refreshing ? "fa-spin" : ""} mr-1`}></i>{refreshing ? "刷新中..." : "刷新"}
                   </button>
               </div>
 
               {/* 翻译按钮 - 始终显示 */}
-              <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg w-fit">
+              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg w-fit">
                 <button
                   onClick={() => setReadmeLang("original")}
                   className={`px-4 py-2 text-sm rounded-md transition-colors ${
-                    readmeLang === "original" ? "bg-white shadow-sm text-blue-600 font-medium" : "text-gray-600 hover:text-gray-900"
+                    readmeLang === "original" ? "bg-white dark:bg-gray-800 shadow-sm text-blue-600 dark:text-blue-400 font-medium" : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
                   }`}
                 >
                   {t("detail.original")}
@@ -1298,7 +1298,7 @@ const handleAnalyze = useCallback(async () => {
                   }}
                   disabled={isTranslatingReadme || !project.readme_content}
                   className={`px-4 py-2 text-sm rounded-md transition-colors disabled:opacity-50 ${
-                    readmeLang === "translated" ? "bg-white shadow-sm text-blue-600 font-medium" : "text-gray-600 hover:text-gray-900"
+                    readmeLang === "translated" ? "bg-white dark:bg-gray-800 shadow-sm text-blue-600 dark:text-blue-400 font-medium" : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
                   }`}
                 >
                   {isTranslatingReadme ? (
@@ -1317,25 +1317,25 @@ const handleAnalyze = useCallback(async () => {
 
                 if (backgroundTasks.some((t) => t.taskType === "readme_translation") && !content) {
                   return (
-                    <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
                       <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-3"></div>
-                      <p className="text-gray-500">后台正在翻译 README...</p>
-                      <p className="text-sm text-gray-400 mt-1">翻译完成后自动显示</p>
+                      <p className="text-gray-500 dark:text-gray-400">后台正在翻译 README...</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">翻译完成后自动显示</p>
                     </div>
                   );
                 }
 
                 if (content) {
                   return (
-                    <div className="bg-white rounded-xl border border-gray-200 p-6 overflow-auto max-h-[60vh]">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 overflow-auto max-h-[60vh]">
                       <MarkdownRenderer content={content} className="text-sm" />
                     </div>
                   );
                 } else {
                   return (
-                    <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-                      <i className="fa-solid fa-file-lines text-4xl text-gray-300 mb-4"></i>
-                      <p className="text-gray-500">暂无 README 内容</p>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
+                      <i className="fa-solid fa-file-lines text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                      <p className="text-gray-500 dark:text-gray-400">暂无 README 内容</p>
                     </div>
                   );
                 }
@@ -1344,16 +1344,16 @@ const handleAnalyze = useCallback(async () => {
           )}
 
           {tab === "notes" && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold">{t("detail.notes")}</h2>
+                <h2 className="text-lg font-bold dark:text-gray-100">{t("detail.notes")}</h2>
               </div>
               <div className="space-y-4">
                 {projectNotes.length > 0 ? (
                   projectNotes.map((note) => (
-                    <div key={note.id} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div key={note.id} className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-blue-800">{new Date(note.created_at).toLocaleString()}</span>
+                        <span className="text-sm font-medium text-blue-800 dark:text-blue-300">{new Date(note.created_at).toLocaleString()}</span>
                         <div className="flex gap-2">
                           <button
                             onClick={async () => {
@@ -1370,19 +1370,19 @@ const handleAnalyze = useCallback(async () => {
                           </button>
                         </div>
                       </div>
-                      <p className="text-sm text-blue-900 whitespace-pre-wrap">{note.content}</p>
+                      <p className="text-sm text-blue-900 dark:text-blue-200 whitespace-pre-wrap">{note.content}</p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500 text-center py-4">{t("detail.noNotes")}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">{t("detail.noNotes")}</p>
                 )}
               </div>
-              <div className="mt-4 pt-4 border-t">
+              <div className="mt-4 pt-4 border-t dark:border-gray-700">
                 <textarea
                   value={noteInput}
                   onChange={(e) => setNoteInput(e.target.value)}
                   placeholder="记录你的使用心得、踩坑记录..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full px-4 py-3 border border-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   rows={3}
                 />
                 <button
@@ -1412,11 +1412,11 @@ const handleAnalyze = useCallback(async () => {
           {tab === "releases" && <ReleasesPanel project={project} />}
 
           {tab === "user" && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-              <i className="fa-solid fa-lock text-4xl text-gray-300 mb-4"></i>
-              <h2 className="text-lg font-bold mb-2">{t("detail.user")}</h2>
-              <p className="text-gray-500">用于存储项目相关的敏感信息（如 Token、密钥等）</p>
-              <p className="text-sm text-gray-400 mt-4">功能开发中...</p>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
+              <i className="fa-solid fa-lock text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
+              <h2 className="text-lg font-bold dark:text-gray-100 mb-2">{t("detail.user")}</h2>
+              <p className="text-gray-500 dark:text-gray-400">用于存储项目相关的敏感信息（如 Token、密钥等）</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-4">功能开发中...</p>
             </div>
           )}
         </div>
@@ -1425,23 +1425,23 @@ const handleAnalyze = useCallback(async () => {
       {/* 删除确认弹框 */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 mx-4">
             <div className="flex items-start gap-4 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 flex-shrink-0">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 flex-shrink-0">
                 <i className="fa-solid fa-triangle-exclamation text-xl"></i>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1">确认删除项目？</h3>
-                <p className="text-sm text-gray-600">
-                  项目 <span className="font-medium text-gray-900">"{project.name}"</span> 及其所有数据（AI 分析、翻译、笔记、标签）将被永久删除。
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">确认删除项目？</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  项目 <span className="font-medium text-gray-900 dark:text-gray-100">"{project.name}"</span> 及其所有数据（AI 分析、翻译、笔记、标签）将被永久删除。
                 </p>
-                <p className="text-sm text-red-600 mt-2 font-medium">此操作不可恢复！</p>
+                <p className="text-sm text-red-600 dark:text-red-400 mt-2 font-medium">此操作不可恢复！</p>
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 {t("common.cancel")}
               </button>

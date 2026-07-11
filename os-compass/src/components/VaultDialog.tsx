@@ -57,14 +57,14 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
         {/* 头部 */}
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <i className="fa-solid fa-folder-open text-amber-600 text-xl"></i>
+            <i className="fa-solid fa-folder-open text-amber-600 dark:text-amber-300 text-xl"></i>
             <h1 className="text-2xl font-bold">{t("vault.title")}</h1>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             <i className="fa-solid fa-xmark text-lg"></i>
           </button>
         </div>
@@ -78,7 +78,7 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <i className="fa-solid fa-database text-2xl"></i>
-                    <span className="text-lg font-medium">当前仓库</span>
+                    <span className="text-lg font-medium">{t("vault.currentVault")}</span>
                   </div>
                   <h2 className="text-2xl font-bold mb-1">{currentVault.name}</h2>
                   <p className="text-blue-100 text-sm truncate max-w-md">{currentVault.path}</p>
@@ -93,13 +93,13 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                   onClick={() => setSwitchModalOpen(true)}
                   className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm flex items-center gap-2"
                 >
-                  <i className="fa-solid fa-right-left"></i>切换仓库
+                  <i className="fa-solid fa-right-left"></i>{t("vault.switchVault")}
                 </button>
                 <button
                   onClick={() => invoke("open", { path: currentVault.path }).catch(() => {})}
                   className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm flex items-center gap-2"
                 >
-                  <i className="fa-solid fa-folder"></i>打开所在文件夹
+                  <i className="fa-solid fa-folder"></i>{t("vault.openFolder")}
                 </button>
               </div>
             </div>
@@ -107,12 +107,12 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
 
           {/* 仓库列表 */}
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">所有仓库</h2>
+            <h2 className="text-lg font-semibold">{t("vault.allVaults")}</h2>
             <button
               onClick={refreshData}
-              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1"
             >
-              <i className="fa-solid fa-arrows-rotate"></i>刷新
+              <i className="fa-solid fa-arrows-rotate"></i>{t("vault.refresh")}
             </button>
           </div>
 
@@ -120,25 +120,25 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
             {vaults.map((vault) => (
               <div
                 key={vault.path}
-                className={`vault-card bg-white rounded-xl border p-5 ${
-                  currentVault?.path === vault.path ? "border-2 border-blue-500" : "border-gray-200"
+                className={`vault-card bg-white dark:bg-gray-800 rounded-xl border p-5 ${
+                  currentVault?.path === vault.path ? "border-2 border-blue-500" : "border-gray-200 dark:border-gray-700"
                 }`}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    currentVault?.path === vault.path ? "bg-blue-100" : "bg-purple-100"
+                    currentVault?.path === vault.path ? "bg-blue-100 dark:bg-blue-900" : "bg-purple-100 dark:bg-purple-900"
                   }`}>
                     <i className={`fa-solid fa-database text-xl ${
-                      currentVault?.path === vault.path ? "text-blue-600" : "text-purple-600"
+                      currentVault?.path === vault.path ? "text-blue-600 dark:text-blue-400" : "text-purple-600 dark:text-purple-400"
                     }`}></i>
                   </div>
                   {currentVault?.path === vault.path && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">{t("vault.list.current")}</span>
+                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-medium rounded">{t("vault.list.current")}</span>
                   )}
                 </div>
                 <h3 className="font-semibold text-lg mb-1">{vault.name}</h3>
-                <p className="text-gray-500 text-sm mb-3 break-all">{vault.path}</p>
-                <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-3 break-all">{vault.path}</p>
+                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
                   <span><i className="fa-solid fa-layer-group mr-1"></i>{vault.project_count} {t("vault.list.projectCount")}</span>
                 </div>
                 <div className="flex gap-2">
@@ -153,12 +153,12 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                           await refreshData();
                         } catch (e) {
                           console.error("[VaultDialog] Switch failed:", e);
-                          alert("切换仓库失败: " + String(e));
+                          alert(t("vault.switchFailed") + ": " + String(e));
                         }
                       }}
                       className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
                     >
-                      切换
+                      {t("vault.switch")}
                     </button>
                   )}
                   <button
@@ -166,7 +166,7 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                       setDeleteTarget(vault);
                       setDeleteModalOpen(true);
                     }}
-                    className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm"
+                    className="px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg text-sm"
                   >
                     <i className="fa-solid fa-trash"></i>
                   </button>
@@ -177,40 +177,40 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
             {/* 导入已有仓库卡片 */}
             <div
               onClick={() => setImportModalOpen(true)}
-              className="vault-card bg-white rounded-xl border-2 border-dashed border-emerald-300 p-5 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30"
+              className="vault-card bg-white dark:bg-gray-800 rounded-xl border-2 border-dashed border-emerald-300 p-5 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/30"
             >
               <div className="flex flex-col items-center justify-center py-8">
-                <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4">
-                  <i className="fa-solid fa-file-import text-emerald-500 text-xl"></i>
+                <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950 rounded-xl flex items-center justify-center mb-4">
+                  <i className="fa-solid fa-file-import text-emerald-500 dark:text-emerald-400 text-xl"></i>
                 </div>
-                <p className="text-emerald-600 text-sm font-medium">{t("vault.import.title")}</p>
-                <p className="text-gray-400 text-xs mt-1">选择含仓库文件的目录</p>
+                <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium">{t("vault.import.title")}</p>
+                <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">{t("vault.importExistingDesc")}</p>
               </div>
             </div>
 
             {/* 新建仓库卡片 */}
             <div
               onClick={() => setCreateModalOpen(true)}
-              className="vault-card bg-white rounded-xl border-2 border-dashed border-gray-300 p-5 cursor-pointer hover:border-blue-400 hover:bg-blue-50/30"
+              className="vault-card bg-white dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 p-5 cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 dark:hover:bg-blue-950/30"
             >
               <div className="flex flex-col items-center justify-center py-8">
-                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
-                  <i className="fa-solid fa-plus text-gray-400 text-xl"></i>
+                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center mb-4">
+                  <i className="fa-solid fa-plus text-gray-400 dark:text-gray-500 text-xl"></i>
                 </div>
-                <p className="text-gray-500 text-sm">点击创建新仓库</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">{t("vault.createNewDesc")}</p>
               </div>
             </div>
           </div>
 
           {/* 提示信息 */}
-          <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-            <i className="fa-solid fa-lightbulb text-amber-500 mt-0.5"></i>
+          <div className="mt-6 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
+            <i className="fa-solid fa-lightbulb text-amber-500 dark:text-amber-400 mt-0.5"></i>
             <div>
-              <h4 className="font-medium text-amber-800 mb-1">使用提示</h4>
-              <ul className="text-sm text-amber-700 space-y-1">
-                <li>每个仓库是独立的数据存储空间，可用于分类管理不同场景的项目</li>
-                <li>仓库数据以 SQLite 数据库文件形式存储，便于备份和迁移</li>
-                <li>删除仓库不会影响其他仓库的数据</li>
+              <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-1">{t("vault.usageTips")}</h4>
+              <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                <li>{t("vault.tip1")}</li>
+                <li>{t("vault.tip2")}</li>
+                <li>{t("vault.tip3")}</li>
               </ul>
             </div>
           </div>
@@ -220,12 +220,12 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
       {/* 创建仓库弹窗 */}
       {createModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4" onClick={() => createButtonState !== "creating" && setCreateModalOpen(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">{t("vault.create.title")}</h2>
                 {createButtonState !== "creating" && (
-                  <button onClick={() => setCreateModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                  <button onClick={() => setCreateModalOpen(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
                     <i className="fa-solid fa-xmark text-xl"></i>
                   </button>
                 )}
@@ -234,26 +234,26 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
 
             <div className="p-6 space-y-5">
               <div>
-                <label className="block text-sm font-medium mb-2">{t("vault.create.name")} <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium mb-2">{t("vault.create.name")} <span className="text-red-500 dark:text-red-400">*</span></label>
                 <input
                   type="text"
                   value={newVaultName}
                   onChange={(e) => setNewVaultName(e.target.value)}
                   placeholder={t("vault.create.namePlaceholder")}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                   disabled={createButtonState === "creating"}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">{t("vault.create.path")} <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium mb-2">{t("vault.create.path")} <span className="text-red-500 dark:text-red-400">*</span></label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={newVaultPath}
                     onChange={(e) => setNewVaultPath(e.target.value)}
-                    placeholder="选择存放目录"
-                    className="flex-1 px-4 py-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder={t("vault.selectStorageDir")}
+                    className="flex-1 px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     disabled={createButtonState === "creating"}
                   />
                   <button
@@ -263,7 +263,7 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                         const selected = await openDialog({
                           directory: true,
                           multiple: false,
-                          title: "选择仓库存放目录",
+                          title: t("vault.selectStorageDirTitle"),
                         });
                         if (selected) {
                           setNewVaultPath(selected as string);
@@ -273,33 +273,33 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                       }
                     }}
                     disabled={createButtonState === "creating"}
-                    className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                    className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
                   >
                     <i className="fa-solid fa-folder-open"></i>
                   </button>
                 </div>
               </div>
 
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 <i className="fa-solid fa-circle-info mr-1"></i>
-                将在所选目录下创建 SQLite 数据库和加密密钥文件
+                {t("vault.willCreateDesc")}
               </p>
 
               {createStep.step > 0 && (
-                <div className="border-t border-gray-200 pt-5">
-                  <h4 className="font-medium mb-3">正在创建仓库...</h4>
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-5">
+                  <h4 className="font-medium mb-3">{t("vault.creatingVault")}</h4>
                   <div className="space-y-3">
                     {[
-                      { id: 1, text: "验证目录有效性", successText: "目录有效性验证通过" },
-                      { id: 2, text: "创建数据库文件", successText: "数据库文件创建成功" },
-                      { id: 3, text: "执行初始化脚本", successText: "初始化脚本执行完成" },
-                      { id: 4, text: "验证数据库结构", successText: "数据库结构验证通过" },
+                      { id: 1, text: t("vault.import.step1"), successText: t("vault.import.step1") },
+                      { id: 2, text: t("vault.import.step2"), successText: t("vault.import.step2") },
+                      { id: 3, text: t("vault.import.step5"), successText: t("vault.import.step5") },
+                      { id: 4, text: t("vault.import.step5"), successText: t("vault.import.step5") },
                     ].map((step) => (
                       <div key={step.id} className="flex items-center gap-3">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
                           createStep.step > step.id ? "bg-green-500 text-white" :
                           createStep.step === step.id ? "bg-blue-500 animate-pulse text-white" :
-                          "bg-gray-200 text-gray-500"
+                          "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                         }`}>
                           {createStep.step > step.id ? (
                             <i className="fa-solid fa-check"></i>
@@ -308,9 +308,9 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                           )}
                         </div>
                         <span className={`text-sm ${
-                          createStep.step > step.id ? "text-green-600 font-medium" :
-                          createStep.step === step.id ? "text-gray-500" :
-                          "text-gray-400"
+                          createStep.step > step.id ? "text-green-600 dark:text-green-400 font-medium" :
+                          createStep.step === step.id ? "text-gray-500 dark:text-gray-400" :
+                          "text-gray-400 dark:text-gray-500"
                         }`}>
                           {createStep.step > step.id ? step.successText : step.text}
                         </span>
@@ -320,21 +320,21 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
 
                   <div className="mt-4">
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-500">{createStep.step > 3 ? "完成" : `步骤 ${createStep.step}/4`}</span>
-                      <span className="text-blue-600 font-medium">{createStep.percent}%</span>
+                      <span className="text-gray-500 dark:text-gray-400">{createStep.step > 3 ? t("vault.done") : t("vault.step", { current: createStep.step, total: 4 })}</span>
+                      <span className="text-blue-600 dark:text-blue-400 font-medium">{createStep.percent}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                       <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${createStep.percent}%` }}></div>
                     </div>
                   </div>
 
                   {createStep.error && (
-                    <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="mt-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <i className="fa-solid fa-circle-xmark text-red-500 mt-0.5"></i>
+                        <i className="fa-solid fa-circle-xmark text-red-500 dark:text-red-400 mt-0.5"></i>
                         <div>
-                          <p className="text-sm text-red-700 font-medium">创建失败</p>
-                          <p className="text-sm text-red-600 mt-1">{createStep.error}</p>
+                          <p className="text-sm text-red-700 dark:text-red-300 font-medium">{t("vault.createFailed")}</p>
+                          <p className="text-sm text-red-600 dark:text-red-400 mt-1">{createStep.error}</p>
                         </div>
                       </div>
                     </div>
@@ -343,7 +343,7 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
               )}
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex gap-3">
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
               <button
                 onClick={() => {
                   setCreateModalOpen(false);
@@ -353,7 +353,7 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                   setCreateButtonState("idle");
                 }}
                 disabled={createButtonState === "creating"}
-                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
               >
                 {t("vault.delete.cancel")}
               </button>
@@ -361,7 +361,7 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                 onClick={async () => {
                   if (!newVaultName.trim()) return;
                   if (!newVaultPath.trim()) {
-                    alert("请选择存放目录");
+                    alert(t("vault.selectDirFirst"));
                     return;
                   }
 
@@ -411,15 +411,15 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
       {/* 切换仓库弹窗 */}
       {switchModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={() => setSwitchModalOpen(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">切换仓库</h2>
-                <button onClick={() => setSwitchModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                <h2 className="text-xl font-semibold">{t("vault.switchVaultTitle")}</h2>
+                <button onClick={() => setSwitchModalOpen(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
                   <i className="fa-solid fa-xmark text-xl"></i>
                 </button>
               </div>
-              <p className="text-sm text-gray-500 mt-1">选择要打开的仓库</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("vault.switchVaultDesc")}</p>
             </div>
 
             <div className="p-4 max-h-80 overflow-auto">
@@ -437,28 +437,28 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                         setSwitchModalOpen(false);
                       } catch (e) {
                         console.error("[VaultDialog] Switch modal: failed:", e);
-                        alert("切换仓库失败: " + String(e));
+                        alert(t("vault.switchFailed") + ": " + String(e));
                       }
                     }}
                     className={`w-full p-4 rounded-lg border text-left flex items-center gap-4 ${
                       currentVault?.path === vault.path
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                        : "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                     }`}
                   >
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      currentVault?.path === vault.path ? "bg-blue-100" : "bg-purple-100"
+                      currentVault?.path === vault.path ? "bg-blue-100 dark:bg-blue-900" : "bg-purple-100 dark:bg-purple-900"
                     }`}>
                       <i className={`fa-solid fa-database ${
-                        currentVault?.path === vault.path ? "text-blue-600" : "text-purple-600"
+                        currentVault?.path === vault.path ? "text-blue-600 dark:text-blue-400" : "text-purple-600 dark:text-purple-400"
                       }`}></i>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium">{vault.name}</div>
-                      <div className="text-sm text-gray-500 break-all">{vault.path}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 break-all">{vault.path}</div>
                     </div>
                     {currentVault?.path === vault.path && (
-                      <i className="fa-solid fa-check text-blue-600"></i>
+                      <i className="fa-solid fa-check text-blue-600 dark:text-blue-400"></i>
                     )}
                   </button>
                 ))}
@@ -468,14 +468,14 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                     setSwitchModalOpen(false);
                     setImportModalOpen(true);
                   }}
-                  className="w-full p-4 rounded-lg border-2 border-dashed border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50/30 text-left flex items-center gap-4"
+                  className="w-full p-4 rounded-lg border-2 border-dashed border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/30 text-left flex items-center gap-4"
                 >
-                  <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
-                    <i className="fa-solid fa-file-import text-emerald-500"></i>
+                  <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-950 rounded-lg flex items-center justify-center">
+                    <i className="fa-solid fa-file-import text-emerald-500 dark:text-emerald-400"></i>
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-emerald-600">{t("vault.import.title")}</div>
-                    <div className="text-sm text-gray-400">选择含仓库文件的目录登记回清单</div>
+                    <div className="font-medium text-emerald-600 dark:text-emerald-400">{t("vault.import.title")}</div>
+                    <div className="text-sm text-gray-400 dark:text-gray-500">{t("vault.importSelectDesc")}</div>
                   </div>
                 </button>
 
@@ -484,21 +484,21 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                     setSwitchModalOpen(false);
                     setCreateModalOpen(true);
                   }}
-                  className="w-full p-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30 text-left flex items-center gap-4"
+                  className="w-full p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-blue-50/30 dark:hover:bg-blue-950/30 text-left flex items-center gap-4"
                 >
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <i className="fa-solid fa-folder-plus text-gray-400"></i>
+                  <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                    <i className="fa-solid fa-folder-plus text-gray-400 dark:text-gray-500"></i>
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-600">{t("vault.create.title")}</div>
-                    <div className="text-sm text-gray-400">设置新的数据存储空间</div>
+                    <div className="font-medium text-gray-600 dark:text-gray-300">{t("vault.create.title")}</div>
+                    <div className="text-sm text-gray-400 dark:text-gray-500">{t("vault.createNewShortDesc")}</div>
                   </div>
                 </button>
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200">
-              <button onClick={() => setSwitchModalOpen(false)} className="w-full px-4 py-2 border rounded-lg hover:bg-gray-50">
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+              <button onClick={() => setSwitchModalOpen(false)} className="w-full px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
                 {t("vault.delete.cancel")}
               </button>
             </div>
@@ -509,29 +509,29 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
       {/* 导入已有仓库弹窗 */}
       {importModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={() => importButtonState !== "importing" && setImportModalOpen(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 flex-shrink-0">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">{t("vault.import.title")}</h2>
                 {importButtonState !== "importing" && (
-                  <button onClick={() => setImportModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                  <button onClick={() => setImportModalOpen(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
                     <i className="fa-solid fa-xmark text-xl"></i>
                   </button>
                 )}
               </div>
-              <p className="text-sm text-gray-500 mt-1">选择已有仓库文件目录，校验齐全、有效后登记回仓库清单</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("vault.importDesc")}</p>
             </div>
 
             <div className="p-6 space-y-4 flex-1 overflow-y-auto">
               <div>
-                <label className="block text-sm font-medium mb-2">仓库存放位置 <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium mb-2">{t("vault.storageLocation")} <span className="text-red-500 dark:text-red-400">*</span></label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={importVaultPath}
                     onChange={(e) => setImportVaultPath(e.target.value)}
-                    placeholder="选择含 os_compass.db 和 .cryptokey 的目录"
-                    className="flex-1 px-4 py-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder={t("vault.storageLocationPlaceholder")}
+                    className="flex-1 px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     disabled={importButtonState === "importing"}
                   />
                   <button
@@ -555,7 +555,7 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                       }
                     }}
                     disabled={importButtonState === "importing"}
-                    className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                    className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
                   >
                     <i className="fa-solid fa-folder-open"></i>
                   </button>
@@ -563,39 +563,39 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">{t("vault.create.name")} <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium mb-2">{t("vault.create.name")} <span className="text-red-500 dark:text-red-400">*</span></label>
                 <input
                   type="text"
                   value={importVaultName}
                   onChange={(e) => setImportVaultName(e.target.value)}
-                  placeholder="默认取目录名，可修改"
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder={t("vault.vaultNamePlaceholder")}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                   disabled={importButtonState === "importing"}
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
-                <i className="fa-solid fa-circle-info text-blue-500 mt-0.5"></i>
-                <div className="text-sm text-blue-700">
-                  <p>将校验目录下的 <code className="bg-blue-100 px-1 rounded">os_compass.db</code> 和 <code className="bg-blue-100 px-1 rounded">.cryptokey</code> 文件齐全、有效后登记到仓库清单。</p>
-                  <p className="mt-1 text-blue-500">导入后不会立即切换，可在清单中手动点"切换"。</p>
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-start gap-2">
+                <i className="fa-solid fa-circle-info text-blue-500 dark:text-blue-400 mt-0.5"></i>
+                <div className="text-sm text-blue-700 dark:text-blue-300">
+                  <p>{t("vault.importValidationDesc")}</p>
+                  <p className="mt-1 text-blue-500 dark:text-blue-400">{t("vault.importNoSwitchNote")}</p>
                 </div>
               </div>
 
               {importError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
                   <div className="flex items-start gap-2">
-                    <i className="fa-solid fa-circle-xmark text-red-500 mt-0.5"></i>
+                    <i className="fa-solid fa-circle-xmark text-red-500 dark:text-red-400 mt-0.5"></i>
                     <div>
-                      <p className="text-sm text-red-700 font-medium">导入失败</p>
-                      <p className="text-sm text-red-600 mt-1">{importError}</p>
+                      <p className="text-sm text-red-700 dark:text-red-300 font-medium">{t("vault.importFailed")}</p>
+                      <p className="text-sm text-red-600 dark:text-red-400 mt-1">{importError}</p>
                     </div>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex gap-3 flex-shrink-0">
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3 flex-shrink-0">
               <button
                 onClick={() => {
                   setImportModalOpen(false);
@@ -605,14 +605,14 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                   setImportButtonState("idle");
                 }}
                 disabled={importButtonState === "importing"}
-                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
               >
                 {t("vault.delete.cancel")}
               </button>
               <button
                 onClick={async () => {
-                  if (!importVaultName.trim()) { alert("请输入仓库名称"); return; }
-                  if (!importVaultPath.trim()) { alert("请选择仓库目录"); return; }
+                  if (!importVaultName.trim()) { alert(t("vault.enterVaultName")); return; }
+                  if (!importVaultPath.trim()) { alert(t("vault.selectVaultDir")); return; }
                   setImportButtonState("importing");
                   setImportError(null);
                   try {
@@ -644,24 +644,24 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
       {/* 删除确认弹窗 */}
       {deleteModalOpen && deleteTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={() => setDeleteModalOpen(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                  <i className="fa-solid fa-triangle-exclamation text-red-600 text-xl"></i>
+                <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                  <i className="fa-solid fa-triangle-exclamation text-red-600 dark:text-red-400 text-xl"></i>
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold">{t("vault.delete.title")}</h2>
-                  <p className="text-sm text-gray-500">{t("vault.delete.warningSub")}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t("vault.delete.warningSub")}</p>
                 </div>
               </div>
             </div>
 
             <div className="p-6">
-              <p className="text-gray-600 mb-4">{t("vault.delete.warning", { name: deleteTarget.name })}</p>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">{t("vault.delete.warning", { name: deleteTarget.name })}</p>
 
               <div className="space-y-3">
-                <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
                   <input
                     type="radio"
                     name="deleteMode"
@@ -671,11 +671,11 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                     className="mt-1"
                   />
                   <div>
-                    <div className="font-medium">仅从索引移除</div>
-                    <div className="text-sm text-gray-500">数据库文件保留在原位置，可后续重新打开</div>
+                    <div className="font-medium">{t("vault.removeFromIndex")}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{t("vault.removeFromIndexDesc")}</div>
                   </div>
                 </label>
-                <label className="flex items-start gap-3 p-3 border border-red-200 rounded-lg cursor-pointer hover:bg-red-50">
+                <label className="flex items-start gap-3 p-3 border border-red-200 dark:border-red-800 rounded-lg cursor-pointer hover:bg-red-50 dark:hover:bg-red-950 dark:bg-gray-800 dark:text-gray-200">
                   <input
                     type="radio"
                     name="deleteMode"
@@ -685,21 +685,21 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                     className="mt-1"
                   />
                   <div>
-                    <div className="font-medium text-red-600">彻底删除</div>
-                    <div className="text-sm text-red-500">删除数据库文件、加密密钥等所有仓库文件，不可恢复</div>
+                    <div className="font-medium text-red-600 dark:text-red-400">{t("vault.permanentDelete")}</div>
+                    <div className="text-sm text-red-500 dark:text-red-400">{t("vault.permanentDeleteDesc")}</div>
                   </div>
                 </label>
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex gap-3">
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
               <button
                 onClick={() => {
                   setDeleteModalOpen(false);
                   setDeleteTarget(null);
                   setDeleteMode("index");
                 }}
-                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
               >
                 {t("vault.delete.cancel")}
               </button>
@@ -712,7 +712,7 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                     setDeleteTarget(null);
                     setDeleteMode("index");
                   } catch (e) {
-                    alert("删除失败: " + String(e));
+                    alert(t("vault.deleteFailed") + ": " + String(e));
                   }
                 }}
                 className={`flex-1 px-4 py-2 text-white rounded-lg ${
@@ -721,7 +721,7 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                     : "bg-blue-600 hover:bg-blue-700"
                 }`}
               >
-                {deleteMode === "permanent" ? "彻底删除" : t("vault.delete.confirm")}
+                {deleteMode === "permanent" ? t("vault.permanentDelete") : t("vault.delete.confirm")}
               </button>
             </div>
           </div>

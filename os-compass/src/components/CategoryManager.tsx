@@ -268,8 +268,8 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
           className={`flex items-center justify-between p-3 rounded-lg mb-1 transition-colors relative ${
             isDragging ? "opacity-40" : ""
           } ${
-            lastSelectedId === cat.id ? "bg-blue-100 border border-blue-300" : "bg-gray-50 hover:bg-gray-100"
-          } ${isDragOver && dropIndicator === "inside" ? "ring-2 ring-indigo-400 bg-indigo-50" : ""} ${
+            lastSelectedId === cat.id ? "bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700" : "bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
+          } ${isDragOver && dropIndicator === "inside" ? "ring-2 ring-indigo-400 bg-indigo-50 dark:bg-indigo-950" : ""} ${
             !isSystem ? "cursor-grab active:cursor-grabbing" : ""
           }`}
           style={{ marginLeft }}
@@ -290,7 +290,7 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
                 e.stopPropagation();
                 if (hasChildren) toggleExpand(cat.id);
               }}
-              className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+              className="w-6 h-6 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950 rounded"
               title={hasChildren ? (isExpanded ? "收起" : "展开") : ""}
             >
               {hasChildren ? (
@@ -300,10 +300,10 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
               )}
             </button>
             <i className={`fa-solid fa-folder ${hasChildren ? "text-yellow-500" : "text-yellow-300"}`}></i>
-            <span className={`font-medium ${isSystem ? "text-gray-600" : "text-gray-800"}`}>{cat.name}</span>
-            {isSystem && <span className="text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded">{t("category.system")}</span>}
+            <span className={`font-medium ${isSystem ? "text-gray-600 dark:text-gray-400" : "text-gray-800 dark:text-gray-200"}`}>{cat.name}</span>
+            {isSystem && <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded">{t("category.system")}</span>}
             {hasChildren && (
-              <span className="text-xs text-gray-400">({cat.children!.length})</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">({cat.children!.length})</span>
             )}
           </div>
           <div className="flex items-center gap-1">
@@ -313,7 +313,7 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
                   e.stopPropagation();
                   openNew(cat.id);
                 }}
-                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"
+                className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-950 rounded"
                 title={t("category.addChild")}
               >
                 <i className="fa-solid fa-plus"></i>
@@ -326,7 +326,7 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
                     e.stopPropagation();
                     openEdit(cat);
                   }}
-                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950 rounded"
                   title={t("category.edit")}
                 >
                   <i className="fa-solid fa-pen-to-square"></i>
@@ -336,7 +336,7 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
                     e.stopPropagation();
                     handleDelete(cat.id);
                   }}
-                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded"
                   title={t("category.delete")}
                 >
                   <i className="fa-solid fa-trash"></i>
@@ -356,15 +356,15 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
           >
             <i className="fa-solid fa-arrow-left mr-2"></i>{t("common.close")}
           </button>
-          <h1 className="text-xl font-bold">{t("category.title")}</h1>
+          <h1 className="text-xl font-bold dark:text-gray-100">{t("category.title")}</h1>
         </div>
         <button
           onClick={() => openNew(null)}
@@ -375,10 +375,10 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
       </header>
 
       <div className="flex-1 overflow-auto p-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-4xl">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 max-w-4xl">
           {loading ? (
-            <div className="text-center py-8 text-gray-500">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mb-2"></div>
               <p className="text-sm">{t("category.loading")}</p>
             </div>
           ) : categoryTree.length === 0 ? (
@@ -394,24 +394,24 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
           )}
 
           {showNewForm && (
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 mt-6">
-              <h3 className="font-bold mb-4 text-lg">
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mt-6">
+              <h3 className="font-bold mb-4 text-lg dark:text-gray-100">
                 {editingCategory ? `${t("category.form.editTitle")}：${editingCategory.name}` : t("category.form.newTitle")}
               </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700">{t("category.form.name")}</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t("category.form.name")}</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                     placeholder={t("category.form.namePlaceholder")}
                     autoFocus
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700">{t("category.form.parent")}</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t("category.form.parent")}</label>
                   <select
                     value={formData.parent_id || ""}
                     onChange={(e) =>
@@ -420,35 +420,35 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
                         parent_id: e.target.value ? Number(e.target.value) : null,
                       })
                     }
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                   >
                     <option value="">{t("category.form.topLevel")}</option>
                     {renderParentOptions(categories.filter((c) => c.parent_id === null))}
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     {formData.parent_id
                       ? t("category.willCreateUnder", { name: categories.find((c) => c.id === formData.parent_id)?.name })
                       : t("category.willCreateTop")}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700">{t("category.form.desc")}</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t("category.form.desc")}</label>
                   <textarea
                     value={formData.explain}
                     onChange={(e) => setFormData({ ...formData, explain: e.target.value })}
                     rows={3}
                     placeholder={t("category.form.descPlaceholder")}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                   />
-                  <p className="text-xs text-gray-500 mt-1">{t("category.form.descTip")}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t("category.form.descTip")}</p>
                 </div>
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={() => {
                       setEditingCategory(null);
                       setShowNewForm(false);
                     }}
-                    className="px-4 py-2 border rounded-lg hover:bg-gray-100"
+                    className="px-4 py-2 border rounded-lg hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
                   >
                     {t("category.form.cancel")}
                   </button>

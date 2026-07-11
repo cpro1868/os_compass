@@ -68,13 +68,13 @@ export function ArchiveView({
             <span>{t("archive.selected", { count: selectedIds.size })}</span>
             <button
               onClick={toggleSelectAll}
-              className="text-sm underline hover:text-amber-100"
+              className="text-sm underline hover:text-amber-100 dark:hover:text-amber-200"
             >
               {selectedIds.size === filteredProjects.length ? t("archive.cancelSelect") : t("archive.selectAll")}
             </button>
             <button
               onClick={() => setSelectedIds(new Set())}
-              className="text-sm underline hover:text-amber-100"
+              className="text-sm underline hover:text-amber-100 dark:hover:text-amber-200"
             >
               {t("archive.deselect")}
             </button>
@@ -100,18 +100,18 @@ export function ArchiveView({
       )}
 
       {/* 顶部栏 */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
             <button
               onClick={onBack}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             >
               <i className="fa-solid fa-arrow-left mr-2"></i>{t("common.close")}
             </button>
-            <i className="fa-solid fa-box-archive text-amber-600"></i>
-            <h1 className="text-xl font-bold">{t("archive.title")}</h1>
-            <span className="text-sm text-gray-500">
+            <i className="fa-solid fa-box-archive text-amber-600 dark:text-amber-400"></i>
+            <h1 className="text-xl font-bold dark:text-gray-100">{t("archive.title")}</h1>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               {t("kanban.totalProjects", { count: filteredProjects.length })}
             </span>
           </div>
@@ -119,13 +119,13 @@ export function ArchiveView({
 
         {/* 搜索框 */}
         <div className="relative">
-          <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("archive.search")}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
           />
         </div>
       </header>
@@ -153,8 +153,8 @@ export function ArchiveView({
             {filteredProjects.map((p) => (
               <div
                 key={p.id}
-                className={`bg-white rounded-xl border p-4 hover:shadow-md transition ${
-                  selectedIds.has(p.id) ? "border-amber-300 bg-amber-50" : "border-gray-200"
+                className={`bg-white dark:bg-gray-800 rounded-xl border p-4 hover:shadow-md transition ${
+                  selectedIds.has(p.id) ? "border-amber-300 bg-amber-50 dark:border-amber-600 dark:bg-amber-950" : "border-gray-200 dark:border-gray-700"
                 }`}
               >
                 <div className="flex items-start gap-4">
@@ -165,19 +165,19 @@ export function ArchiveView({
                     className="mt-1 rounded"
                   />
 
-                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
+                  <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-gray-400 dark:text-gray-500">
                     <i className="fa-solid fa-box-archive text-xl"></i>
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-medium text-gray-700">{p.name}</h3>
-                      <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded">
+                      <h3 className="font-medium text-gray-700 dark:text-gray-300">{p.name}</h3>
+                      <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 rounded">
                         {t("archive.archived")}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">{p.url}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{p.url}</p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 dark:text-gray-500">
                       <span>
                         <i className="fa-solid fa-folder mr-1"></i>
                         {p.category_id || "-"}
@@ -196,13 +196,13 @@ export function ArchiveView({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onRestore(p.id)}
-                      className="px-3 py-1.5 text-sm border border-green-600 text-green-600 rounded-lg hover:bg-green-50 flex items-center gap-2"
+                      className="px-3 py-1.5 text-sm border border-green-600 text-green-600 dark:text-green-400 dark:border-green-500 rounded-lg hover:bg-green-50 dark:hover:bg-green-950 flex items-center gap-2"
                     >
                       <i className="fa-solid fa-rotate-left"></i>{t("actions.restore")}
                     </button>
                     <button
                       onClick={() => onPermanentDelete(p.id)}
-                      className="px-3 py-1.5 text-sm border border-red-600 text-red-600 rounded-lg hover:bg-red-50 flex items-center gap-2"
+                      className="px-3 py-1.5 text-sm border border-red-600 text-red-600 dark:text-red-400 dark:border-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2"
                     >
                       <i className="fa-solid fa-trash"></i>{t("archive.deletePermanent")}
                     </button>
@@ -217,26 +217,26 @@ export function ArchiveView({
       {/* 永久删除确认弹窗 */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <i className="fa-solid fa-triangle-exclamation text-red-600 text-xl"></i>
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                <i className="fa-solid fa-triangle-exclamation text-red-600 dark:text-red-400 text-xl"></i>
               </div>
               <div>
-                <h3 className="font-semibold text-lg">{t("archive.deleteConfirmTitle")}</h3>
-                <p className="text-sm text-gray-500">{t("archive.deleteConfirmSubtitle")}</p>
+                <h3 className="font-semibold text-lg dark:text-gray-100">{t("archive.deleteConfirmTitle")}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t("archive.deleteConfirmSubtitle")}</p>
               </div>
             </div>
 
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
               {t("archive.deleteConfirmMsg", { count: selectedIds.size })}
             </p>
 
-            <p className="text-sm text-red-500 mb-4">
+            <p className="text-sm text-red-500 dark:text-red-400 mb-4">
               <i className="fa-solid fa-exclamation-circle mr-1"></i>
               {t("archive.deleteWarning")}
             </p>
-            <ul className="text-sm text-gray-500 mb-6 list-disc ml-4">
+            <ul className="text-sm text-gray-500 dark:text-gray-400 mb-6 list-disc ml-4">
               <li>{t("archive.deleteWarningItem1")}</li>
               <li>{t("archive.deleteWarningItem2")}</li>
               <li>{t("archive.deleteWarningItem3")}</li>
@@ -246,7 +246,7 @@ export function ArchiveView({
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
               >
                 {t("common.cancel")}
               </button>

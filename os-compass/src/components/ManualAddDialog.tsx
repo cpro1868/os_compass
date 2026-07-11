@@ -57,18 +57,18 @@ export function ManualAddDialog({ open, onClose, onSuccess }: ManualAddDialogPro
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-xl">
-        <div className="p-6 border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-xl">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">{t("manualAdd.title")}</h2>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             >
               <i className="fa-solid fa-xmark"></i>
             </button>
           </div>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {t("manualAdd.subtitle")}
           </p>
         </div>
@@ -83,7 +83,7 @@ export function ManualAddDialog({ open, onClose, onSuccess }: ManualAddDialogPro
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("manualAdd.namePlaceholder")}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
             />
           </div>
 
@@ -96,7 +96,7 @@ export function ManualAddDialog({ open, onClose, onSuccess }: ManualAddDialogPro
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder={t("manualAdd.urlPlaceholder")}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
             />
           </div>
 
@@ -109,7 +109,7 @@ export function ManualAddDialog({ open, onClose, onSuccess }: ManualAddDialogPro
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t("manualAdd.descPlaceholder")}
               rows={3}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
             />
           </div>
 
@@ -120,7 +120,7 @@ export function ManualAddDialog({ open, onClose, onSuccess }: ManualAddDialogPro
             <select
               value={categoryId ?? ""}
               onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : null)}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
             >
               <option value="">{t("manualAdd.uncategorized")}</option>
               {categories.map((cat) => (
@@ -131,18 +131,18 @@ export function ManualAddDialog({ open, onClose, onSuccess }: ManualAddDialogPro
             </select>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-700">
+          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
               <i className="fa-solid fa-info-circle mr-1"></i>
               {t("manualAdd.infoTip")}
             </p>
           </div>
         </div>
 
-        <div className="p-6 border-t border-gray-200 flex gap-3">
+        <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+            className="flex-1 px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             {t("manualAdd.cancel")}
           </button>

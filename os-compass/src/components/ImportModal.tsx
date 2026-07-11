@@ -131,13 +131,13 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">{t("import.title")}</h2>
             <button
               onClick={() => setShowManualAdd(true)}
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
               <i className="fa-solid fa-pen mr-1"></i>{t("import.manualAdd")}
             </button>
@@ -149,8 +149,8 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
               disabled={importing}
               className={`px-4 py-2 rounded-lg ${
                 mode === "single"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
               } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               <i className="fa-solid fa-link mr-2"></i>
@@ -162,8 +162,8 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
               disabled={importing}
               className={`px-4 py-2 rounded-lg ${
                 mode === "batch"
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
               } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               <i className="fa-solid fa-list mr-2"></i>
@@ -186,9 +186,9 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
                   onChange={(e) => setSingleUrl(e.target.value)}
                   placeholder="https://github.com/facebook/react"
                   disabled={importing}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {t("import.autoPlatform")}
                 </p>
               </div>
@@ -201,7 +201,7 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
                   value={categoryId ?? ""}
                   onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : null)}
                   disabled={importing}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                 >
                   <option value="">{t("import.autoSelectCategory")}</option>
                   {categories.map((cat) => (
@@ -210,7 +210,7 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {t("import.autoCategoryTip")}
                 </p>
               </div>
@@ -251,9 +251,9 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
                   placeholder={t("import.batchPlaceholder")}
                   rows={10}
                   disabled={importing}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm disabled:bg-gray-100 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {t("import.batchTip", { count: urlList.length })}
                 </p>
               </div>
@@ -284,12 +284,12 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
           )}
 
           {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mt-4 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
               <div className="flex items-start gap-3">
-                <i className="fa-solid fa-circle-exclamation text-red-500 mt-0.5"></i>
+                <i className="fa-solid fa-circle-exclamation text-red-500 dark:text-red-400 mt-0.5"></i>
                 <div>
-                  <p className="font-medium text-red-700">{t("import.importFailed")}</p>
-                  <p className="text-sm text-red-600 mt-1">{error}</p>
+                  <p className="font-medium text-red-700 dark:text-red-300">{t("import.importFailed")}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
                 </div>
               </div>
             </div>
@@ -298,43 +298,43 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
           {results.length > 0 && (
             <div className="mt-4">
               <div className="flex items-center gap-4 mb-3">
-                <span className="text-sm text-green-600">
+                <span className="text-sm text-green-600 dark:text-green-400">
                   <i className="fa-solid fa-check-circle mr-1"></i>
                   {t("import.success", { count: successCount })}
                 </span>
                 {failCount > 0 && (
-                  <span className="text-sm text-red-600">
+                  <span className="text-sm text-red-600 dark:text-red-400">
                     <i className="fa-solid fa-times-circle mr-1"></i>
                     {t("import.failed", { count: failCount })}
                   </span>
                 )}
                 {duplicateCount > 0 && (
-                  <span className="text-sm text-yellow-600">
+                  <span className="text-sm text-yellow-600 dark:text-yellow-400">
                     <i className="fa-solid fa-exclamation-circle mr-1"></i>
                     {t("import.duplicateSkipped", { count: duplicateCount })}
                   </span>
                 )}
               </div>
 
-              <div className="border rounded-lg divide-y max-h-60 overflow-y-auto">
+              <div className="border dark:border-gray-700 rounded-lg divide-y dark:divide-gray-700 max-h-60 overflow-y-auto">
                 {results.map((result, index) => (
                   <div
                     key={index}
                     className="p-3 flex items-center gap-3"
                   >
                     {result.success ? (
-                      <i className="fa-solid fa-check-circle text-green-500"></i>
+                      <i className="fa-solid fa-check-circle text-green-500 dark:text-green-400"></i>
                     ) : result.duplicate ? (
-                      <i className="fa-solid fa-exclamation-circle text-yellow-500"></i>
+                      <i className="fa-solid fa-exclamation-circle text-yellow-500 dark:text-yellow-400"></i>
                     ) : (
-                      <i className="fa-solid fa-times-circle text-red-500"></i>
+                      <i className="fa-solid fa-times-circle text-red-500 dark:text-red-400"></i>
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
                         {result.name || result.url}
                       </p>
                       {result.error && (
-                        <p className={`text-xs truncate ${result.duplicate ? "text-yellow-600" : "text-red-600"}`}>
+                        <p className={`text-xs truncate ${result.duplicate ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"}`}>
                           {result.error}
                         </p>
                       )}
@@ -349,7 +349,7 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
                             window.dispatchEvent(event);
                           }, 300);
                         }}
-                        className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 whitespace-nowrap"
+                        className="text-xs px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800 whitespace-nowrap"
                       >
                         {t("import.viewProject")}
                       </button>
@@ -361,11 +361,11 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
           )}
         </div>
 
-        <div className="p-6 border-t border-gray-200 flex justify-between">
-          <div className="text-sm text-gray-500">
+        <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             {importing ? (
               <span className="flex items-center gap-2">
-                <i className="fa-solid fa-spinner fa-spin text-blue-500"></i>
+                <i className="fa-solid fa-spinner fa-spin text-blue-500 dark:text-blue-400"></i>
                 {currentStep || t("import.importing")} ({currentIndex}/{urlList.length})
               </span>
             ) : results.length > 0 ? (
@@ -380,7 +380,7 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
             <button
               onClick={onClose}
               disabled={importing}
-              className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              className="px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
             >
               {t("import.cancel")}
             </button>

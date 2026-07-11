@@ -17,10 +17,10 @@ interface ListViewProps {
 }
 
 const STATUS_CONFIG: Record<string, { emoji: string; label: string; class: string }> = {
-  TO_EXPLORE: { emoji: "💡", label: "待探索", class: "bg-blue-100 text-blue-700" },
-  DIVING: { emoji: "🔬", label: "深度研究中", class: "bg-yellow-100 text-yellow-700" },
-  IN_USE: { emoji: "✅", label: "已落地", class: "bg-green-100 text-green-700" },
-  ABANDONED: { emoji: "🗑️", label: "弃用/避坑", class: "bg-gray-100 text-gray-700" },
+  TO_EXPLORE: { emoji: "💡", label: "待探索", class: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" },
+  DIVING: { emoji: "🔬", label: "深度研究中", class: "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300" },
+  IN_USE: { emoji: "✅", label: "已落地", class: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" },
+  ABANDONED: { emoji: "🗑️", label: "弃用/避坑", class: "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300" },
 };
 
 export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatchArchive, selectedIds, onSelectionChange }: ListViewProps) {
@@ -224,24 +224,24 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
   return (
     <div className="flex flex-col h-full">
       {/* 顶部栏 */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold">全部项目</h1>
-            <span className="text-sm text-gray-500">共 {filteredProjects.length} 个</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">共 {filteredProjects.length} 个</span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {/* 搜索框 */}
           <div className="flex-1 max-w-md relative">
-            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("list.search")}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
             />
           </div>
 
@@ -249,7 +249,7 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-3 py-2 border rounded-lg text-sm"
+            className="px-3 py-2 border rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
           >
             <option value="">全部分类</option>
             {categoryOptions.map((cat) => (
@@ -263,20 +263,20 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
               onClick={() => {
                 setShowLangDropdown(!showLangDropdown);
               }}
-              className="px-3 py-2 border rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50"
+              className="px-3 py-2 border rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
             >
               <span>语言</span>
               {filterLanguages.length > 0 && (
-                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 text-xs rounded">
+                <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs rounded">
                   {filterLanguages.length}
                 </span>
               )}
               <i className="fa-solid fa-chevron-down text-xs"></i>
             </button>
             {showLangDropdown && (
-              <div className="absolute z-10 mt-1 bg-white border rounded-lg shadow-lg p-2 min-w-[160px] right-0 max-h-64 overflow-auto">
+              <div className="absolute z-10 mt-1 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg p-2 min-w-[160px] right-0 max-h-64 overflow-auto">
                 <label
-                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded text-sm cursor-pointer border-b"
+                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded text-sm cursor-pointer border-b dark:border-gray-700"
                 >
                   <input
                     type="checkbox"
@@ -289,7 +289,7 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
                 {allLanguages.map((lang) => (
                   <label
                     key={lang}
-                    className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded text-sm cursor-pointer"
+                    className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded text-sm cursor-pointer"
                   >
                     <input
                       type="checkbox"
@@ -308,7 +308,7 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border rounded-lg text-sm"
+            className="px-3 py-2 border rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
           >
             <option value="">全部状态</option>
             <option value="TO_EXPLORE">💡 待探索</option>
@@ -373,8 +373,8 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
             <col style={{ width: getColWidth('updated', 100) }} />
             <col style={{ width: getColWidth('actions', 80) }} />
           </colgroup>
-          <thead className="bg-gray-50 sticky top-0">
-            <tr className="text-left text-xs text-gray-500 border-b">
+          <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0">
+            <tr className="text-left text-xs text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
               <th className="px-2 py-2">
                 <input
                   type="checkbox"
@@ -430,7 +430,7 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
               <th className="px-2 py-2">操作</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
             {filteredProjects.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-6 py-12">
@@ -455,7 +455,7 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
               filteredProjects.map((project) => (
                 <tr
                   key={project.id}
-                  className={`hover:bg-gray-50 ${selectedIds.has(project.id) ? "bg-blue-50" : ""}`}
+                  className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${selectedIds.has(project.id) ? "bg-blue-50 dark:bg-blue-950" : ""}`}
                 >
                   <td className="px-3 py-2">
                     <input
@@ -467,21 +467,21 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center text-orange-600">
+                      <div className="w-6 h-6 bg-orange-100 dark:bg-orange-900 rounded flex items-center justify-center text-orange-600 dark:text-orange-400">
                         <i className="fa-solid fa-code text-xs"></i>
                       </div>
                       <div className="min-w-0">
                         <button
                           onClick={() => onProjectClick(project)}
-                          className="font-medium text-blue-600 hover:underline text-sm truncate block"
+                          className="font-medium text-blue-600 dark:text-blue-400 hover:underline text-sm truncate block"
                         >
                           {project.name}
                         </button>
-                        <p className="text-xs text-gray-400 truncate">{project.url}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{project.url}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-600">
+                  <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-300">
                     <span className="truncate block" title={buildCategoryPath(project.category_id ?? null)}>
                       {buildCategoryPath(project.category_id ?? null)}
                     </span>
@@ -490,11 +490,11 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
                   <td className="px-3 py-2">
                     {(() => {
                       const langs = parseLanguages(project.languages);
-                      if (langs.length === 0) return <span className="text-xs text-gray-400">-</span>;
+                      if (langs.length === 0) return <span className="text-xs text-gray-400 dark:text-gray-500">-</span>;
                       return (
                         <div className="flex flex-wrap gap-1">
                           {langs.slice(0, 3).map((lang) => (
-                            <span key={lang} className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                            <span key={lang} className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded">
                               {lang}
                             </span>
                           ))}
@@ -507,22 +507,22 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
                       {statusText(project.lifecycle_status)}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-400">
+                  <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
                     {new Date(project.updated_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-3">
                     <div className="relative" onMouseLeave={() => setOpenMenuId(null)}>
                       <button
                         onClick={() => setOpenMenuId(openMenuId === project.id ? null : project.id)}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                       >
                         <i className="fa-solid fa-ellipsis"></i>
                       </button>
                       {openMenuId === project.id && (
-                        <div className="absolute right-0 mt-1 bg-white border rounded-lg shadow-lg py-1 min-w-[120px] z-10">
+                        <div className="absolute right-0 mt-1 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[120px] z-10">
                           <button
                             onClick={() => { onProjectClick(project); setOpenMenuId(null); }}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                           >
                             <i className="fa-solid fa-pen"></i>编辑
                           </button>
@@ -533,7 +533,7 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
                               }
                               setOpenMenuId(null);
                             }}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                           >
                             <i className="fa-solid fa-box-archive"></i>归档
                           </button>
@@ -544,7 +544,7 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
                               }
                               setOpenMenuId(null);
                             }}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600 flex items-center gap-2"
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 flex items-center gap-2"
                           >
                             <i className="fa-solid fa-trash"></i>删除
                           </button>

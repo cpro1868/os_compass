@@ -176,26 +176,26 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-gray-200">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col dark:bg-gray-800">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">{t("settings.title")}</h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700"
             >
               <i className="fa-solid fa-xmark text-lg"></i>
             </button>
           </div>
-          <div className="border-b border-gray-200 flex">
+          <div className="border-b border-gray-200 flex dark:border-gray-700">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-6 py-3 border-b-2 ${
                   activeTab === tab.id
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-blue-600"
+                    ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                    : "border-transparent text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
                 }`}
               >
                 {tab.label}
@@ -218,7 +218,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                         setSettings({ ...settings, theme: e.target.value });
                         onThemeChange?.(e.target.value);
                       }}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                     >
                       <option value="dark">{t("settings.themeDark")}</option>
                       <option value="light">{t("settings.themeLight")}</option>
@@ -230,7 +230,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                     <select
                       value={settings.default_language}
                       onChange={(e) => setSettings({ ...settings, default_language: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                     >
                       <option value="zh-CN">{t("settings.langZh")}</option>
                       <option value="en-US">English</option>
@@ -253,7 +253,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                       value={settings.download_path}
                       onChange={(e) => setSettings({ ...settings, download_path: e.target.value })}
                       placeholder="D:\OpenSource_Workspace"
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                     />
                   </div>
                   <div>
@@ -261,7 +261,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                     <select
                       value={settings.default_editor}
                       onChange={(e) => setSettings({ ...settings, default_editor: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                     >
                       <option value="code">VS Code</option>
                       <option value="cursor">Cursor</option>
@@ -272,7 +272,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-6">
+              <div className="border-t border-gray-100 pt-6 dark:border-gray-700">
                 <h3 className="font-medium mb-4">{t("settings.proxy")}</h3>
                 <div className="space-y-4">
                   <label className="flex items-center gap-2">
@@ -292,7 +292,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                           <select
                             value={settings.proxy_protocol}
                             onChange={(e) => setSettings({ ...settings, proxy_protocol: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg"
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                           >
                             <option value="http">HTTP</option>
                             <option value="https">HTTPS</option>
@@ -306,7 +306,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                             value={settings.proxy_port || ""}
                             onChange={(e) => setSettings({ ...settings, proxy_port: parseInt(e.target.value) || 0 })}
                             placeholder="7890"
-                            className="w-full px-3 py-2 border rounded-lg"
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                           />
                         </div>
                       </div>
@@ -317,7 +317,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                           value={settings.proxy_host}
                           onChange={(e) => setSettings({ ...settings, proxy_host: e.target.value })}
                           placeholder="127.0.0.1"
-                          className="w-full px-3 py-2 border rounded-lg"
+                          className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -328,7 +328,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                             value={settings.proxy_username}
                             onChange={(e) => setSettings({ ...settings, proxy_username: e.target.value })}
                             placeholder="username"
-                            className="w-full px-3 py-2 border rounded-lg"
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                           />
                         </div>
                         <div>
@@ -338,7 +338,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                             value={settings.proxy_password}
                             onChange={(e) => setSettings({ ...settings, proxy_password: e.target.value })}
                             placeholder="password"
-                            className="w-full px-3 py-2 border rounded-lg"
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                           />
                         </div>
                       </div>
@@ -359,7 +359,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                     <select
                       value={settings.llm_provider}
                       onChange={(e) => setSettings({ ...settings, llm_provider: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                     >
                       <option value="openai">OpenAI</option>
                       <option value="deepseek">DeepSeek</option>
@@ -375,9 +375,9 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                       value={settings.llm_api_base}
                       onChange={(e) => setSettings({ ...settings, llm_api_base: e.target.value })}
                       placeholder="https://api.openai.com/v1"
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                     />
-                    <p className="text-xs text-gray-500 mt-1">{t("settings.apiBaseTip")}</p>
+                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">{t("settings.apiBaseTip")}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">{t("settings.apiKey")}</label>
@@ -386,9 +386,9 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                       value={settings.llm_api_key}
                       onChange={(e) => setSettings({ ...settings, llm_api_key: e.target.value })}
                       placeholder="sk-..."
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                     />
-                    <p className="text-xs text-gray-500 mt-1">{t("settings.apiKeyTip")}</p>
+                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">{t("settings.apiKeyTip")}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">
@@ -419,7 +419,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                           }
                         }}
                         disabled={fetchingModels || !settings.llm_api_base || !settings.llm_api_key}
-                        className="ml-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
+                        className="ml-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
                       >
                         {fetchingModels ? t("settings.fetchingModels") : t("settings.fetchModels")}
                       </button>
@@ -436,7 +436,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                                 setSettings({ ...settings, llm_model: e.target.value });
                               }
                             }}
-                            className="flex-1 px-3 py-2 border rounded-lg"
+                            className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                           >
                             <option value="__custom__">{t("settings.manualInput")}</option>
                             {(settings.llm_available_models || []).map((m) => (
@@ -449,7 +449,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                               value={settings.llm_model}
                               onChange={(e) => setSettings({ ...settings, llm_model: e.target.value })}
                               placeholder={t("settings.manualInputPlaceholder")}
-                              className="flex-1 px-3 py-2 border rounded-lg"
+                              className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                             />
                           )}
                         </div>
@@ -463,13 +463,13 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                         value={settings.llm_model}
                         onChange={(e) => setSettings({ ...settings, llm_model: e.target.value })}
                         placeholder="gpt-4o"
-                        className="w-full px-3 py-2 border rounded-lg"
+                        className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                       />
                     )}
                     {modelError && (
                       <p className="text-xs text-red-500 mt-1">{modelError}</p>
                     )}
-                    <p className="text-xs text-gray-500 mt-1">{t("settings.modelTip")}</p>
+                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">{t("settings.modelTip")}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <button
@@ -494,7 +494,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 pt-6 mt-6">
+                <div className="border-t border-gray-100 pt-6 mt-6 dark:border-gray-700">
                   <h3 className="font-medium mb-4">{t("settings.llmProxySettings")}</h3>
                   <div className="space-y-4">
                     <label className="flex items-center gap-2">
@@ -514,7 +514,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                             <select
                               value={settings.llm_proxy_protocol}
                               onChange={(e) => setSettings({ ...settings, llm_proxy_protocol: e.target.value })}
-                              className="w-full px-3 py-2 border rounded-lg"
+                              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                             >
                               <option value="http">HTTP</option>
                               <option value="https">HTTPS</option>
@@ -528,7 +528,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                               value={settings.llm_proxy_port || ""}
                               onChange={(e) => setSettings({ ...settings, llm_proxy_port: parseInt(e.target.value) || 0 })}
                               placeholder="7890"
-                              className="w-full px-3 py-2 border rounded-lg"
+                              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                             />
                           </div>
                         </div>
@@ -539,7 +539,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                               value={settings.llm_proxy_host}
                             onChange={(e) => setSettings({ ...settings, llm_proxy_host: e.target.value })}
                             placeholder="127.0.0.1"
-                            className="w-full px-3 py-2 border rounded-lg"
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -550,7 +550,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                               value={settings.llm_proxy_username}
                               onChange={(e) => setSettings({ ...settings, llm_proxy_username: e.target.value })}
                               placeholder="username"
-                              className="w-full px-3 py-2 border rounded-lg"
+                              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                             />
                           </div>
                           <div>
@@ -560,7 +560,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                               value={settings.llm_proxy_password}
                               onChange={(e) => setSettings({ ...settings, llm_proxy_password: e.target.value })}
                               placeholder="password"
-                              className="w-full px-3 py-2 border rounded-lg"
+                              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                             />
                           </div>
                         </div>
@@ -570,7 +570,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-6">
+              <div className="border-t border-gray-100 pt-6 dark:border-gray-700">
                 <h3 className="font-medium mb-4">{t("settings.translatePref")}</h3>
                 <div className="space-y-4">
                   <div>
@@ -578,13 +578,13 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                     <select
                       value={settings.default_language}
                       onChange={(e) => setSettings({ ...settings, default_language: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                     >
                       <option value="zh-CN">{t("settings.langZh")}</option>
                       <option value="en-US">English</option>
                       <option value="ja-JP">日本語</option>
                     </select>
-                    <p className="text-xs text-gray-500 mt-1">{t("settings.defaultLangTip")}</p>
+                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">{t("settings.defaultLangTip")}</p>
                   </div>
                   <label className="flex items-center gap-2">
                     <input
@@ -607,7 +607,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-6">
+              <div className="border-t border-gray-100 pt-6 dark:border-gray-700">
                 <h3 className="font-medium mb-4">{t("settings.crawler")}</h3>
                 <div className="space-y-4">
                   <label className="flex items-center gap-2">
@@ -627,9 +627,9 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                         value={settings.crawler_api_url}
                         onChange={(e) => setSettings({ ...settings, crawler_api_url: e.target.value })}
                         placeholder="http://localhost:8080/crawl"
-                        className="w-full px-3 py-2 border rounded-lg"
+                        className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                       />
-                      <p className="text-xs text-gray-500 mt-1">{t("settings.crawlerApiTip")}</p>
+                      <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">{t("settings.crawlerApiTip")}</p>
                     </div>
                   )}
                 </div>
@@ -647,27 +647,27 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                     <select
                       value={settings.translate_engine || "auto"}
                       onChange={(e) => setSettings({ ...settings, translate_engine: e.target.value as "auto" | "google" | "llm" })}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                     >
                       <option value="auto">{t("settings.engineAuto")}</option>
                       <option value="google">{t("settings.engineGoogle")}</option>
                       <option value="llm">{t("settings.engineLlm")}</option>
                     </select>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">
                       {t("settings.engineAutoTip")}
                     </p>
                   </div>
 
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-medium text-blue-800 mb-2">{t("settings.engineGuideTitle")}</h4>
-                    <ul className="text-sm text-blue-700 space-y-1">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-blue-950 dark:border-blue-800">
+                    <h4 className="font-medium text-blue-800 mb-2 dark:text-blue-300">{t("settings.engineGuideTitle")}</h4>
+                    <ul className="text-sm text-blue-700 space-y-1 dark:text-blue-300">
                       <li>{t("settings.engineGuideGoogle")}</li>
                       <li>{t("settings.engineGuideLlm")}</li>
                       <li>{t("settings.engineGuideAuto")}</li>
                     </ul>
                   </div>
 
-                  <div className="border-t border-gray-200 pt-4">
+                  <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
                     <h4 className="font-medium mb-3">{t("settings.googleSettings")}</h4>
                     <div className="space-y-4">
                       <div>
@@ -677,9 +677,9 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                           value={settings.google_api_key || ""}
                           onChange={(e) => setSettings({ ...settings, google_api_key: e.target.value })}
                           placeholder="AIza..."
-                          className="w-full px-3 py-2 border rounded-lg"
+                          className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">
                           {t("settings.googleApiKeyTip")}
                         </p>
                       </div>
@@ -702,7 +702,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                               <select
                                 value={settings.google_proxy_protocol || "http"}
                                 onChange={(e) => setSettings({ ...settings, google_proxy_protocol: e.target.value })}
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                               >
                                 <option value="http">HTTP</option>
                                 <option value="https">HTTPS</option>
@@ -716,7 +716,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                                 value={settings.google_proxy_port || ""}
                                 onChange={(e) => setSettings({ ...settings, google_proxy_port: parseInt(e.target.value) || 0 })}
                                 placeholder="7890"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                               />
                             </div>
                           </div>
@@ -727,7 +727,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                               value={settings.google_proxy_host || ""}
                               onChange={(e) => setSettings({ ...settings, google_proxy_host: e.target.value })}
                               placeholder="127.0.0.1"
-                              className="w-full px-3 py-2 border rounded-lg"
+                              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-4">
@@ -738,7 +738,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                                 value={settings.google_proxy_username || ""}
                                 onChange={(e) => setSettings({ ...settings, google_proxy_username: e.target.value })}
                                 placeholder="username"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                               />
                             </div>
                             <div>
@@ -748,7 +748,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                                 value={settings.google_proxy_password || ""}
                                 onChange={(e) => setSettings({ ...settings, google_proxy_password: e.target.value })}
                                 placeholder="password"
-                                className="w-full px-3 py-2 border rounded-lg"
+                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                               />
                             </div>
                           </div>
@@ -759,7 +759,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                 </div>
               </div>
 
-              <div className="border-t border-gray-200 pt-6">
+              <div className="border-t border-gray-200 pt-6 dark:border-gray-700">
                 <h3 className="font-medium mb-4">{t("settings.translatePref")}</h3>
                 <div className="space-y-4">
                   <div>
@@ -767,14 +767,14 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                     <select
                       value={settings.default_language}
                       onChange={(e) => setSettings({ ...settings, default_language: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                     >
                       <option value="zh-CN">中文（简体）</option>
                       <option value="en-US">English</option>
                       <option value="ja-JP">日本語</option>
                       <option value="ko-KR">한국어</option>
                     </select>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">
                       {t("settings.defaultTargetLangTip")}
                     </p>
                   </div>
@@ -806,7 +806,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium">{t("settings.systemVariables")}</h3>
-                  <p className="text-sm text-gray-500">{t("settings.systemVariablesTip")}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t("settings.systemVariablesTip")}</p>
                 </div>
                 <button
                   onClick={() => {
@@ -822,35 +822,35 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                 </button>
               </div>
 
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-hidden dark:border-gray-700">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="bg-gray-50 border-b dark:bg-gray-900 dark:border-gray-700">
                     <tr>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-gray-600">{t("settings.variableKey")}</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-gray-600">{t("settings.variableValue")}</th>
-                      <th className="text-center px-4 py-3 text-sm font-medium text-gray-600">{t("settings.variableType")}</th>
-                      <th className="text-center px-4 py-3 text-sm font-medium text-gray-600">{t("common.actions")}</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t("settings.variableKey")}</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t("settings.variableValue")}</th>
+                      <th className="text-center px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t("settings.variableType")}</th>
+                      <th className="text-center px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t("common.actions")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
+                  <tbody className="divide-y dark:divide-gray-700">
                     {variables.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="text-center py-8 text-gray-500">
+                        <td colSpan={4} className="text-center py-8 text-gray-500 dark:text-gray-400">
                           {t("settings.noVariables")}
                         </td>
                       </tr>
                     )}
                     {variables.map((v) => (
-                      <tr key={v.key} className="hover:bg-gray-50">
+                      <tr key={v.key} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="px-4 py-3 font-mono text-sm">{v.key}</td>
-                        <td className="px-4 py-3 font-mono text-sm text-gray-500">
+                        <td className="px-4 py-3 font-mono text-sm text-gray-500 dark:text-gray-400">
                           {v.isSecret ? "••••••••" : v.value || "-"}
                         </td>
                         <td className="px-4 py-3 text-center">
                           {v.isSecret ? (
-                            <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded">{t("settings.secret")}</span>
+                            <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded dark:bg-orange-900 dark:text-orange-300">{t("settings.secret")}</span>
                           ) : (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">{t("settings.normal")}</span>
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded dark:bg-gray-700 dark:text-gray-300">{t("settings.normal")}</span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -867,7 +867,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                           </button>
                           <button
                             onClick={() => {
-                              if (window.confirm(t("settings.confirmDeleteVar") || "确定删除此变量?")) {
+                              if (window.confirm(t("settings.confirmDeleteVar"))) {
                                 invoke("delete_system_variable", { key: v.key }).then(() => {
                                   setVariables(variables.filter((x) => x.key !== v.key));
                                 });
@@ -891,10 +891,10 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
               <h3 className="font-medium">{t("settings.installedExtensions")}</h3>
               <div className="space-y-3">
                 {extensions.map((ext) => (
-                  <div key={ext.id} className="bg-gray-50 rounded-xl border p-4">
+                  <div key={ext.id} className="bg-gray-50 rounded-xl border p-4 dark:bg-gray-900 dark:border-gray-700">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center text-white">
+                        <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center text-white dark:bg-gray-700">
                           {ext.id === "github" && <i className="fa-brands fa-github text-xl"></i>}
                           {ext.id === "gitee" && <i className="fa-solid fa-code text-xl"></i>}
                           {ext.id === "crawler" && <i className="fa-solid fa-spider text-xl"></i>}
@@ -902,11 +902,11 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{ext.name}</span>
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">
                               v{ext.version || "1.0.0"}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-500 font-mono">{ext.pluginClass}</p>
+                          <p className="text-sm text-gray-500 font-mono dark:text-gray-400">{ext.pluginClass}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -920,14 +920,14 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                             }}
                             className="sr-only peer"
                           />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:bg-gray-700 dark:after:border-gray-600"></div>
                         </label>
                       </div>
                     </div>
                     {ext.requiredVariables && ext.requiredVariables.length > 0 && (
-                      <div className="mt-3 pt-3 border-t text-sm text-gray-500">
+                      <div className="mt-3 pt-3 border-t text-sm text-gray-500 dark:text-gray-400 dark:border-gray-700">
                         <span className="text-orange-500">*</span> {t("settings.requiredVars")}: {ext.requiredVariables.map((v: any) => v.name).join(", ")}
-                        <span className="ml-2 text-gray-400">{t("settings.extensionVarsTip")}</span>
+                        <span className="ml-2 text-gray-400 dark:text-gray-500">{t("settings.extensionVarsTip")}</span>
                       </div>
                     )}
                   </div>
@@ -937,7 +937,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
           )}
         </div>
 
-        <div className="p-6 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+        <div className="p-6 border-t border-gray-200 flex items-center justify-between bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
           <div>
             {saved && (
               <span className="text-sm text-green-600 flex items-center gap-1">
@@ -946,7 +946,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
             )}
           </div>
           <div className="flex gap-3">
-            <button onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-white">
+            <button onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-white dark:border-gray-600 dark:hover:bg-gray-700 dark:text-gray-200">
               {t("common.cancel")}
             </button>
             <button
@@ -962,13 +962,13 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
 
       {varModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="p-6 border-b">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md dark:bg-gray-800">
+            <div className="p-6 border-b dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">
                   {editingVarKey ? t("settings.editVariable") : t("settings.addVariable")}
                 </h3>
-                <button onClick={() => setVarModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setVarModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                   <i className="fa-solid fa-xmark text-xl"></i>
                 </button>
               </div>
@@ -982,7 +982,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                   onChange={(e) => setVarForm({ ...varForm, key: e.target.value })}
                   disabled={!!editingVarKey}
                   placeholder="github_token"
-                  className="w-full px-3 py-2 border rounded-lg font-mono disabled:bg-gray-100"
+                  className="w-full px-3 py-2 border rounded-lg font-mono disabled:bg-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:disabled:bg-gray-700"
                 />
               </div>
               <div>
@@ -992,15 +992,15 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                     type={varForm.isSecret && !showVarValue ? "password" : "text"}
                     value={varForm.value}
                     onChange={(e) => setVarForm({ ...varForm, value: e.target.value })}
-                    placeholder={varForm.isSecret ? "••••••••" : "输入变量值"}
-                    className="w-full px-3 py-2 border rounded-lg font-mono pr-10"
+                    placeholder={varForm.isSecret ? "••••••••" : t("settings.inputVariableValue")}
+                    className="w-full px-3 py-2 border rounded-lg font-mono pr-10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                   />
                   {varForm.isSecret && (
                     <button
                       type="button"
                       onClick={() => setShowVarValue(!showVarValue)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      title={showVarValue ? "隐藏" : "显示"}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                      title={showVarValue ? t("settings.hide") : t("settings.show")}
                     >
                       <i className={`fa-solid ${showVarValue ? "fa-eye-slash" : "fa-eye"}`}></i>
                     </button>
@@ -1017,10 +1017,10 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                 <span className="text-sm">{t("settings.secretTip")}</span>
               </label>
             </div>
-            <div className="p-6 border-t flex justify-end gap-3">
+            <div className="p-6 border-t flex justify-end gap-3 dark:border-gray-700">
               <button
                 onClick={() => setVarModalOpen(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
               >
                 {t("common.cancel")}
               </button>

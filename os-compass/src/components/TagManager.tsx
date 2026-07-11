@@ -80,9 +80,9 @@ export function TagManager({ onBack }: TagManagerProps) {
   const presetTags = filteredTags.filter((t) => t.source === "preset");
 
   const sourceColors: Record<TagSource, { bg: string; text: string; icon: string }> = {
-    ai: { bg: "bg-purple-100", text: "text-purple-700", icon: "fa-solid fa-robot" },
-    user: { bg: "bg-pink-100", text: "text-pink-700", icon: "fa-solid fa-user" },
-    preset: { bg: "bg-gray-100", text: "text-gray-700", icon: "fa-solid fa-star" },
+    ai: { bg: "bg-purple-100 dark:bg-purple-900", text: "text-purple-700 dark:text-purple-300", icon: "fa-solid fa-robot" },
+    user: { bg: "bg-pink-100 dark:bg-pink-900", text: "text-pink-700 dark:text-pink-300", icon: "fa-solid fa-user" },
+    preset: { bg: "bg-gray-100 dark:bg-gray-700", text: "text-gray-700 dark:text-gray-300", icon: "fa-solid fa-star" },
   };
 
   const sourceNames: Record<TagSource, string> = {
@@ -99,16 +99,16 @@ export function TagManager({ onBack }: TagManagerProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <button
               onClick={onBack}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             >
               <i className="fa-solid fa-arrow-left mr-2"></i>{t("common.close")}
             </button>
-            <h1 className="text-xl font-bold">{t("tag.title")}</h1>
+            <h1 className="text-xl font-bold dark:text-gray-100">{t("tag.title")}</h1>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -120,19 +120,19 @@ export function TagManager({ onBack }: TagManagerProps) {
 
         <div className="flex gap-4">
           <div className="flex-1 relative">
-            <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={`${t("tag.name")}...`}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
             />
           </div>
           <select
             value={filterSource}
             onChange={(e) => setFilterSource(e.target.value as TagSource | "")}
-            className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
           >
             <option value="">{t("kanban.all")} {t("tag.source")}</option>
             <option value="ai">{t("tag.aiSource")}</option>
@@ -144,24 +144,24 @@ export function TagManager({ onBack }: TagManagerProps) {
 
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
             <i className="fa-solid fa-spinner fa-spin text-2xl"></i>
             <p className="mt-2">{t("common.loading")}</p>
           </div>
         ) : (
           <div className="space-y-3">
             {(!filterSource || filterSource === "ai") && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <h3 className="font-medium text-gray-700 mb-3">
-                  <i className={`${sourceColors.ai.icon} text-blue-500 mr-2`}></i>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  <i className={`${sourceColors.ai.icon} text-blue-500 dark:text-blue-400 mr-2`}></i>
                   {sourceNames.ai}
-                  <span className="text-sm font-normal text-gray-400 ml-2">
+                  <span className="text-sm font-normal text-gray-400 dark:text-gray-500 ml-2">
                     （{sourceDescs.ai}）
                   </span>
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {aiTags.length === 0 ? (
-                    <span className="text-gray-400 text-sm">暂无 AI 提取标签</span>
+                    <span className="text-gray-400 dark:text-gray-500 text-sm">暂无 AI 提取标签</span>
                   ) : (
                     aiTags.map((tag) => (
                       <span
@@ -178,17 +178,17 @@ export function TagManager({ onBack }: TagManagerProps) {
             )}
 
             {(!filterSource || filterSource === "user") && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <h3 className="font-medium text-gray-700 mb-3">
-                  <i className={`${sourceColors.user.icon} text-green-500 mr-2`}></i>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  <i className={`${sourceColors.user.icon} text-green-500 dark:text-green-400 mr-2`}></i>
                   {sourceNames.user}
-                  <span className="text-sm font-normal text-gray-400 ml-2">
+                  <span className="text-sm font-normal text-gray-400 dark:text-gray-500 ml-2">
                     （{sourceDescs.user}）
                   </span>
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {userTags.length === 0 ? (
-                    <span className="text-gray-400 text-sm">暂无用户添加标签</span>
+                    <span className="text-gray-400 dark:text-gray-500 text-sm">暂无用户添加标签</span>
                   ) : (
                     userTags.map((tag) => (
                       <span
@@ -198,7 +198,7 @@ export function TagManager({ onBack }: TagManagerProps) {
                         {tag.name}
                         <button
                           onClick={() => handleDeleteTag(tag.id)}
-                          className="hover:text-pink-900"
+                          className="hover:text-pink-900 dark:hover:text-pink-300"
                         >
                           <i className="fa-solid fa-times text-xs"></i>
                         </button>
@@ -210,17 +210,17 @@ export function TagManager({ onBack }: TagManagerProps) {
             )}
 
             {(!filterSource || filterSource === "preset") && (
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <h3 className="font-medium text-gray-700 mb-3">
-                  <i className={`${sourceColors.preset.icon} text-amber-500 mr-2`}></i>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  <i className={`${sourceColors.preset.icon} text-amber-500 dark:text-amber-400 mr-2`}></i>
                   {sourceNames.preset}
-                  <span className="text-sm font-normal text-gray-400 ml-2">
+                  <span className="text-sm font-normal text-gray-400 dark:text-gray-500 ml-2">
                     （{sourceDescs.preset}）
                   </span>
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {presetTags.length === 0 ? (
-                    <span className="text-gray-400 text-sm">暂无预设标签</span>
+                    <span className="text-gray-400 dark:text-gray-500 text-sm">暂无预设标签</span>
                   ) : (
                     presetTags.map((tag) => (
                       <span
@@ -240,12 +240,12 @@ export function TagManager({ onBack }: TagManagerProps) {
 
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">新建标签</h3>
+              <h3 className="text-lg font-semibold dark:text-gray-100">新建标签</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <i className="fa-solid fa-xmark text-xl"></i>
               </button>
@@ -253,7 +253,7 @@ export function TagManager({ onBack }: TagManagerProps) {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                   标签名称
                 </label>
                 <textarea
@@ -261,32 +261,32 @@ export function TagManager({ onBack }: TagManagerProps) {
                   onChange={(e) => setNewTags(e.target.value)}
                   placeholder="输入标签名称（每行一个，可批量添加）"
                   rows={5}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                   autoFocus
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   每行一个标签，支持批量添加多个
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                   标签类型
                 </label>
                 <select
                   value={newTagSource}
                   onChange={(e) => setNewTagSource(e.target.value as TagSource)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                 >
                   <option value="user">用户添加</option>
                   <option value="preset">预设</option>
                 </select>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t">
+              <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
                 >
                   取消
                 </button>
