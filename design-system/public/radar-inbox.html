@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 情报雷达收件箱</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .scroll-area::-webkit-scrollbar {
+      width: 6px;
+    }
+    .scroll-area::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .scroll-area::-webkit-scrollbar-thumb {
+      background: #4b5563;
+      border-radius: 3px;
+    }
+    .scroll-area::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .spinning {
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .toast-enter {
+      animation: slideUp 0.3s ease-out;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen overflow-hidden">
+  <div class="flex flex-col h-full">
+
+    <!-- 顶部栏 -->
+    <header class="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-satellite-dish text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-semibold text-lg leading-tight">情报雷达</h1>
+          <p class="text-xs text-gray-400">二期功能 · 监控信息源更新，发现新开源项目</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="scanBtn" onclick="triggerScan()"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center gap-2 transition">
+          <i id="scanIcon" class="fa-solid fa-rotate"></i>
+          <span>立即扫描</span>
+        </button>
+        <button onclick="showToast('信息源管理面板待开发', 'info')"
+          class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm rounded-lg flex items-center gap-2 transition">
+          <i class="fa-solid fa-rss"></i>
+          <span>信息源管理</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 双栏布局 -->
+    <div class="flex flex-1 min-h-0">
+
+      <!-- 左侧边栏 - 信息源列表 -->
+      <aside class="w-64 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0">
+        <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+          <h2 class="font-semibold text-sm text-gray-400 uppercase tracking-wide">信息源</h2>
+          <button onclick="showToast('添加信息源向导待开发', 'info')"
+            class="w-7 h-7 hover:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition">
+            <i class="fa-solid fa-plus text-xs"></i>
+          </button>
+        </div>
+        <div class="flex-1 overflow-auto scroll-area p-2 space-y-1">
+          <!-- 信息源项 -->
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center text-gray-300 flex-shrink-0">
+              <i class="fa-brands fa-github text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                <span class="text-sm font-medium truncate">GitHub Trending Daily</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">2小时前</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-orange-900/40 rounded-lg flex items-center justify-center text-orange-400 flex-shrink-0">
+              <i class="fa-solid fa-globe text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                <span class="text-sm font-medium truncate">Hacker News</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">1小时前</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-purple-900/40 rounded-lg flex items-center justify-center text-purple-400 flex-shrink-0">
+              <i class="fa-solid fa-newspaper text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                <span class="text-sm font-medium truncate">阮一峰周刊</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">3天前</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-sky-900/40 rounded-lg flex items-center justify-center text-sky-400 flex-shrink-0">
+              <i class="fa-solid fa-paper-plane text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                <span class="text-sm font-medium truncate">TG: 开源推荐频道</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">5小时前</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-red-900/40 rounded-lg flex items-center justify-center text-red-400 flex-shrink-0">
+              <i class="fa-solid fa-globe text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" title="上次扫描失败"></span>
+                <span class="text-sm font-medium truncate">Gitee 趋势</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">1天前</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center text-gray-500 flex-shrink-0">
+              <i class="fa-solid fa-rss text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-gray-500 rounded-full flex-shrink-0"></span>
+                <span class="text-sm font-medium truncate text-gray-500">Ruby Weekly</span>
+              </div>
+              <p class="text-xs text-gray-600 mt-0.5">已禁用</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+        </div>
+        <div class="p-3 border-t border-gray-700 text-xs text-gray-500 flex items-center justify-between">
+          <span><i class="fa-solid fa-circle-check text-green-500 mr-1"></i>5 个活跃</span>
+          <span><i class="fa-solid fa-circle-xmark text-red-500 mr-1"></i>1 个异常</span>
+        </div>
+      </aside>
+
+      <!-- 主内容区 - 雷达收件箱 -->
+      <main class="flex-1 flex flex-col min-w-0">
+        <!-- 筛选标签 -->
+        <div class="px-6 pt-4 pb-3 border-b border-gray-700 flex items-center gap-1 flex-shrink-0">
+          <button onclick="switchTab(this, 'all')" data-tab="all"
+            class="tab-btn px-3 py-1.5 text-sm rounded-lg bg-gray-700 text-white font-medium transition">
+            全部 <span class="text-gray-400 ml-1">18</span>
+          </button>
+          <button onclick="switchTab(this, 'unread')" data-tab="unread"
+            class="tab-btn px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700/60 text-gray-400 transition">
+            未读 <span class="text-blue-400 ml-1">12</span>
+          </button>
+          <button onclick="switchTab(this, 'imported')" data-tab="imported"
+            class="tab-btn px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700/60 text-gray-400 transition">
+            已导入
+          </button>
+          <button onclick="switchTab(this, 'ignored')" data-tab="ignored"
+            class="tab-btn px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700/60 text-gray-400 transition">
+            不感兴趣
+          </button>
+          <div class="ml-auto flex items-center gap-2">
+            <button class="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition flex items-center gap-1.5">
+              <i class="fa-solid fa-sort"></i>按时间
+            </button>
+            <button class="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition flex items-center gap-1.5">
+              <i class="fa-solid fa-filter"></i>筛选
+            </button>
+          </div>
+        </div>
+
+        <!-- 雷达条目列表 -->
+        <div id="radarList" class="flex-1 overflow-auto scroll-area p-6 space-y-3">
+
+          <!-- 条目 1 - 未读 -->
+          <div class="radar-item bg-gray-800 border border-gray-700 rounded-xl p-4 hover:border-gray-600 transition" data-status="unread">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-blue-900/40 rounded-lg flex items-center justify-center text-blue-400 flex-shrink-0">
+                <i class="fa-solid fa-cube"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-sm">astral-sh/uv</h3>
+                  <span class="px-2 py-0.5 text-xs bg-gray-700 text-gray-300 rounded">Python</span>
+                  <span class="px-2 py-0.5 text-xs bg-blue-900/40 text-blue-400 rounded">
+                    <i class="fa-brands fa-github mr-1"></i>来自 GitHub Trending
+                  </span>
+                </div>
+                <p class="text-sm text-gray-400 mt-1.5 leading-relaxed">
+                  一个用 Rust 编写的极速 Python 包管理器和解析器，可作为 pip 和 pip-tools 的 10-100 倍速度替代方案。
+                </p>
+                <p class="text-xs text-gray-500 mt-2"><i class="fa-regular fa-clock mr-1"></i>3小时前</p>
+              </div>
+              <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                <button onclick="importItem(this)"
+                  class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-download text-xs"></i>导入
+                </button>
+                <button onclick="ignoreItem(this)"
+                  class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition flex items-center gap-1.5">
+                  <i class="fa-regular fa-thumbs-down text-xs"></i>不感兴趣
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 条目 2 - 未读 -->
+          <div class="radar-item bg-gray-800 border border-gray-700 rounded-xl p-4 hover:border-gray-600 transition" data-status="unread">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-purple-900/40 rounded-lg flex items-center justify-center text-purple-400 flex-shrink-0">
+                <i class="fa-solid fa-terminal"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-sm">nvim-lualine/lualine.nvim</h3>
+                  <span class="px-2 py-0.5 text-xs bg-gray-700 text-gray-300 rounded">Lua</span>
+                  <span class="px-2 py-0.5 text-xs bg-orange-900/40 text-orange-400 rounded">
+                    <i class="fa-solid fa-fire mr-1"></i>来自 Hacker News
+                  </span>
+                </div>
+                <p class="text-sm text-gray-400 mt-1.5 leading-relaxed">
+                  一个用 Lua 编写的 Neovim 状态栏插件，速度快、可完全自定义，支持多种主题和文件类型图标。
+                </p>
+                <p class="text-xs text-gray-500 mt-2"><i class="fa-regular fa-clock mr-1"></i>5小时前</p>
+              </div>
+              <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                <button onclick="importItem(this)"
+                  class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-download text-xs"></i>导入
+                </button>
+                <button onclick="ignoreItem(this)"
+                  class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition flex items-center gap-1.5">
+                  <i class="fa-regular fa-thumbs-down text-xs"></i>不感兴趣
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 条目 3 - 已导入 -->
+          <div class="radar-item bg-gray-800 border border-gray-700 rounded-xl p-4 hover:border-gray-600 transition" data-status="imported">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-green-900/40 rounded-lg flex items-center justify-center text-green-400 flex-shrink-0">
+                <i class="fa-solid fa-bolt"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-sm">tinygrad/tinygrad</h3>
+                  <span class="px-2 py-0.5 text-xs bg-gray-700 text-gray-300 rounded">Python</span>
+                  <span class="px-2 py-0.5 text-xs bg-green-900/50 text-green-400 rounded font-medium">
+                    <i class="fa-solid fa-check mr-1"></i>已导入
+                  </span>
+                  <span class="px-2 py-0.5 text-xs bg-purple-900/40 text-purple-400 rounded">
+                    <i class="fa-solid fa-newspaper mr-1"></i>来自 阮一峰周刊
+                  </span>
+                </div>
+                <p class="text-sm text-gray-400 mt-1.5 leading-relaxed">
+                  用于深度学习的极简框架，代码量不到 3000 行，旨在成为最易理解且高性能的深度学习框架。
+                </p>
+                <p class="text-xs text-gray-500 mt-2"><i class="fa-regular fa-clock mr-1"></i>8小时前</p>
+              </div>
+              <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                <span class="px-3 py-1.5 text-sm text-green-400 flex items-center gap-1.5">
+                  <i class="fa-solid fa-check"></i>已导入
+                </span>
+                <button onclick="showToast('已在项目库中查看', 'info')"
+                  class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition">
+                  查看项目
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 条目 4 - 未读 -->
+          <div class="radar-item bg-gray-800 border border-gray-700 rounded-xl p-4 hover:border-gray-600 transition" data-status="unread">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-sky-900/40 rounded-lg flex items-center justify-center text-sky-400 flex-shrink-0">
+                <i class="fa-solid fa-rocket"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-sm">bergfiore/crabgo</h3>
+                  <span class="px-2 py-0.5 text-xs bg-gray-700 text-gray-300 rounded">Rust</span>
+                  <span class="px-2 py-0.5 text-xs bg-sky-900/40 text-sky-400 rounded">
+                    <i class="fa-solid fa-paper-plane mr-1"></i>来自 TG: 开源推荐频道
+                  </span>
+                </div>
+                <p class="text-sm text-gray-400 mt-1.5 leading-relaxed">
+                  一个实验性的 Rust 包管理器概念，探索更高效的依赖解析与并行编译方案。
+                </p>
+                <p class="text-xs text-gray-500 mt-2"><i class="fa-regular fa-clock mr-1"></i>12小时前</p>
+              </div>
+              <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                <button onclick="importItem(this)"
+                  class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-download text-xs"></i>导入
+                </button>
+                <button onclick="ignoreItem(this)"
+                  class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition flex items-center gap-1.5">
+                  <i class="fa-regular fa-thumbs-down text-xs"></i>不感兴趣
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 条目 5 - 已忽略 -->
+          <div class="radar-item bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 opacity-50 transition" data-status="ignored">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center text-gray-500 flex-shrink-0">
+                <i class="fa-solid fa-cube"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-sm text-gray-400">some-org/legacy-toolkit</h3>
+                  <span class="px-2 py-0.5 text-xs bg-gray-700 text-gray-400 rounded">JavaScript</span>
+                  <span class="px-2 py-0.5 text-xs bg-gray-700 text-gray-400 rounded font-medium">
+                    <i class="fa-solid fa-ban mr-1"></i>已忽略
+                  </span>
+                  <span class="px-2 py-0.5 text-xs bg-gray-700 text-gray-500 rounded">
+                    <i class="fa-brands fa-github mr-1"></i>来自 GitHub Trending
+                  </span>
+                </div>
+                <p class="text-sm text-gray-500 mt-1.5 leading-relaxed">
+                  一套老旧的 JavaScript 工具集合，包含 DOM 操作、事件处理等常见功能封装。
+                </p>
+                <p class="text-xs text-gray-600 mt-2"><i class="fa-regular fa-clock mr-1"></i>1天前</p>
+              </div>
+              <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                <span class="px-3 py-1.5 text-sm text-gray-500 flex items-center gap-1.5">
+                  <i class="fa-solid fa-ban"></i>已忽略
+                </span>
+                <button onclick="unignoreItem(this)"
+                  class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition">
+                  恢复显示
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 条目 6 - 未读 -->
+          <div class="radar-item bg-gray-800 border border-gray-700 rounded-xl p-4 hover:border-gray-600 transition" data-status="unread">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-emerald-900/40 rounded-lg flex items-center justify-center text-emerald-400 flex-shrink-0">
+                <i class="fa-solid fa-database"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-sm">quackdb/quackdb</h3>
+                  <span class="px-2 py-0.5 text-xs bg-gray-700 text-gray-300 rounded">C++</span>
+                  <span class="px-2 py-0.5 text-xs bg-orange-900/40 text-orange-400 rounded">
+                    <i class="fa-solid fa-fire mr-1"></i>来自 Hacker News
+                  </span>
+                </div>
+                <p class="text-sm text-gray-400 mt-1.5 leading-relaxed">
+                  基于 DuckDB 的轻量级嵌入式分析数据库，提供 PostgreSQL 兼容的查询接口。
+                </p>
+                <p class="text-xs text-gray-500 mt-2"><i class="fa-regular fa-clock mr-1"></i>1天前</p>
+              </div>
+              <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                <button onclick="importItem(this)"
+                  class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-download text-xs"></i>导入
+                </button>
+                <button onclick="ignoreItem(this)"
+                  class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition flex items-center gap-1.5">
+                  <i class="fa-regular fa-thumbs-down text-xs"></i>不感兴趣
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 条目 7 - 未读 -->
+          <div class="radar-item bg-gray-800 border border-gray-700 rounded-xl p-4 hover:border-gray-600 transition" data-status="unread">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-pink-900/40 rounded-lg flex items-center justify-center text-pink-400 flex-shrink-0">
+                <i class="fa-solid fa-chart-line"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-sm">withastro/starlight</h3>
+                  <span class="px-2 py-0.5 text-xs bg-gray-700 text-gray-300 rounded">TypeScript</span>
+                  <span class="px-2 py-0.5 text-xs bg-blue-900/40 text-blue-400 rounded">
+                    <i class="fa-brands fa-github mr-1"></i>来自 GitHub Trending
+                  </span>
+                </div>
+                <p class="text-sm text-gray-400 mt-1.5 leading-relaxed">
+                  用 Astro 构建文档网站的最简方式，内置主题、搜索、国际化、版本管理等文档站点常用功能。
+                </p>
+                <p class="text-xs text-gray-500 mt-2"><i class="fa-regular fa-clock mr-1"></i>2天前</p>
+              </div>
+              <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                <button onclick="importItem(this)"
+                  class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-download text-xs"></i>导入
+                </button>
+                <button onclick="ignoreItem(this)"
+                  class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition flex items-center gap-1.5">
+                  <i class="fa-regular fa-thumbs-down text-xs"></i>不感兴趣
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 条目 8 - 已导入 -->
+          <div class="radar-item bg-gray-800 border border-gray-700 rounded-xl p-4 hover:border-gray-600 transition" data-status="imported">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-amber-900/40 rounded-lg flex items-center justify-center text-amber-400 flex-shrink-0">
+                <i class="fa-solid fa-gears"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-sm">charmbracelet/gum</h3>
+                  <span class="px-2 py-0.5 text-xs bg-gray-700 text-gray-300 rounded">Go</span>
+                  <span class="px-2 py-0.5 text-xs bg-green-900/50 text-green-400 rounded font-medium">
+                    <i class="fa-solid fa-check mr-1"></i>已导入
+                  </span>
+                  <span class="px-2 py-0.5 text-xs bg-sky-900/40 text-sky-400 rounded">
+                    <i class="fa-solid fa-paper-plane mr-1"></i>来自 TG: 开源推荐频道
+                  </span>
+                </div>
+                <p class="text-sm text-gray-400 mt-1.5 leading-relaxed">
+                  用于在 shell 脚本中创建迷人 CLI 界面的工具，提供选择、输入、确认、旋转器等交互组件。
+                </p>
+                <p class="text-xs text-gray-500 mt-2"><i class="fa-regular fa-clock mr-1"></i>2天前</p>
+              </div>
+              <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                <span class="px-3 py-1.5 text-sm text-green-400 flex items-center gap-1.5">
+                  <i class="fa-solid fa-check"></i>已导入
+                </span>
+                <button onclick="showToast('已在项目库中查看', 'info')"
+                  class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition">
+                  查看项目
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 底部栏 -->
+        <footer class="h-12 bg-gray-800 border-t border-gray-700 flex items-center justify-between px-6 flex-shrink-0">
+          <button onclick="showToast('已清理 30 天前的缓存条目', 'success')"
+            class="text-sm text-gray-400 hover:text-gray-200 flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-broom"></i>清理缓存
+          </button>
+          <div class="flex items-center gap-2">
+            <button class="px-2.5 py-1 text-xs text-gray-500 hover:text-white hover:bg-gray-700 rounded transition" disabled>
+              上一页
+            </button>
+            <span class="text-sm text-gray-400">1 / 3</span>
+            <button onclick="loadMore(this)"
+            class="px-2.5 py-1 text-xs text-gray-300 hover:text-white hover:bg-gray-700 rounded transition">
+              下一页
+            </button>
+            <span class="mx-2 text-gray-600">|</span>
+            <button onclick="loadMore(this)"
+            class="px-3 py-1.5 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-chevron-down text-xs"></i>加载更多
+            </button>
+          </div>
+        </footer>
+      </main>
+    </div>
+  </div>
+
+  <!-- Toast 容器 -->
+  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
+
+  <script>
+    // 筛选标签切换
+    let currentTab = 'all';
+    function switchTab(btn, tab) {
+      currentTab = tab;
+      const buttons = document.querySelectorAll('.tab-btn');
+      buttons.forEach(b => {
+        b.classList.remove('bg-gray-700', 'text-white', 'font-medium');
+        b.classList.add('hover:bg-gray-700/60', 'text-gray-400');
+      });
+      btn.classList.add('bg-gray-700', 'text-white', 'font-medium');
+      btn.classList.remove('hover:bg-gray-700/60', 'text-gray-400');
+
+      filterItems();
+    }
+
+    // 根据标签筛选条目
+    function filterItems() {
+      const items = document.querySelectorAll('.radar-item');
+      items.forEach(item => {
+        const status = item.getAttribute('data-status');
+        if (currentTab === 'all') {
+          item.style.display = '';
+        } else if (currentTab === 'unread') {
+          item.style.display = (status === 'unread') ? '' : 'none';
+        } else if (currentTab === 'imported') {
+          item.style.display = (status === 'imported') ? '' : 'none';
+        } else if (currentTab === 'ignored') {
+          item.style.display = (status === 'ignored') ? '' : 'none';
+        }
+      });
+    }
+
+    // 导入条目
+    function importItem(btn) {
+      const item = btn.closest('.radar-item');
+      const nameEl = item.querySelector('h3');
+      const projectName = nameEl ? nameEl.textContent : '项目';
+
+      item.setAttribute('data-status', 'imported');
+
+      // 获取项目名称与描述区域
+      const contentArea = item.querySelector('.flex-1.min-w-0');
+      // 在标题后插入已导入徽章（如未存在）
+      let badge = contentArea.querySelector('.imported-badge');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'imported-badge px-2 py-0.5 text-xs bg-green-900/50 text-green-400 rounded font-medium';
+        badge.innerHTML = '<i class="fa-solid fa-check mr-1"></i>已导入';
+        nameEl.after(badge);
+      }
+
+      // 替换操作按钮区域
+      const actionArea = btn.parentElement;
+      actionArea.innerHTML = `
+        <span class="px-3 py-1.5 text-sm text-green-400 flex items-center gap-1.5">
+          <i class="fa-solid fa-check"></i>已导入
+        </span>
+        <button onclick="showToast('已在项目库中查看', 'info')"
+          class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition">
+          查看项目
+        </button>
+      `;
+
+      showToast(`已导入「${projectName}」`, 'success');
+    }
+
+    // 忽略条目
+    function ignoreItem(btn) {
+      const item = btn.closest('.radar-item');
+      const nameEl = item.querySelector('h3');
+      const projectName = nameEl ? nameEl.textContent : '项目';
+
+      item.setAttribute('data-status', 'ignored');
+      item.classList.add('opacity-50');
+
+      // 在标题后插入已忽略徽章
+      let badge = nameEl.parentElement.querySelector('.ignored-badge');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'ignored-badge px-2 py-0.5 text-xs bg-gray-700 text-gray-400 rounded font-medium';
+        badge.innerHTML = '<i class="fa-solid fa-ban mr-1"></i>已忽略';
+        nameEl.after(badge);
+      }
+
+      // 降低文字透明度
+      nameEl.classList.add('text-gray-400');
+
+      // 替换操作按钮区域
+      const actionArea = btn.parentElement;
+      actionArea.innerHTML = `
+        <span class="px-3 py-1.5 text-sm text-gray-500 flex items-center gap-1.5">
+          <i class="fa-solid fa-ban"></i>已忽略
+        </span>
+        <button onclick="unignoreItem(this)"
+          class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition">
+          恢复显示
+        </button>
+      `;
+
+      showToast(`已忽略「${projectName}」`, 'info');
+    }
+
+    // 恢复忽略条目
+    function unignoreItem(btn) {
+      const item = btn.closest('.radar-item');
+      item.setAttribute('data-status', 'unread');
+      item.classList.remove('opacity-50');
+
+      const nameEl = item.querySelector('h3');
+      nameEl.classList.remove('text-gray-400');
+
+      // 移除已忽略徽章
+      const badge = nameEl.parentElement.querySelector('.ignored-badge');
+      if (badge) badge.remove();
+
+      // 恢复操作按钮
+      const actionArea = btn.parentElement;
+      actionArea.innerHTML = `
+        <button onclick="importItem(this)"
+          class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-1.5">
+          <i class="fa-solid fa-download text-xs"></i>导入
+        </button>
+        <button onclick="ignoreItem(this)"
+          class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition flex items-center gap-1.5">
+          <i class="fa-regular fa-thumbs-down text-xs"></i>不感兴趣
+        </button>
+      `;
+
+      showToast('已恢复显示', 'success');
+    }
+
+    // 立即扫描
+    function triggerScan() {
+      const btn = document.getElementById('scanBtn');
+      const icon = document.getElementById('scanIcon');
+      btn.disabled = true;
+      btn.classList.add('opacity-75', 'cursor-not-allowed');
+      icon.classList.add('spinning');
+      btn.querySelector('span').textContent = '扫描中...';
+
+      setTimeout(() => {
+        icon.classList.remove('spinning');
+        btn.disabled = false;
+        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+        btn.querySelector('span').textContent = '立即扫描';
+        showToast('扫描完成，发现 4 个新项目', 'success');
+      }, 1800);
+    }
+
+    // 信息源开关
+    function toggleSource(checkbox) {
+      const item = checkbox.closest('.flex.items-center.gap-3');
+      const nameEl = item.querySelector('.text-sm.font-medium');
+      const statusDot = item.querySelector('.w-2.h-2');
+      const timeEl = item.querySelector('.text-xs.text-gray-500, .text-xs.text-gray-600');
+
+      if (checkbox.checked) {
+        nameEl.classList.remove('text-gray-500');
+        nameEl.classList.add('text-gray-100');
+        if (statusDot) {
+          statusDot.classList.remove('bg-gray-500');
+          statusDot.classList.add('bg-green-500');
+        }
+        if (timeEl) timeEl.textContent = '刚刚启用';
+        showToast('信息源已启用', 'success');
+      } else {
+        nameEl.classList.remove('text-gray-100');
+        nameEl.classList.add('text-gray-500');
+        if (statusDot) {
+          statusDot.classList.remove('bg-green-500', 'bg-red-500');
+          statusDot.classList.add('bg-gray-500');
+        }
+        if (timeEl) {
+          timeEl.classList.remove('text-gray-500');
+          timeEl.classList.add('text-gray-600');
+          timeEl.textContent = '已禁用';
+        }
+        showToast('信息源已禁用', 'info');
+      }
+    }
+
+    // 加载更多
+    function loadMore(btn) {
+      const original = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch spinning text-xs"></i>加载中...';
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = original;
+        showToast('没有更多条目了', 'info');
+      }, 800);
+    }
+
+    // Toast 提示
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const colors = {
+        success: 'bg-green-600 border-green-500',
+        error: 'bg-red-600 border-red-500',
+        info: 'bg-gray-700 border-gray-600'
+      };
+      const icons = {
+        success: 'fa-circle-check',
+        error: 'fa-circle-exclamation',
+        info: 'fa-circle-info'
+      };
+
+      const toast = document.createElement('div');
+      toast.className = `toast-enter ${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 text-sm border`;
+      toast.innerHTML = `<i class="fa-solid ${icons[type]}"></i><span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.transition = 'opacity 0.3s, transform 0.3s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+  </script>
+</body>
+</html>

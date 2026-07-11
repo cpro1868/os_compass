@@ -6,7 +6,7 @@
 | 审核 |  |
 | 批准 |  |
 | 日期 | 2026-07-01 |
-| 版本 | V1.4 |
+| 版本 | V1.7 |
 
 ---
 
@@ -1465,7 +1465,262 @@ AI 智能分类项目。
 
 ---
 
-## 4 错误处理规范
+## 3.14 插件管理接口（二期 M13）
+
+> **二期功能标记**：以下所有接口均为二期（Phase 2）设计。
+
+### 3.14.1 list_feature_plugins
+
+获取所有功能插件列表。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `list_feature_plugins` |
+| 参数 | 无 |
+| 返回 | `Vec<FeaturePluginInfo>` |
+
+```typescript
+interface FeaturePluginInfo {
+  id: string;           // 插件 ID
+  name: string;         // 插件名称
+  plugin_type: string;  // 'radar' | 'search' | 'webhook' | 'importer'
+  enabled: boolean;     // 启用状态
+  config: string | null; // 配置 JSON
+  version: string | null;
+}
+```
+
+### 3.14.2 set_plugin_enabled
+
+启用/禁用插件（动态启停，立即生效）。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `set_plugin_enabled` |
+| 参数 | `{ pluginId: string, enabled: boolean }` |
+| 返回 | `void` |
+| 错误 | 插件不存在、插件初始化失败 |
+
+### 3.14.3 get_plugin_config / save_plugin_config
+
+获取/保存插件配置。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `get_plugin_config` / `save_plugin_config` |
+| 参数 | `{ pluginId: string }` / `{ pluginId: string, config: string }` |
+| 返回 | `string | null`（配置 JSON）/ `void` |
+
+### 3.14.4 plugin_get_db_path
+
+获取插件独立数据库文件路径。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `plugin_get_db_path` |
+| 参数 | `{ pluginId: string }` |
+| 返回 | `string`（.db 文件路径，如 `{vault_dir}/plugin_radar.db`） |
+| 说明 | 插件自行决定是否使用独立 .db。调用此命令获取路径后，插件自行打开连接。 |
+
+---
+
+## 3.15 意图搜索接口（二期 M13）
+
+> **二期功能标记**：以下所有接口均为二期（Phase 2）设计。
+
+### 3.15.1 intent_search
+
+执行意图搜索（三层优先级）。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `intent_search` |
+| 参数 | `{ query: string, conversationId?: string }` |
+| 返回 | `SearchResult` |
+
+```typescript
+interface SearchResult {
+  query: string;              // 原始查询
+  keywords: string[];         // LLM 提取的关键词
+  local_results: ProjectMatch[];   // 第一层：本地库匹配
+  cache_results: ProjectMatch[];   // 第二层：信息源缓存匹配
+  web_results: ProjectMatch[];     // 第三层：联网搜索结果
+  total: number;              // 总结果数
+  conversation_id: string;    // 会话 ID（多轮对话）
+}
+
+interface ProjectMatch {
+  project_name: string;
+  project_url: string;
+  description: string;
+  language: string | null;
+  stars: number | null;
+  health_score: number | null;
+  match_score: number;        // 匹配度 0-100
+  source: 'local' | 'cache' | 'web';
+  source_detail?: string;     // 来源详情（如 RSS 源名称）
+}
+```
+
+### 3.15.2 get_search_history
+
+获取搜索历史。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `get_search_history` |
+| 参数 | `{ limit?: number }`（默认 20） |
+| 返回 | `Vec<SearchHistoryItem>` |
+
+```typescript
+interface SearchHistoryItem {
+  id: number;
+  query: string;
+  result_count: number;
+  created_at: string;
+}
+```
+
+### 3.15.3 clear_search_history
+
+清空搜索历史。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `clear_search_history` |
+| 参数 | 无 |
+| 返回 | `void` |
+
+### 3.15.4 搜索信息源管理
+
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `list_search_sources` | 无 | `Vec<SearchSource>` | 列出所有搜索信息源 |
+| `add_search_source` | `{ name, sourceType, url, platform? }` | `SearchSource` | 添加信息源 |
+| `update_search_source` | `{ id, name?, url?, enabled? }` | `void` | 更新信息源 |
+| `delete_search_source` | `{ id }` | `void` | 删除信息源 |
+| `refresh_search_cache` | `{ sourceId? }` | `number`（刷新条目数） | 手动刷新信息源缓存 |
+
+```typescript
+interface SearchSource {
+  id: number;
+  name: string;
+  source_type: 'rss' | 'web_crawl' | 'telegram' | 'platform_preset';
+  url: string;
+  platform: string | null;
+  enabled: boolean;
+  created_at: string;
+}
+```
+
+### 3.15.5 import_search_result
+
+将搜索结果一键导入到本地项目库。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `import_search_result` |
+| 参数 | `{ projectUrl: string, projectName: string, categoryId?: number }` |
+| 返回 | `{ projectId: number }` |
+| 说明 | 内部调用现有的 `import_project` 流程 |
+
+---
+
+## 3.16 情报雷达接口（二期 M13）
+
+> **二期功能标记**：以下所有接口均为二期（Phase 2）设计。
+
+### 3.16.1 雷达信息源管理
+
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `list_radar_sources` | 无 | `Vec<RadarSource>` | 列出所有雷达信息源 |
+| `add_radar_source` | `{ name, sourceType, url, platform?, checkInterval? }` | `RadarSource` | 添加信息源 |
+| `update_radar_source` | `{ id, name?, url?, enabled?, checkInterval? }` | `void` | 更新信息源 |
+| `delete_radar_source` | `{ id }` | `void` | 删除信息源 |
+
+```typescript
+interface RadarSource {
+  id: number;
+  name: string;
+  source_type: 'rss' | 'web_crawl' | 'telegram' | 'platform_preset';
+  url: string;
+  platform: string | null;
+  enabled: boolean;
+  check_interval: number;  // 秒
+  last_checked_at: string | null;
+  last_status: 'success' | 'error' | null;
+  last_error: string | null;
+}
+```
+
+### 3.16.2 get_radar_items
+
+获取收件箱条目。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `get_radar_items` |
+| 参数 | `{ status?: string, limit?: number }`（status 默认 'unread'） |
+| 返回 | `Vec<RadarItem>` |
+
+```typescript
+interface RadarItem {
+  id: number;
+  source_id: number;
+  project_name: string | null;
+  project_url: string | null;
+  description: string | null;
+  language: string | null;
+  source_urls: string | null;  // JSON 数组
+  status: 'unread' | 'imported' | 'blacklisted' | 'ignored';
+  published_at: string | null;
+  fetched_at: string;
+}
+```
+
+### 3.16.3 radar_item_action
+
+对收件箱条目执行操作（导入/不感兴趣/忽略）。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `radar_item_action` |
+| 参数 | `{ itemId: number, action: 'import' | 'blacklist' | 'ignore', categoryId?: number }` |
+| 返回 | `{ projectId?: number }`（action='import' 时返回导入的项目 ID） |
+| 说明 | import 内部调用 `import_project`；blacklist 加入 `radar_blacklist` 表 |
+
+### 3.16.4 trigger_radar_scan
+
+手动触发雷达扫描（不等定时任务）。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `trigger_radar_scan` |
+| 参数 | `{ sourceId?: number }`（不传则扫描所有启用的源） |
+| 返回 | `{ scanned: number, newItems: number, errors: number }` |
+
+### 3.16.5 get_radar_unread_count
+
+获取未读条目数量（用于 Sidebar 徽标）。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `get_radar_unread_count` |
+| 参数 | 无 |
+| 返回 | `number` |
+
+### 3.16.6 clear_radar_cache
+
+清理雷达缓存（手动清理或 TTL 过期清理）。
+
+| 项目 | 说明 |
+|------|------|
+| 命令 | `clear_radar_cache` |
+| 参数 | `{ beforeDays?: number }`（清理 N 天前的数据，不传则清理所有已处理条目） |
+| 返回 | `number`（清理条目数） |
+
+---
 
 ### 4.1 错误码定义
 
@@ -1557,6 +1812,7 @@ function parseErrorCode(error: unknown): string {
 | V1.4 | 2026-07-07 | 新增 Releases 接口（fetch_releases、get_releases、translate_release_body）；新增 AI 智能分类接口（ai_classify_project） |
 | V1.5 | 2026-07-08 | 新增仓库管理接口（create_vault、list_vaults、open_vault、delete_vault、validate_vault） |
 | V1.6 | 2026-07-10 | 新增导入已有仓库接口（import_vault），含完整校验链和密钥匹配验证 |
+| V1.7 | 2026-07-11 | 新增二期 M13 接口：插件管理（list_feature_plugins、set_plugin_enabled、get/save_plugin_config、plugin_get_db_path）；意图搜索（intent_search、get/clear_search_history、搜索信息源管理、import_search_result）；情报雷达（雷达信息源管理、get_radar_items、radar_item_action、trigger_radar_scan、get_radar_unread_count、clear_radar_cache） |
 
 ---
 
