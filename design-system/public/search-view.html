@@ -68,7 +68,7 @@
           </div>
           <div>
             <h1 class="font-semibold">智能项目推荐</h1>
-            <p class="text-xs text-gray-500">二期功能：输入您的需求，AI 将推荐相关开源项目</p>
+            <p class="text-xs text-gray-500">二期功能 · 三层智能搜索：本地库 → 信息源缓存 → 联网搜索</p>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -88,21 +88,21 @@
           <div class="flex-1">
             <div class="bg-gray-100 rounded-2xl rounded-tl-sm p-4">
               <p class="text-gray-700">
-                您好！我是您的开源项目助手。请告诉我您想要解决的问题或场景，我将为您推荐合适的开源项目。
+                您好！我是您的开源项目助手。输入您的需求，系统将按三层优先级搜索：先查本地项目库，再查信息源缓存，最后联网搜索补充结果。
               </p>
             </div>
             <div class="mt-3 flex flex-wrap gap-2">
-              <button onclick="sendSuggestion('我想找一个 React 状态管理库')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
-                React 状态管理库
+              <button onclick="sendSuggestion('前端状态管理库')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
+                前端状态管理库
               </button>
-              <button onclick="sendSuggestion('推荐一些 Python Web 框架')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
+              <button onclick="sendSuggestion('Python Web 框架')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
                 Python Web 框架
               </button>
-              <button onclick="sendSuggestion('有哪些好用的 Rust Web 框架？')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
-                Rust Web 框架
+              <button onclick="sendSuggestion('Rust 日志库')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
+                Rust 日志库
               </button>
-              <button onclick="sendSuggestion('帮我找一个人脸识别开源项目')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
-                人脸识别项目
+              <button onclick="sendSuggestion('开源人脸识别项目')" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition">
+                开源人脸识别项目
               </button>
             </div>
           </div>
@@ -140,73 +140,8 @@
           <i class="fa-solid fa-xmark text-gray-500"></i>
         </button>
       </div>
-      <div class="p-4 max-h-[60vh] overflow-auto space-y-3">
-        <!-- 项目卡片 -->
-        <div class="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition cursor-pointer">
-          <div class="flex items-start gap-3">
-            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-              <i class="fa-brands fa-react text-xl"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <h4 class="font-semibold">facebook/react</h4>
-                <span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">健康度 92</span>
-              </div>
-              <p class="text-sm text-gray-500 mt-1">用于构建用户界面的 JavaScript 库</p>
-              <div class="flex items-center gap-2 mt-2">
-                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">TypeScript</span>
-                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">220k Stars</span>
-              </div>
-            </div>
-            <button onclick="importProject('facebook/react')" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              导入
-            </button>
-          </div>
-        </div>
-        
-        <div class="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition cursor-pointer">
-          <div class="flex items-start gap-3">
-            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
-              <i class="fa-solid fa-code text-xl"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <h4 class="font-semibold">pmndrs/zustand</h4>
-                <span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">健康度 95</span>
-              </div>
-              <p class="text-sm text-gray-500 mt-1">简洁、直观的状态管理解决方案</p>
-              <div class="flex items-center gap-2 mt-2">
-                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">TypeScript</span>
-                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">35k Stars</span>
-              </div>
-            </div>
-            <button onclick="importProject('pmndrs/zustand')" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              导入
-            </button>
-          </div>
-        </div>
-
-        <div class="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition cursor-pointer">
-          <div class="flex items-start gap-3">
-            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600">
-              <i class="fa-solid fa-layer-group text-xl"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <h4 class="font-semibold">tanstack/query</h4>
-                <span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">健康度 94</span>
-              </div>
-              <p class="text-sm text-gray-500 mt-1">强大的异步状态管理与数据获取库</p>
-              <div class="flex items-center gap-2 mt-2">
-                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">TypeScript</span>
-                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">42k Stars</span>
-              </div>
-            </div>
-            <button onclick="importProject('tanstack/query')" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              导入
-            </button>
-          </div>
-        </div>
+      <div id="resultList" class="p-4 max-h-[60vh] overflow-auto space-y-3">
+        <!-- 项目卡片由 JavaScript 动态生成 -->
       </div>
     </div>
   </div>
@@ -250,8 +185,10 @@
       // 模拟 AI 回复
       setTimeout(() => {
         hideTypingIndicator();
-        addMessage('assistant', getAIResponse(message));
-        // 显示结果弹窗
+        const results = getAIResponse(message);
+        addMessage('assistant', results.summary);
+        // 渲染结果弹窗
+        renderResultList(results.items);
         document.getElementById('resultModal').classList.remove('hidden');
         document.getElementById('resultModal').classList.add('flex');
       }, 1500);
@@ -307,9 +244,118 @@
       if (indicator) indicator.remove();
     }
 
-    // 获取 AI 响应（模拟）
+    // 获取 AI 响应（模拟三层搜索结果）
     function getAIResponse(message) {
-      return `根据您的需求"${message}"，我为您找到了以下推荐项目。这些项目都是业界广泛使用、社区活跃且文档完善的开源项目。`;
+      // 根据关键词匹配预设结果，未匹配时回退到默认集
+      const mockData = {
+        '前端状态管理库': {
+          summary: `根据您的需求"${message}"，系统按三层优先级搜索完成。本地库命中 1 项，信息源缓存命中 2 项，联网搜索补充 2 项，共 5 个相关项目。`,
+          items: [
+            { name: 'pmndrs/zustand', source: 'local', health: 95, desc: '简洁、直观的状态管理解决方案', lang: 'TypeScript', stars: '35k Stars', icon: 'fa-code', iconColor: 'purple' },
+            { name: 'reduxjs/redux-toolkit', source: 'cache', health: 90, desc: '官方推荐的 Redux 状态管理工具集', lang: 'TypeScript', stars: '10k Stars', icon: 'fa-layer-group', iconColor: 'orange' },
+            { name: 'tanstack/query', source: 'cache', health: 94, desc: '强大的异步状态管理与数据获取库', lang: 'TypeScript', stars: '42k Stars', icon: 'fa-layer-group', iconColor: 'orange' },
+            { name: 'pinia-ecommerce/store', source: 'web', health: 85, desc: '面向电商场景的 Pinia 状态管理方案', lang: 'TypeScript', stars: '1.2k Stars', icon: 'fa-globe', iconColor: 'blue' },
+            { name: 'nathanbale/state-machine', source: 'web', health: null, desc: '基于状态机的前端状态管理新方案', lang: 'TypeScript', stars: '320 Stars', icon: 'fa-globe', iconColor: 'blue' },
+          ]
+        },
+        'Python Web 框架': {
+          summary: `根据您的需求"${message}"，系统按三层优先级搜索完成。本地库命中 1 项，信息源缓存命中 2 项，联网搜索补充 2 项，共 5 个相关项目。`,
+          items: [
+            { name: 'pallets/flask', source: 'local', health: 93, desc: '轻量级 Python Web 框架', lang: 'Python', stars: '66k Stars', icon: 'fa-flask', iconColor: 'blue' },
+            { name: 'tiangolo/fastapi', source: 'cache', health: 96, desc: '现代、快速的 Web 框架，基于标准类型提示', lang: 'Python', stars: '70k Stars', icon: 'fa-bolt', iconColor: 'orange' },
+            { name: 'encode/starlette', source: 'cache', health: 88, desc: '轻量级 ASGI 框架/工具包', lang: 'Python', stars: '9.5k Stars', icon: 'fa-bolt', iconColor: 'orange' },
+            { name: 'litestar-org/litestar', source: 'web', health: 82, desc: '新一代轻量、高性能 ASGI 框架', lang: 'Python', stars: '3.8k Stars', icon: 'fa-globe', iconColor: 'blue' },
+            { name: 'molten-framework/molten', source: 'web', health: null, desc: '极简的 Python Web API 框架', lang: 'Python', stars: '850 Stars', icon: 'fa-globe', iconColor: 'blue' },
+          ]
+        },
+        'Rust 日志库': {
+          summary: `根据您的需求"${message}"，系统按三层优先级搜索完成。本地库命中 1 项，信息源缓存命中 2 项，联网搜索补充 2 项，共 5 个相关项目。`,
+          items: [
+            { name: 'tokio-rs/tracing', source: 'local', health: 94, desc: '应用级分布式追踪与日志框架', lang: 'Rust', stars: '4.8k Stars', icon: 'fa-route', iconColor: 'orange' },
+            { name: 'tokio-rs/log', source: 'cache', health: 91, desc: 'Rust 生态标准日志门面库', lang: 'Rust', stars: '2.1k Stars', icon: 'fa-file-lines', iconColor: 'orange' },
+            { name: 'slog-rs/slog', source: 'cache', health: 86, desc: '结构化、可组合的日志库', lang: 'Rust', stars: '1.4k Stars', icon: 'fa-file-lines', iconColor: 'orange' },
+            { name: 'flexzero/fern', source: 'web', health: 79, desc: '简单易用的 Rust 日志配置库', lang: 'Rust', stars: '680 Stars', icon: 'fa-globe', iconColor: 'blue' },
+            { name: 'rbalog/logscope', source: 'web', health: null, desc: '基于作用域的 Rust 日志筛选新方案', lang: 'Rust', stars: '120 Stars', icon: 'fa-globe', iconColor: 'blue' },
+          ]
+        },
+        '开源人脸识别项目': {
+          summary: `根据您的需求"${message}"，系统按三层优先级搜索完成。本地库命中 1 项，信息源缓存命中 2 项，联网搜索补充 2 项，共 5 个相关项目。`,
+          items: [
+            { name: 'ageitgey/face_recognition', source: 'local', health: 89, desc: '最简单的 Python 人脸识别 API', lang: 'Python', stars: '52k Stars', icon: 'fa-face-grin', iconColor: 'blue' },
+            { name: 'deepinsight/insightface', source: 'cache', health: 92, desc: '2D/3D 人脸分析开源工具包', lang: 'Python', stars: '22k Stars', icon: 'fa-face-smile', iconColor: 'orange' },
+            { name: 'dlib-platform/dlib', source: 'cache', health: 87, desc: '含人脸检测与现代 C++ 算法的工具箱', lang: 'C++', stars: '13k Stars', icon: 'fa-face-smile', iconColor: 'orange' },
+            { name: 'mobilevet/face-mask-detect', source: 'web', health: 81, desc: '人脸口罩检测实时推理项目', lang: 'Python', stars: '2.3k Stars', icon: 'fa-globe', iconColor: 'blue' },
+            { name: 'edgeai/facemesh-lite', source: 'web', health: null, desc: '面向边缘设备的人脸网格推理项目', lang: 'C++', stars: '540 Stars', icon: 'fa-globe', iconColor: 'blue' },
+          ]
+        }
+      };
+
+      if (mockData[message]) {
+        return mockData[message];
+      }
+
+      // 默认回退：演示三层结构
+      return {
+        summary: `根据您的需求"${message}"，系统按三层优先级搜索完成。本地库命中 1 项，信息源缓存命中 2 项，联网搜索补充 2 项，共 5 个相关项目。`,
+        items: [
+          { name: 'local/sample-local', source: 'local', health: 90, desc: '本地项目库中已入库的示例项目', lang: 'TypeScript', stars: '5k Stars', icon: 'fa-database', iconColor: 'blue' },
+          { name: 'cache/sample-cache-1', source: 'cache', health: 85, desc: '信息源缓存中的示例项目一', lang: 'Rust', stars: '2k Stars', icon: 'fa-rss', iconColor: 'orange' },
+          { name: 'cache/sample-cache-2', source: 'cache', health: 83, desc: '信息源缓存中的示例项目二', lang: 'Python', stars: '1.5k Stars', icon: 'fa-rss', iconColor: 'orange' },
+          { name: 'web/sample-web-1', source: 'web', health: 78, desc: '联网搜索补充的示例项目一', lang: 'Go', stars: '600 Stars', icon: 'fa-globe', iconColor: 'blue' },
+          { name: 'web/sample-web-2', source: 'web', health: null, desc: '联网搜索补充的示例项目二', lang: 'C', stars: '180 Stars', icon: 'fa-globe', iconColor: 'blue' },
+        ]
+      };
+    }
+
+    // 渲染结果列表
+    function renderResultList(items) {
+      const list = document.getElementById('resultList');
+      list.innerHTML = items.map(item => createProjectCard(item)).join('');
+    }
+
+    // 生成单个项目卡片 HTML
+    function createProjectCard(item) {
+      const sourceMap = {
+        local:  { label: '本地库', cls: 'bg-blue-100 text-blue-700' },
+        cache:  { label: '缓存',   cls: 'bg-green-100 text-green-700' },
+        web:    { label: '联网',   cls: 'bg-purple-100 text-purple-700' },
+      };
+      const src = sourceMap[item.source] || sourceMap.web;
+      const healthBadge = item.health
+        ? `<span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">健康度 ${item.health}</span>`
+        : '';
+      const actionBtn = item.source === 'local'
+        ? `<span class="px-3 py-1.5 text-sm bg-gray-100 text-gray-500 rounded-lg cursor-default">已入库</span>`
+        : `<button onclick="importProject('${item.name}')" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">导入</button>`;
+      const iconColorMap = {
+        blue: 'bg-blue-100 text-blue-600',
+        purple: 'bg-purple-100 text-purple-600',
+        orange: 'bg-orange-100 text-orange-600',
+      };
+      const iconCls = iconColorMap[item.iconColor] || iconColorMap.blue;
+
+      return `
+        <div class="border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition cursor-pointer">
+          <div class="flex items-start gap-3">
+            <div class="w-12 h-12 ${iconCls} rounded-xl flex items-center justify-center">
+              <i class="fa-solid ${item.icon} text-xl"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h4 class="font-semibold">${item.name}</h4>
+                <span class="px-2 py-0.5 text-xs ${src.cls} rounded">${src.label}</span>
+                ${healthBadge}
+              </div>
+              <p class="text-sm text-gray-500 mt-1">${item.desc}</p>
+              <div class="flex items-center gap-2 mt-2">
+                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">${item.lang}</span>
+                <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">${item.stars}</span>
+              </div>
+            </div>
+            <div class="flex-shrink-0">${actionBtn}</div>
+          </div>
+        </div>
+      `;
     }
 
     // 发送建议

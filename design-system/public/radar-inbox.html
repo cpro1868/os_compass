@@ -66,137 +66,6 @@
     <!-- 双栏布局 -->
     <div class="flex flex-1 min-h-0">
 
-      <!-- 左侧边栏 - 信息源列表 -->
-      <aside class="w-64 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0">
-        <div class="p-4 border-b border-gray-700 flex items-center justify-between">
-          <h2 class="font-semibold text-sm text-gray-400 uppercase tracking-wide">信息源</h2>
-          <button onclick="showToast('添加信息源向导待开发', 'info')"
-            class="w-7 h-7 hover:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition">
-            <i class="fa-solid fa-plus text-xs"></i>
-          </button>
-        </div>
-        <div class="flex-1 overflow-auto scroll-area p-2 space-y-1">
-          <!-- 信息源项 -->
-          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
-            <div class="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center text-gray-300 flex-shrink-0">
-              <i class="fa-brands fa-github text-sm"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
-                <span class="text-sm font-medium truncate">GitHub Trending Daily</span>
-              </div>
-              <p class="text-xs text-gray-500 mt-0.5">2小时前</p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
-              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
-                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
-              </div>
-            </label>
-          </div>
-
-          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
-            <div class="w-8 h-8 bg-orange-900/40 rounded-lg flex items-center justify-center text-orange-400 flex-shrink-0">
-              <i class="fa-solid fa-globe text-sm"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
-                <span class="text-sm font-medium truncate">Hacker News</span>
-              </div>
-              <p class="text-xs text-gray-500 mt-0.5">1小时前</p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
-              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
-                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
-              </div>
-            </label>
-          </div>
-
-          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
-            <div class="w-8 h-8 bg-purple-900/40 rounded-lg flex items-center justify-center text-purple-400 flex-shrink-0">
-              <i class="fa-solid fa-newspaper text-sm"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
-                <span class="text-sm font-medium truncate">阮一峰周刊</span>
-              </div>
-              <p class="text-xs text-gray-500 mt-0.5">3天前</p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
-              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
-                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
-              </div>
-            </label>
-          </div>
-
-          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
-            <div class="w-8 h-8 bg-sky-900/40 rounded-lg flex items-center justify-center text-sky-400 flex-shrink-0">
-              <i class="fa-solid fa-paper-plane text-sm"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
-                <span class="text-sm font-medium truncate">TG: 开源推荐频道</span>
-              </div>
-              <p class="text-xs text-gray-500 mt-0.5">5小时前</p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
-              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
-                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
-              </div>
-            </label>
-          </div>
-
-          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
-            <div class="w-8 h-8 bg-red-900/40 rounded-lg flex items-center justify-center text-red-400 flex-shrink-0">
-              <i class="fa-solid fa-globe text-sm"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" title="上次扫描失败"></span>
-                <span class="text-sm font-medium truncate">Gitee 趋势</span>
-              </div>
-              <p class="text-xs text-gray-500 mt-0.5">1天前</p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
-              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
-                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
-              </div>
-            </label>
-          </div>
-
-          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
-            <div class="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center text-gray-500 flex-shrink-0">
-              <i class="fa-solid fa-rss text-sm"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2 h-2 bg-gray-500 rounded-full flex-shrink-0"></span>
-                <span class="text-sm font-medium truncate text-gray-500">Ruby Weekly</span>
-              </div>
-              <p class="text-xs text-gray-600 mt-0.5">已禁用</p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-              <input type="checkbox" class="sr-only peer" onchange="toggleSource(this)">
-              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
-                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
-              </div>
-            </label>
-          </div>
-        </div>
-        <div class="p-3 border-t border-gray-700 text-xs text-gray-500 flex items-center justify-between">
-          <span><i class="fa-solid fa-circle-check text-green-500 mr-1"></i>5 个活跃</span>
-          <span><i class="fa-solid fa-circle-xmark text-red-500 mr-1"></i>1 个异常</span>
-        </div>
-      </aside>
-
       <!-- 主内容区 - 雷达收件箱 -->
       <main class="flex-1 flex flex-col min-w-0">
         <!-- 筛选标签 -->
@@ -517,6 +386,137 @@
           </div>
         </footer>
       </main>
+
+      <!-- 右侧边栏 - 信息源列表 -->
+      <aside class="w-64 bg-gray-800 border-l border-gray-700 flex flex-col flex-shrink-0">
+        <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+          <h2 class="font-semibold text-sm text-gray-400 uppercase tracking-wide">信息源</h2>
+          <button onclick="showToast('添加信息源向导待开发', 'info')"
+            class="w-7 h-7 hover:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition">
+            <i class="fa-solid fa-plus text-xs"></i>
+          </button>
+        </div>
+        <div class="flex-1 overflow-auto scroll-area p-2 space-y-1">
+          <!-- 信息源项 -->
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center text-gray-300 flex-shrink-0">
+              <i class="fa-brands fa-github text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                <span class="text-sm font-medium truncate">GitHub Trending Daily</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">2小时前</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-orange-900/40 rounded-lg flex items-center justify-center text-orange-400 flex-shrink-0">
+              <i class="fa-solid fa-globe text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                <span class="text-sm font-medium truncate">Hacker News</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">1小时前</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-purple-900/40 rounded-lg flex items-center justify-center text-purple-400 flex-shrink-0">
+              <i class="fa-solid fa-newspaper text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                <span class="text-sm font-medium truncate">阮一峰周刊</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">3天前</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-sky-900/40 rounded-lg flex items-center justify-center text-sky-400 flex-shrink-0">
+              <i class="fa-solid fa-paper-plane text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                <span class="text-sm font-medium truncate">TG: 开源推荐频道</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">5小时前</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-red-900/40 rounded-lg flex items-center justify-center text-red-400 flex-shrink-0">
+              <i class="fa-solid fa-globe text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" title="上次扫描失败"></span>
+                <span class="text-sm font-medium truncate">Gitee 趋势</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">1天前</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" checked class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer flex items-center gap-3">
+            <div class="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center text-gray-500 flex-shrink-0">
+              <i class="fa-solid fa-rss text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 bg-gray-500 rounded-full flex-shrink-0"></span>
+                <span class="text-sm font-medium truncate text-gray-500">Ruby Weekly</span>
+              </div>
+              <p class="text-xs text-gray-600 mt-0.5">已禁用</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" class="sr-only peer" onchange="toggleSource(this)">
+              <div class="w-9 h-5 bg-gray-600 peer-checked:bg-blue-600 rounded-full transition relative">
+                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+        </div>
+        <div class="p-3 border-t border-gray-700 text-xs text-gray-500 flex items-center justify-between">
+          <span><i class="fa-solid fa-circle-check text-green-500 mr-1"></i>5 个活跃</span>
+          <span><i class="fa-solid fa-circle-xmark text-red-500 mr-1"></i>1 个异常</span>
+        </div>
+      </aside>
     </div>
   </div>
 
