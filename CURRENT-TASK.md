@@ -2,7 +2,7 @@
 
 ## 任务标题
 
-Phase 1 打磨：github_token 防御性修复 + i18n 覆盖率提升
+工程化改进：Git 仓库初始化 + 测试框架 + CI
 
 ## 状态
 
@@ -10,40 +10,36 @@ done
 
 ## 完成内容
 
-### 1. github_token 根因排查与防御性修复
+### 1. Git 仓库初始化
+- [x] 创建 .gitignore（排除 node_modules、target、*.db、*.cryptokey、.env、Previous/、session-*.md 等）
+- [x] 初始化 Git 仓库，首次提交全部源码
+- [x] 移除 crawler/webtomd 内嵌 .git，改为直接纳入主仓库
 
-- [x] 根因分析：`cleanup_undecryptable_secrets()` 和 `get_variable_value_internal()` 在解密失败时静默清空密文，导致密钥临时不匹配时数据永久丢失
-- [x] `variables.rs` cleanup 函数：不再清空无法解密的密文，改为仅记录警告日志
-- [x] `variables.rs` get_variable_value_internal：解密失败时保留密文，不再执行 UPDATE SET value=''
-- [x] `settings.rs` get_setting：解密失败时保留密文，不再清空
-- [x] `lib.rs` 启动时添加加密服务验证步骤
-- [x] `lib.rs` legacy 密钥迁移路径也调用 cleanup（之前因 early return 跳过）
-- [x] 诊断日志：set_system_variable 记录保存操作，get_system_variables 记录解密失败详情
+### 2. 测试框架（vitest）
+- [x] 安装 vitest + @testing-library/react + jsdom
+- [x] 创建 vitest.config.ts（jsdom 环境）
+- [x] 新增 types.test.ts（13 个测试）
+- [x] 新增 i18n.test.ts（5 个测试，zh/en 键一致性校验）
+- [x] 修复 i18n 测试发现的 en.json 缺失 detail.aiAnalysis 键
+- [x] package.json 新增 test/test:watch/typecheck 脚本
 
-### 2. i18n 覆盖率提升（9/20 → 17/20 组件）
+### 3. CI 配置
+- [x] 创建 .github/workflows/ci.yml（GitHub Actions）
+- [x] 创建 scripts/pre-commit.ps1（本地提交前检查）
 
-- [x] MoveCategoryDialog 接入 useTranslation
-- [x] ManualAddDialog 接入 useTranslation
-- [x] ImportConfirmDialog 接入 useTranslation
-- [x] MarkdownEditor 接入 useTranslation
-- [x] ClonePanel 接入 useTranslation
-- [x] ReleasesPanel 接入 useTranslation
-- [x] ImportModal 补齐剩余硬编码字符串
-- [x] VaultDialog 接入 useTranslation
-- [x] ProjectDetailDialog 接入 useTranslation
-- [x] SettingsDialog 补齐翻译标签页和代理设置硬编码字符串
-- [x] 修复 en.json 重复 detail 块问题
-- [x] 翻译资源大幅扩展（markdownEditor 命名空间 + clone/releases/import/manualAdd/moveCategory/importConfirm/settings 扩展）
+### 4. 文档更新
+- [x] AGENTS.md 新增第 7 节：开发命令和 Git 规范
 
-### 3. 回归验证
+## Git 提交历史
 
-- [x] TypeScript 类型检查通过（pnpm tsc --noEmit 无错误）
-- [x] release 构建成功
-- [x] 产物已复制到 Previous 目录
+- `28a7d9c` chore: initial commit - Phase 1 MVP complete (M1-M12)
+- `709880f` fix: add crawler/webtomd source files
+- `2201846` chore: add test framework (vitest) + CI + pre-commit script
 
 ## 构建命令
 
 ```cmd
 $env:PATH="D:\Soft\msys64\ucrt64\bin;D:\Soft\msys64\usr\bin;$env:PATH"
+cd "G:\Projects\kimicode\os_compass\os-compass"
 pnpm tauri build
 ```

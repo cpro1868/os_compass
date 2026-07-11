@@ -8,16 +8,18 @@ OS-Compass（开源罗盘）是一款基于"本地优先 (Local-First)"理念设
 
 ## 当前阶段
 
-**Phase 1 MVP 全部完成，Phase 1 打磨进行中（github_token 防御性修复 + i18n 覆盖率提升已完成）。**
+**Phase 1 MVP 全部完成，工程化改进完成（Git + 测试框架 + CI）。**
 
 ## 当前重点任务
 
-无活跃任务。Phase 1 打磨第一批已完成（github_token 防御性修复 + i18n 覆盖率 17/20），等待用户指定下一步。
+无活跃任务。工程化改进已完成（Git 仓库初始化 + vitest 测试框架 + GitHub Actions CI），等待用户指定下一步（Phase 2 M13 意图搜索或继续打磨）。
 
 ## 最近完成
 
+- ✅ 工程化改进：Git 仓库初始化（3 次 commit）+ vitest 测试框架（18 个测试）+ GitHub Actions CI + pre-commit 脚本
+- ✅ i18n 测试发现并修复 en.json 缺失 detail.aiAnalysis 键
 - ✅ github_token 防御性修复：解密失败不再静默清空密文，改为保留+警告日志
-- ✅ i18n 覆盖率提升：9/20 → 17/20 组件接入 useTranslation（实际 100%，剩余 3 个为通用 prop 组件）
+- ✅ i18n 覆盖率提升：9/20 → 17/20 组件接入 useTranslation（实际 100%）
 - ✅ 修复 en.json 重复 detail 块问题
 - ✅ M11 国际化与体验优化全部完成
 - ✅ 导入已有仓库功能实现（`import_vault` 命令 + 9 步校验链）
