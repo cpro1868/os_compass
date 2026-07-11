@@ -2,7 +2,7 @@
 
 ## 任务标题
 
-工程化改进：Git 仓库初始化 + 测试框架 + CI
+Phase 1 打磨收尾：残余 i18n + 暗色模式全覆盖
 
 ## 状态
 
@@ -10,31 +10,41 @@ done
 
 ## 完成内容
 
-### 1. Git 仓库初始化
-- [x] 创建 .gitignore（排除 node_modules、target、*.db、*.cryptokey、.env、Previous/、session-*.md 等）
-- [x] 初始化 Git 仓库，首次提交全部源码
-- [x] 移除 crawler/webtomd 内嵌 .git，改为直接纳入主仓库
+### 1. 残余 i18n 字符串补齐
+- [x] VaultDialog：33 个残余中文字符串替换为 t() 调用
+- [x] ProjectDetailDialog：21 个残余字符串国际化
+- [x] SettingsDialog：5 个残余字符串国际化
+- [x] ClonePanel：2 个残余字符串国际化
+- [x] VaultDialog 创建步骤数组 step text/successText 国际化
+- [x] ProjectDetailDialog 后台任务类型字符串国际化
 
-### 2. 测试框架（vitest）
-- [x] 安装 vitest + @testing-library/react + jsdom
-- [x] 创建 vitest.config.ts（jsdom 环境）
-- [x] 新增 types.test.ts（13 个测试）
-- [x] 新增 i18n.test.ts（5 个测试，zh/en 键一致性校验）
-- [x] 修复 i18n 测试发现的 en.json 缺失 detail.aiAnalysis 键
-- [x] package.json 新增 test/test:watch/typecheck 脚本
+### 2. 翻译键扩展
+- [x] vault 命名空间新增 30+ 键
+- [x] detail 命名空间新增 15+ 键
+- [x] clone/settings 命名空间补充
+- [x] en.json 同步扩展
 
-### 3. CI 配置
-- [x] 创建 .github/workflows/ci.yml（GitHub Actions）
-- [x] 创建 scripts/pre-commit.ps1（本地提交前检查）
+### 3. 暗色模式全覆盖
+- [x] 18 个组件添加 1026 个 dark: 变体类
+- [x] SettingsDialog: 169, ProjectDetailDialog: 201, VaultDialog: 157
+- [x] ListView: 56, ClonePanel: 61, ArchiveView: 40, StatsView: 43
+- [x] CategoryManager: 51, TagManager: 54, ImportModal: 46
+- [x] ImportConfirmDialog: 40, ReleasesPanel: 38, ManualAddDialog: 23
+- [x] MoveCategoryDialog: 12, EmptyState: 4, ErrorState: 6
 
-### 4. 文档更新
-- [x] AGENTS.md 新增第 7 节：开发命令和 Git 规范
+### 4. 验证
+- [x] TypeScript 类型检查通过
+- [x] 18/18 测试通过
+- [x] release 构建成功
+- [x] 产物已复制到 Previous 目录
 
 ## Git 提交历史
 
 - `28a7d9c` chore: initial commit - Phase 1 MVP complete (M1-M12)
 - `709880f` fix: add crawler/webtomd source files
 - `2201846` chore: add test framework (vitest) + CI + pre-commit script
+- `65f3991` docs: update project status after engineering improvements
+- `7cb0ce9` feat: complete i18n residual strings + dark mode coverage
 
 ## 构建命令
 
