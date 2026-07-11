@@ -187,6 +187,7 @@
     "openVSCode": "Open in VS Code",
     "localFileMissing": "Local File Missing",
     "localFileMissingDesc": "Local path does not exist, may have been moved or deleted",
+    "aiAnalysis": "AI Analysis",
     "analyzing": "Analyzing...",
     "analyzeProject": "Analyze Project",
     "analyzeTip": "Run AI analysis to generate summary, use cases, risks, and dependency suggestions",

@@ -134,4 +134,42 @@ Previous/
 
 ---
 
-**最后更新**: 2026-06-30（web2md HTTP 服务实现）
+## 7. 开发命令
+
+### 构建命令
+
+```cmd
+$env:PATH="D:\Soft\msys64\ucrt64\bin;D:\Soft\msys64\usr\bin;$env:PATH"
+cd "G:\Projects\kimicode\os_compass\os-compass"
+pnpm tauri build
+```
+
+### 测试命令
+
+```cmd
+# 前端测试（vitest）
+cd "G:\Projects\kimicode\os_compass\os-compass"
+pnpm test              # 运行一次
+pnpm test:watch        # 监听模式
+pnpm typecheck         # TypeScript 类型检查
+
+# Rust 测试（注意：cargo test 因 Tauri GUI 依赖无法在 CLI 运行）
+cd "G:\Projects\kimicode\os_compass\os-compass\src-tauri"
+cargo check --lib      # 编译检查
+cargo clippy --lib     # lint 检查
+
+# 提交前检查
+cd "G:\Projects\kimicode\os_compass"
+powershell -ExecutionPolicy Bypass -File scripts\pre-commit.ps1
+```
+
+### Git 规范
+
+- 仓库根目录：`G:\Projects\kimicode\os_compass`
+- 分支：`main`（主分支）
+- 提交前必须运行 `scripts/pre-commit.ps1` 或手动执行 typecheck + test
+- 敏感文件（.db、.cryptokey、.env）已在 .gitignore 中排除
+
+---
+
+**最后更新**: 2026-07-11（Git 仓库初始化 + 测试框架 + CI）
