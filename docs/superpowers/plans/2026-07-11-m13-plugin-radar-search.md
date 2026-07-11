@@ -99,7 +99,9 @@ Task 13 ──> Task 14 (i18n + 暗色模式 + 构建)
 - Modify: `os-compass/src-tauri/Cargo.toml`（添加 async-trait + feed-rs 依赖）
 
 **Interfaces:**
-- Produces: `FeaturePlugin` trait, `FeaturePluginType` enum, `PluginContext` struct, `PluginError` enum, `FeatureResult` struct, `ResultStatus` enum, `PluginInfo` struct
+- Produces: `FeaturePlugin` trait, `FeaturePluginType` enum, `DbMode` enum, `PluginContext` struct, `PluginError` enum, `FeatureResult` struct, `ResultStatus` enum, `PluginInfo` struct
+
+**参照规范：** `docs/插件接入规范.md` §2（四种 DB 模式）、§3（插件声明）、§4（生命周期）
 
 - [ ] **Step 1: 添加 Cargo 依赖**
 
@@ -107,7 +109,28 @@ Task 13 ──> Task 14 (i18n + 暗色模式 + 构建)
 
 - [ ] **Step 2: 创建 feature_plugin.rs**
 
-创建文件，包含：`FeaturePluginType` 枚举（Radar/Search/Webhook/Importer，含 as_str/from_str 方法）、`ResultStatus` 枚举、`FeatureResult` 结构体、`PluginInfo` 结构体（Serialize）、`PluginContext` 结构体（含 vault_dir/config/llm_config + get_db_path 方法）、`PluginError` 枚举（NotSupported/NotFound/InitFailed/ExecutionFailed/DbError，实现 Display 和 Error）、`FeaturePlugin` async trait（id/name/plugin_type/version + init/on_enable/on_disable/execute 方法）。使用 `#[async_trait]` 宏。`PluginContext` 不直接持有 Database 连接，而是通过 `get_db_path(plugin_id)` 返回 .db 文件路径，插件自行打开连接。
+创建文件，包含以下类型（按 `docs/插件接入规范.md` 定义）：
+
+1. `DbMode` 枚举：`Main` / `Global` / `Vault` / `None`，含 `as_str()` 和 `from_str()` 方法
+2. `FeaturePluginType` 枚举：`Radar` / `Search` / `Webhook` / `Importer`，含 `as_str()` 和 `from_str()` 方法
+3. `ResultStatus` 枚举：`Success` / `Failed` / `Partial`
+4. `FeatureResult` 结构体：status / data / message
+5. `PluginInfo` 结构体（Serialize）：id / name / plugin_type / enabled / config / version / db_mode / db_path_template
+6. `PluginContext` 结构体：vault_dir / app_data_dir / config / llm_config / plugin_db_path（Option\<PathBuf\>，由系统根据 db_mode 和 db_path_template 解析得出，main/none 模式为 None）
+7. `PluginError` 枚举：NotSupported / NotFound / InitFailed / ExecutionFailed / DbError / ConfigError，实现 Display 和 Error
+8. `FeaturePlugin` async trait（使用 `#[async_trait]`）：
+   - `fn id(&self) -> &str`
+   - `fn name(&self) -> &str`
+   - `fn plugin_type(&self) -> FeaturePluginType`
+   - `fn version(&self) -> &str`
+   - `fn db_mode(&self) -> DbMode`（默认返回 `DbMode::None`）
+   - `fn db_path_template(&self) -> Option<&str>`（默认返回 `None`）
+   - `async fn init(&self, context: &PluginContext) -> Result<(), PluginError>`
+   - `async fn on_enable(&self, context: &PluginContext) -> Result<(), PluginError>`
+   - `async fn on_disable(&self, context: &PluginContext) -> Result<(), PluginError>`
+   - `async fn execute(&self, context: &PluginContext) -> Result<FeatureResult, PluginError>`
+
+9. `resolve_db_path(db_mode, db_path_template, vault_dir, app_data_dir, plugin_id) -> Option<PathBuf>` 函数：按 §2.2 规则解析路径变量占位符（`${app_data_dir}` / `${vault_dir}` / `${plugin_id}`），main 和 none 模式返回 None
 
 - [ ] **Step 3: 在 lib.rs 中注册模块**
 
@@ -124,28 +147,30 @@ Expected: 无 error（可能有 unused warning）
 ```bash
 cd "G:\Projects\kimicode\os_compass"
 git add os-compass/src-tauri/src/feature_plugin.rs os-compass/src-tauri/src/lib.rs os-compass/src-tauri/Cargo.toml os-compass/src-tauri/Cargo.lock
-git commit -m "feat(M13): add FeaturePlugin trait and type definitions"
+git commit -m "feat(M13): add FeaturePlugin trait, DbMode enum, and type definitions"
 ```
 
 ---
 
-## Task 2: feature_plugins 数据库表 + 插件 .db 路径管理
+## Task 2: feature_plugins 数据库表 + 路径解析工具函数
 
 **Files:**
 - Modify: `os-compass/src-tauri/src/db.rs`
 
 **Interfaces:**
-- Produces: `db::plugin_get_db_path(vault_dir, plugin_id)` 函数, `db::open_plugin_db(vault_dir, plugin_id)` 函数, feature_plugins 表在 INIT_SCHEMA_SQL 中创建
+- Produces: feature_plugins 表在 INIT_SCHEMA_SQL 中创建（含 db_mode 和 db_path_template 列）, `db::open_db_at_path(path) -> Result<Connection, String>` 通用函数
+
+**参照规范：** `docs/插件接入规范.md` §2.2（路径规则表达式）
 
 - [ ] **Step 1: 在 INIT_SCHEMA_SQL 末尾添加 feature_plugins 表**
 
-在 `os-compass/src-tauri/src/db.rs` 的 `INIT_SCHEMA_SQL` 常量中，在 `DELETE FROM system_variables WHERE key LIKE 'settings.%';` 之后添加：`CREATE TABLE IF NOT EXISTS feature_plugins (...)`, `CREATE INDEX IF NOT EXISTS idx_feature_plugins_enabled ON feature_plugins(enabled);`, `INSERT OR IGNORE INTO feature_plugins (id, name, plugin_type, enabled, version) VALUES ('radar', '情报雷达', 'radar', 0, '1.0.0'), ('search', '意图搜索', 'search', 0, '1.0.0');`
+在 `os-compass/src-tauri/src/db.rs` 的 `INIT_SCHEMA_SQL` 常量中，在 `DELETE FROM system_variables WHERE key LIKE 'settings.%';` 之后添加：
 
-表结构：id TEXT PK, name TEXT NOT NULL, plugin_type TEXT NOT NULL, enabled INTEGER DEFAULT 0, config TEXT, version TEXT, created_at TEXT DEFAULT datetime, updated_at TEXT DEFAULT datetime。
+表结构：id TEXT PK, name TEXT NOT NULL, plugin_type TEXT NOT NULL, enabled INTEGER DEFAULT 0, config TEXT, version TEXT, db_mode TEXT DEFAULT 'none', db_path_template TEXT, created_at TEXT DEFAULT datetime, updated_at TEXT DEFAULT datetime。创建索引 idx_feature_plugins_enabled。预设数据：radar（db_mode='vault', db_path_template='${vault_dir}/plugin_${plugin_id}.db'）和 search（同上）。
 
-- [ ] **Step 2: 在 db.rs 末尾添加 plugin db 函数**
+- [ ] **Step 2: 在 db.rs 末尾添加通用 db 打开函数**
 
-添加 `pub fn plugin_get_db_path(vault_dir: &std::path::Path, plugin_id: &str) -> std::path::PathBuf`（返回 `vault_dir.join(format!("plugin_{}.db", plugin_id))`）和 `pub fn open_plugin_db(vault_dir: &std::path::Path, plugin_id: &str) -> Result<Connection, String>`（打开连接 + PRAGMA WAL + foreign_keys）。
+添加 `pub fn open_db_at_path(path: &std::path::Path) -> Result<Connection, String>`（打开连接 + 确保父目录存在 + PRAGMA WAL + foreign_keys）。这个函数供插件按解析后的路径打开自己的 .db，不限定 vault 目录。
 
 - [ ] **Step 3: 编译检查**
 
@@ -157,7 +182,7 @@ Expected: 无 error
 
 ```bash
 git add os-compass/src-tauri/src/db.rs
-git commit -m "feat(M13): add feature_plugins table and plugin db path management"
+git commit -m "feat(M13): add feature_plugins table (with db_mode/path_template) and open_db_at_path"
 ```
 
 ---
@@ -172,18 +197,27 @@ git commit -m "feat(M13): add feature_plugins table and plugin db path managemen
 - Modify: `os-compass/src-tauri/src/plugins/mod.rs`（添加 `pub mod radar; pub mod search;`）
 
 **Interfaces:**
-- Consumes: `FeaturePlugin` trait from Task 1, `DATABASE` from db.rs
-- Produces: `PluginRegistry` struct, `PluginManager` struct, `PLUGIN_MANAGER` lazy_static global
+- Consumes: `FeaturePlugin` trait + `DbMode` + `resolve_db_path` from Task 1, `DATABASE` from db.rs
+- Produces: `PluginRegistry` struct, `PluginManager` struct（含 build_context 方法）, `PLUGIN_MANAGER` lazy_static global
+
+**参照规范：** `docs/插件接入规范.md` §3.4（PluginContext 构建）、§4（生命周期）
 
 - [ ] **Step 1: 创建 plugin_manager.rs**
 
-包含：`PluginRegistry`（plugins: Vec\<Box\<dyn FeaturePlugin\>\>，方法 new/register/register_builtin/find/list）、`PluginManager`（持有 registry，方法 new/list_plugins/get_config/save_config/set_enabled/is_enabled，通过 DATABASE 全局访问主库 feature_plugins 表）、`PLUGIN_MANAGER` lazy_static Mutex。
-
-list_plugins 查询 feature_plugins 表获取 enabled/config/version，与 registry 中的 id/name/plugin_type 合并为 PluginInfo。
+包含：
+1. `PluginRegistry`（plugins: Vec\<Box\<dyn FeaturePlugin\>\>，方法 new/register/register_builtin/find/list）
+2. `PluginManager`（持有 registry），核心方法：
+   - `new()`：创建 registry 并 register_builtin()
+   - `list_plugins()`：查询 feature_plugins 表获取 enabled/config/version/db_mode/db_path_template，与 registry 合并为 PluginInfo
+   - `get_config(plugin_id)` / `save_config(plugin_id, config)`
+   - `set_enabled(plugin_id, enabled)`
+   - `is_enabled(plugin_id)`
+   - `build_context(plugin, vault_dir, app_data_dir) -> PluginContext`：调用 `resolve_db_path(plugin.db_mode(), plugin.db_path_template(), vault_dir, app_data_dir, plugin.id())` 解析路径，构建 PluginContext（含 plugin_db_path）
+3. `PLUGIN_MANAGER` lazy_static Mutex
 
 - [ ] **Step 2: 创建占位 radar.rs 和 search.rs**
 
-两个占位插件实现 FeaturePlugin trait，所有方法返回 Ok(()) 或占位 FeatureResult，message 为 "not implemented"。RadarPlugin id="radar" name="情报雷达"，SearchPlugin id="search" name="意图搜索"。
+两个占位插件实现 FeaturePlugin trait。RadarPlugin：id="radar", name="情报雷达", db_mode=DbMode::Vault, db_path_template=Some("${vault_dir}/plugin_${plugin_id}.db")。SearchPlugin：id="search", name="意图搜索", db_mode=DbMode::Vault, db_path_template=同上。其余方法返回 Ok(()) 或占位 FeatureResult。
 
 - [ ] **Step 3: 注册模块**
 
@@ -199,7 +233,7 @@ Expected: 无 error
 
 ```bash
 git add os-compass/src-tauri/src/plugin_manager.rs os-compass/src-tauri/src/plugins/radar.rs os-compass/src-tauri/src/plugins/search.rs os-compass/src-tauri/src/plugins/mod.rs os-compass/src-tauri/src/lib.rs
-git commit -m "feat(M13): add PluginManager + placeholder RadarPlugin and SearchPlugin"
+git commit -m "feat(M13): add PluginManager with DbMode resolution + placeholder plugins"
 ```
 
 ---
@@ -218,10 +252,10 @@ git commit -m "feat(M13): add PluginManager + placeholder RadarPlugin and Search
 
 5 个 #[tauri::command] 函数：
 - `list_feature_plugins() -> Result<Vec<PluginInfo>, String>`：通过 PLUGIN_MANAGER.list_plugins()
-- `set_plugin_enabled(plugin_id: String, enabled: bool) -> Result<(), String>`：通过 PLUGIN_MANAGER.set_enabled()
+- `set_plugin_enabled(plugin_id: String, enabled: bool) -> Result<(), String>`：通过 PLUGIN_MANAGER.set_enabled()，同时异步调用 plugin.on_enable()/on_disable()
 - `get_plugin_config(plugin_id: String) -> Result<Option<String>, String>`
 - `save_plugin_config(plugin_id: String, config: String) -> Result<(), String>`
-- `plugin_get_db_path_cmd(plugin_id: String) -> Result<String, String>`：通过 CURRENT_VAULT_CONFIG 获取 vault 路径，调用 db::plugin_get_db_path
+- `plugin_get_db_path_cmd(plugin_id: String) -> Result<String, String>`：通过 PLUGIN_MANAGER 获取插件 db_mode 和 db_path_template，调用 resolve_db_path 解析，返回路径字符串（db_mode 为 main/none 时返回空字符串）
 
 - [ ] **Step 2: 注册模块和命令**
 
@@ -402,32 +436,39 @@ git commit -m "feat(M13): implement SearchPlugin with 3-layer search and Tauri c
 
 ---
 
-## Task 9: 启动时初始化插件 + 前端 API 层
+## Task 9: 启动时初始化插件 + 仓库切换处理 + 前端 API 层
 
 **Files:**
-- Modify: `os-compass/src-tauri/src/lib.rs`（setup 中初始化插件）
+- Modify: `os-compass/src-tauri/src/lib.rs`（setup 中初始化插件 + 仓库切换时重建插件上下文）
+- Modify: `os-compass/src-tauri/src/vault.rs`（open_vault 中触发插件仓库切换）
 - Create: `os-compass/src/api/plugin.ts`
 - Create: `os-compass/src/api/radar.ts`
 - Create: `os-compass/src/api/search.ts`
 
+**参照规范：** `docs/插件接入规范.md` §4.2（启动流程）、§4.3（仓库切换流程）
+
 - [ ] **Step 1: 在 lib.rs setup 中添加插件初始化**
 
-在 `cleanup_undecryptable_secrets()` 调用之后，添加：获取 PLUGIN_MANAGER 锁，遍历所有已注册插件，对每个 enabled 的插件调用 on_enable 启动后台任务。用 tokio::spawn 包装 async 调用。
+在 `cleanup_undecryptable_secrets()` 调用之后，添加：获取 PLUGIN_MANAGER 锁和 app_data_dir，遍历所有已注册插件，对每个插件调用 `manager.build_context(plugin, vault_dir, app_data_dir)` 构建 PluginContext（系统根据 db_mode 和 db_path_template 解析 plugin_db_path），调用 `plugin.init(context)`。然后查询 feature_plugins.enabled，对 enabled=true 的插件调用 `plugin.on_enable(context)`。用 tokio::spawn 包装 async 调用。
 
-- [ ] **Step 2: 创建前端 API 文件**
+- [ ] **Step 2: 在 vault.rs open_vault 中添加插件仓库切换处理**
 
-`src/api/plugin.ts`：listFeaturePlugins/setPluginEnabled/getPluginConfig/savePluginConfig/pluginGetDbPath 函数，调用对应 Tauri 命令。导出 FeaturePluginInfo 类型。
+在 `crate::crypto::init_crypto(crypto_key)` 之后，添加插件仓库切换逻辑：获取 PLUGIN_MANAGER 锁，遍历所有已启用插件，调用 on_disable（停止旧仓库后台任务），然后用新 vault_dir 重新 build_context，调用 init（初始化新仓库插件库），如果 enabled 则调用 on_enable。global 模式插件的 plugin_db_path 不变但仍需 on_disable/on_enable。
+
+- [ ] **Step 3: 创建前端 API 文件**
+
+`src/api/plugin.ts`：listFeaturePlugins/setPluginEnabled/getPluginConfig/savePluginConfig/pluginGetDbPath 函数，调用对应 Tauri 命令。导出 FeaturePluginInfo 类型（含 db_mode/db_path_template 字段）。
 
 `src/api/radar.ts`：listRadarSources/addRadarSource/updateRadarSource/deleteRadarSource/getRadarItems/radarItemAction/triggerRadarScan/getRadarUnreadCount/clearRadarCache 函数。导出 RadarSource/RadarItem 类型。
 
 `src/api/search.ts`：intentSearch/getSearchHistory/clearSearchHistory/listSearchSources/addSearchSource/updateSearchSource/deleteSearchSource/refreshSearchCache/importSearchResult 函数。导出 SearchResult/ProjectMatch/SearchSource 类型。
 
-- [ ] **Step 3: 类型检查 + 提交**
+- [ ] **Step 4: 类型检查 + 提交**
 
 ```bash
 cd os-compass; pnpm tsc --noEmit 2>&1 | Select-String "error TS"
-git add os-compass/src-tauri/src/lib.rs os-compass/src/api/plugin.ts os-compass/src/api/radar.ts os-compass/src/api/search.ts
-git commit -m "feat(M13): add plugin init on startup + frontend API layer"
+git add os-compass/src-tauri/src/lib.rs os-compass/src-tauri/src/vault.rs os-compass/src/api/plugin.ts os-compass/src/api/radar.ts os-compass/src/api/search.ts
+git commit -m "feat(M13): add plugin init on startup + vault switch handling + frontend API"
 ```
 
 ---
