@@ -337,6 +337,15 @@ pub fn run() {
             commands::trigger_radar_scan,
             commands::get_radar_unread_count,
             commands::clear_radar_cache,
+            commands::intent_search,
+            commands::get_search_history,
+            commands::clear_search_history,
+            commands::list_search_sources,
+            commands::add_search_source,
+            commands::update_search_source,
+            commands::delete_search_source,
+            commands::refresh_search_cache,
+            commands::import_search_result,
             get_app_data_dir,
         ])
         .run(tauri::generate_context!())
