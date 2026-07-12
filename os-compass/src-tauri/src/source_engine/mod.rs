@@ -1,3 +1,4 @@
+pub mod llm_parser;
 pub mod rss_adapter;
 pub mod webcrawl_adapter;
 pub mod telegram_adapter;
