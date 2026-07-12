@@ -14,15 +14,14 @@ import { KanbanView } from "./components/KanbanView";
 import { ListView } from "./components/ListView";
 import { StatsView } from "./components/StatsView";
 import { ImportModal } from "./components/ImportModal";
-import { CategoryManager } from "./components/CategoryManager";
 import { ArchiveView } from "./components/ArchiveView";
-import { TagManager } from "./components/TagManager";
 import { ErrorState } from "./components/ErrorState";
 import { RadarInbox } from "./components/RadarInbox";
 import { SearchView } from "./components/SearchView";
+import { OrganizationManager } from "./components/OrganizationManager";
 import { ToastContainer } from "./stores/toastStore";
 
-type ViewMode = "kanban" | "list" | "archive" | "category" | "tag" | "stats" | "radar" | "search";
+type ViewMode = "kanban" | "list" | "archive" | "category" | "tag" | "stats" | "radar" | "search" | "organization";
 
 function App() {
   const { t } = useTranslation();
@@ -123,11 +122,7 @@ function App() {
   };
 
   const openCategory = () => {
-    setViewMode("category");
-  };
-
-  const openTag = () => {
-    setViewMode("tag");
+    setViewMode("organization");
   };
 
   const handleBatchArchive = async () => {
@@ -168,7 +163,6 @@ function App() {
         onSettings={() => setShowSettings(true)}
         onOpenVault={() => setShowVault(true)}
         onOpenCategory={openCategory}
-        onOpenTag={openTag}
         currentView={viewMode}
         onViewChange={setViewMode}
       />
@@ -340,15 +334,17 @@ function App() {
               }}
             />
           ) : viewMode === "category" ? (
-            <CategoryManager onBack={() => setViewMode("kanban")} />
+            <OrganizationManager />
           ) : viewMode === "tag" ? (
-            <TagManager onBack={() => setViewMode("kanban")} />
+            <OrganizationManager />
           ) : viewMode === "stats" ? (
             <StatsView onBack={() => setViewMode("kanban")} />
           ) : viewMode === "radar" ? (
             <RadarInbox />
           ) : viewMode === "search" ? (
             <SearchView />
+          ) : viewMode === "organization" ? (
+            <OrganizationManager />
           ) : (
             <ArchiveView
               onBack={() => setViewMode("list")}

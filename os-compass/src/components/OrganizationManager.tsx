@@ -221,12 +221,16 @@ export function OrganizationManager() {
           </button>
         )}
         {(level === 0 || !cat.children || cat.children.length === 0) && <div className="w-5"></div>}
-        
-        <span className="flex-1 font-medium dark:text-gray-200">{cat.name}</span>
+
+        <i className={`fa-solid fa-folder ${cat.children && cat.children.length > 0 ? "text-yellow-500" : "text-yellow-300"}`}></i>
+        <span className={`flex-1 font-medium ${cat.is_system ? "text-gray-500 dark:text-gray-400" : "dark:text-gray-200"}`}>{cat.name}</span>
         {cat.is_system && (
           <span className="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded">
-            系统
+            {t("category.system") || "系统"}
           </span>
+        )}
+        {cat.children && cat.children.length > 0 && (
+          <span className="text-xs text-gray-400 dark:text-gray-500">({cat.children.length})</span>
         )}
         <div className="hidden group-hover:flex items-center gap-1">
           {!cat.is_system && (
@@ -362,23 +366,27 @@ export function OrganizationManager() {
               </div>
             ) : (
               <div className="space-y-3">
-                {(!filterSource || filterSource === "ai") && aiTags.length > 0 && (
+                {(!filterSource || filterSource === "ai") && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                     <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      <i className={`${sourceColors.ai.icon} text-blue-500 mr-2`}></i>
+                      <i className={`${sourceColors.ai.icon} text-blue-500 dark:text-blue-400 mr-2`}></i>
                       {sourceNames.ai}
-                      <span className="text-sm font-normal text-gray-400 ml-2">（{sourceDescs.ai}）</span>
+                      <span className="text-sm font-normal text-gray-400 dark:text-gray-500 ml-2">（{sourceDescs.ai}）</span>
                     </h3>
                     <div className="flex flex-wrap gap-2">
-                      {aiTags.map((tag) => (
-                        <span
-                          key={tag.id}
-                          className={`px-3 py-1.5 ${sourceColors.ai.bg} ${sourceColors.ai.text} rounded-full text-sm flex items-center gap-2`}
-                        >
-                          <i className={`${sourceColors.ai.icon} text-xs`}></i>
-                          {tag.name}
-                        </span>
-                      ))}
+                      {aiTags.length === 0 ? (
+                        <span className="text-gray-400 dark:text-gray-500 text-sm">暂无 AI 提取标签</span>
+                      ) : (
+                        aiTags.map((tag) => (
+                          <span
+                            key={tag.id}
+                            className={`px-3 py-1.5 ${sourceColors.ai.bg} ${sourceColors.ai.text} rounded-full text-sm flex items-center gap-2`}
+                          >
+                            <i className={`${sourceColors.ai.icon} text-xs`}></i>
+                            {tag.name}
+                          </span>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}

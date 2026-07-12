@@ -7,12 +7,11 @@ interface SidebarProps {
   onSettings: () => void;
   onOpenVault: () => void;
   onOpenCategory: () => void;
-  onOpenTag: () => void;
   currentView: string;
-  onViewChange: (view: "kanban" | "list" | "archive" | "category" | "tag" | "radar" | "search") => void;
+  onViewChange: (view: "kanban" | "list" | "archive" | "category" | "tag" | "radar" | "search" | "organization") => void;
 }
 
-export function Sidebar({ onSettings, onOpenVault, onOpenCategory, onOpenTag, currentView, onViewChange }: SidebarProps) {
+export function Sidebar({ onSettings, onOpenVault, onOpenCategory, currentView, onViewChange }: SidebarProps) {
   const { t } = useTranslation();
   const [vaultName, setVaultName] = useState<string>("");
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -106,24 +105,17 @@ export function Sidebar({ onSettings, onOpenVault, onOpenCategory, onOpenTag, cu
         </button>
       </div>
 
-      {/* 分类/标签 */}
+      {/* 分类/标签（合并视图） */}
       <button
         onClick={onOpenCategory}
         className={`w-12 h-10 rounded-lg flex items-center justify-center transition ${
-          currentView === "category" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+          currentView === "category" || currentView === "tag" || currentView === "organization"
+            ? "bg-gray-700 text-white"
+            : "text-gray-400 hover:bg-gray-800 hover:text-white"
         }`}
-        title={t("sidebar.category")}
+        title={t("sidebar.organization") || "组织管理"}
       >
-        <i className="fa-solid fa-folder-tree"></i>
-      </button>
-      <button
-        onClick={onOpenTag}
-        className={`w-12 h-10 rounded-lg flex items-center justify-center transition ${
-          currentView === "tag" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
-        }`}
-        title={t("sidebar.tag")}
-      >
-        <i className="fa-solid fa-tag"></i>
+        <i className="fa-solid fa-layer-group"></i>
       </button>
 
       {/* 当前仓库信息 */}
