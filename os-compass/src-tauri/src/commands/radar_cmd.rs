@@ -17,6 +17,12 @@ pub struct RadarSource {
     pub platform: Option<String>,
     pub enabled: bool,
     pub check_interval: i64,
+    pub proxy_enabled: bool,
+    pub proxy_protocol: String,
+    pub proxy_host: Option<String>,
+    pub proxy_port: i64,
+    pub proxy_username: Option<String>,
+    pub proxy_password: Option<String>,
     pub last_checked_at: Option<String>,
     pub last_status: Option<String>,
     pub last_error: Option<String>,
@@ -49,7 +55,7 @@ fn get_radar_conn() -> Result<rusqlite::Connection, String> {
 pub fn list_radar_sources() -> Result<Vec<RadarSource>, String> {
     let conn = get_radar_conn()?;
     let mut stmt = conn
-        .prepare("SELECT id, name, source_type, url, platform, enabled, check_interval, last_checked_at, last_status, last_error FROM radar_sources ORDER BY created_at DESC")
+        .prepare("SELECT id, name, source_type, url, platform, enabled, check_interval, proxy_enabled, proxy_protocol, proxy_host, proxy_port, proxy_username, proxy_password, last_checked_at, last_status, last_error FROM radar_sources ORDER BY created_at DESC")
         .map_err(|e| e.to_string())?;
 
     let rows = stmt
@@ -62,9 +68,15 @@ pub fn list_radar_sources() -> Result<Vec<RadarSource>, String> {
                 platform: row.get(4)?,
                 enabled: row.get::<_, i32>(5)? == 1,
                 check_interval: row.get(6)?,
-                last_checked_at: row.get(7)?,
-                last_status: row.get(8)?,
-                last_error: row.get(9)?,
+                proxy_enabled: row.get::<_, i32>(7)? == 1,
+                proxy_protocol: row.get::<_, Option<String>>(8)?.unwrap_or_else(|| "http".to_string()),
+                proxy_host: row.get(9)?,
+                proxy_port: row.get(10)?,
+                proxy_username: row.get(11)?,
+                proxy_password: row.get(12)?,
+                last_checked_at: row.get(13)?,
+                last_status: row.get(14)?,
+                last_error: row.get(15)?,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -83,13 +95,21 @@ pub fn add_radar_source(
     url: String,
     platform: Option<String>,
     check_interval: Option<i64>,
+    proxy_enabled: Option<bool>,
+    proxy_protocol: Option<String>,
+    proxy_host: Option<String>,
+    proxy_port: Option<i64>,
+    proxy_username: Option<String>,
+    proxy_password: Option<String>,
 ) -> Result<RadarSource, String> {
     let conn = get_radar_conn()?;
     let interval = check_interval.unwrap_or(86400);
+    let proxy_en = proxy_enabled.unwrap_or(false);
+    let proxy_proto = proxy_protocol.unwrap_or_else(|| "http".to_string());
 
     conn.execute(
-        "INSERT INTO radar_sources (name, source_type, url, platform, check_interval) VALUES (?, ?, ?, ?, ?)",
-        params![name, source_type, url, platform, interval],
+        "INSERT INTO radar_sources (name, source_type, url, platform, check_interval, proxy_enabled, proxy_protocol, proxy_host, proxy_port, proxy_username, proxy_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        params![name, source_type, url, platform, interval, proxy_en, proxy_proto, proxy_host, proxy_port, proxy_username, proxy_password],
     ).map_err(|e| e.to_string())?;
 
     let id = conn.last_insert_rowid();
@@ -102,6 +122,12 @@ pub fn add_radar_source(
         platform,
         enabled: true,
         check_interval: interval,
+        proxy_enabled: proxy_en,
+        proxy_protocol: proxy_proto,
+        proxy_host,
+        proxy_port: proxy_port.unwrap_or(0),
+        proxy_username,
+        proxy_password,
         last_checked_at: None,
         last_status: None,
         last_error: None,
@@ -115,6 +141,12 @@ pub fn update_radar_source(
     url: Option<String>,
     enabled: Option<bool>,
     check_interval: Option<i64>,
+    proxy_enabled: Option<bool>,
+    proxy_protocol: Option<String>,
+    proxy_host: Option<String>,
+    proxy_port: Option<i64>,
+    proxy_username: Option<String>,
+    proxy_password: Option<String>,
 ) -> Result<(), String> {
     let conn = get_radar_conn()?;
 
@@ -132,6 +164,30 @@ pub fn update_radar_source(
     }
     if let Some(i) = check_interval {
         conn.execute("UPDATE radar_sources SET check_interval = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![i, id])
+            .map_err(|e| e.to_string())?;
+    }
+    if let Some(e) = proxy_enabled {
+        conn.execute("UPDATE radar_sources SET proxy_enabled = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![if e { 1 } else { 0 }, id])
+            .map_err(|e| e.to_string())?;
+    }
+    if let Some(p) = proxy_protocol {
+        conn.execute("UPDATE radar_sources SET proxy_protocol = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![p, id])
+            .map_err(|e| e.to_string())?;
+    }
+    if proxy_host.is_some() {
+        conn.execute("UPDATE radar_sources SET proxy_host = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![proxy_host, id])
+            .map_err(|e| e.to_string())?;
+    }
+    if let Some(p) = proxy_port {
+        conn.execute("UPDATE radar_sources SET proxy_port = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![p, id])
+            .map_err(|e| e.to_string())?;
+    }
+    if proxy_username.is_some() {
+        conn.execute("UPDATE radar_sources SET proxy_username = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![proxy_username, id])
+            .map_err(|e| e.to_string())?;
+    }
+    if proxy_password.is_some() {
+        conn.execute("UPDATE radar_sources SET proxy_password = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![proxy_password, id])
             .map_err(|e| e.to_string())?;
     }
 

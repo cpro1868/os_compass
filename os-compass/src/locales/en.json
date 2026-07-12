@@ -738,7 +738,15 @@
     "sourceType": "Source Type",
     "sourceUrl": "URL",
     "platform": "Platform (optional)",
-    "platformPlaceholder": "e.g., github, gitee"
+    "platformPlaceholder": "e.g., github, gitee",
+    "useProxy": "Use Proxy",
+    "proxyProtocol": "Protocol",
+    "proxyHost": "Host",
+    "proxyPort": "Port",
+    "proxyUsername": "Username",
+    "proxyUsernamePlaceholder": "Optional",
+    "proxyPassword": "Password",
+    "proxyPasswordPlaceholder": "Optional"
   },
   "search": {
     "title": "Intent Search",

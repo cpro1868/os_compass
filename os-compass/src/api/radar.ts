@@ -8,6 +8,12 @@ export interface RadarSource {
   platform: string | null;
   enabled: boolean;
   check_interval: number;
+  proxy_enabled: boolean;
+  proxy_protocol: string;
+  proxy_host: string | null;
+  proxy_port: number;
+  proxy_username: string | null;
+  proxy_password: string | null;
   last_checked_at: string | null;
   last_status: string | null;
   last_error: string | null;
@@ -31,34 +37,56 @@ export interface ScanResult {
   errors: number;
 }
 
+export interface RadarSourceInput {
+  name: string;
+  sourceType: string;
+  url: string;
+  platform?: string;
+  checkInterval?: number;
+  proxyEnabled?: boolean;
+  proxyProtocol?: string;
+  proxyHost?: string;
+  proxyPort?: number;
+  proxyUsername?: string;
+  proxyPassword?: string;
+}
+
+export interface RadarSourceUpdate {
+  name?: string;
+  url?: string;
+  enabled?: boolean;
+  checkInterval?: number;
+  proxyEnabled?: boolean;
+  proxyProtocol?: string;
+  proxyHost?: string;
+  proxyPort?: number;
+  proxyUsername?: string;
+  proxyPassword?: string;
+}
+
 export async function listRadarSources(): Promise<RadarSource[]> {
   return invoke<RadarSource[]>('list_radar_sources');
 }
 
-export async function addRadarSource(
-  name: string,
-  sourceType: string,
-  url: string,
-  platform?: string,
-  checkInterval?: number
-): Promise<RadarSource> {
+export async function addRadarSource(input: RadarSourceInput): Promise<RadarSource> {
   return invoke<RadarSource>('add_radar_source', {
-    name,
-    sourceType,
-    url,
-    platform,
-    checkInterval,
+    name: input.name,
+    sourceType: input.sourceType,
+    url: input.url,
+    platform: input.platform,
+    checkInterval: input.checkInterval,
+    proxyEnabled: input.proxyEnabled,
+    proxyProtocol: input.proxyProtocol,
+    proxyHost: input.proxyHost,
+    proxyPort: input.proxyPort,
+    proxyUsername: input.proxyUsername,
+    proxyPassword: input.proxyPassword,
   });
 }
 
 export async function updateRadarSource(
   id: number,
-  updates: {
-    name?: string;
-    url?: string;
-    enabled?: boolean;
-    checkInterval?: number;
-  }
+  updates: RadarSourceUpdate
 ): Promise<void> {
   return invoke('update_radar_source', { id, ...updates });
 }

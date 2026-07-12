@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { listRadarSources, addRadarSource, getRadarItems, triggerRadarScan, radarItemAction, RadarSource, RadarItem } from '../api/radar';
+import { listRadarSources, addRadarSource, getRadarItems, triggerRadarScan, radarItemAction, RadarSource, RadarItem, RadarSourceInput } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
 
 export function RadarInbox() {
@@ -11,12 +11,18 @@ export function RadarInbox() {
   const [activeTab, setActiveTab] = useState<string>('all');
   const [scanning, setScanning] = useState(false);
   const [showAddSource, setShowAddSource] = useState(false);
-  const [newSource, setNewSource] = useState({
+  const [newSource, setNewSource] = useState<RadarSourceInput>({
     name: '',
     url: '',
     sourceType: 'rss',
     platform: '',
     checkInterval: 3600,
+    proxyEnabled: false,
+    proxyProtocol: 'http',
+    proxyHost: '',
+    proxyPort: 0,
+    proxyUsername: '',
+    proxyPassword: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -74,16 +80,22 @@ export function RadarInbox() {
     }
     setSaving(true);
     try {
-      await addRadarSource(
-        newSource.name,
-        newSource.sourceType,
-        newSource.url,
-        newSource.platform || undefined,
-        newSource.checkInterval
-      );
+      await addRadarSource(newSource);
       showToast(t('radar.sourceAdded'), 'success');
       setShowAddSource(false);
-      setNewSource({ name: '', url: '', sourceType: 'rss', platform: '', checkInterval: 3600 });
+      setNewSource({
+        name: '',
+        url: '',
+        sourceType: 'rss',
+        platform: '',
+        checkInterval: 3600,
+        proxyEnabled: false,
+        proxyProtocol: 'http',
+        proxyHost: '',
+        proxyPort: 0,
+        proxyUsername: '',
+        proxyPassword: '',
+      });
       loadSources();
     } catch (e) {
       showToast(t('radar.error.addFailed'), 'error');
@@ -313,11 +325,84 @@ export function RadarInbox() {
                 <label className="block text-sm text-gray-400 mb-1">{t('radar.platform')}</label>
                 <input
                   type="text"
-                  value={newSource.platform}
+                  value={newSource.platform || ''}
                   onChange={e => setNewSource(prev => ({ ...prev, platform: e.target.value }))}
                   placeholder={t('radar.platformPlaceholder')}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                 />
+              </div>
+
+              <div className="border-t border-gray-700 pt-4">
+                <label className="flex items-center gap-2 text-sm text-gray-400 mb-3">
+                  <input
+                    type="checkbox"
+                    checked={newSource.proxyEnabled || false}
+                    onChange={e => setNewSource(prev => ({ ...prev, proxyEnabled: e.target.checked }))}
+                    className="rounded"
+                  />
+                  {t('radar.useProxy')}
+                </label>
+
+                {newSource.proxyEnabled && (
+                  <div className="space-y-3 pl-6">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">{t('radar.proxyProtocol')}</label>
+                        <select
+                          value={newSource.proxyProtocol || 'http'}
+                          onChange={e => setNewSource(prev => ({ ...prev, proxyProtocol: e.target.value }))}
+                          className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                        >
+                          <option value="http">HTTP</option>
+                          <option value="https">HTTPS</option>
+                          <option value="socks5">SOCKS5</option>
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs text-gray-500 mb-1">{t('radar.proxyHost')}</label>
+                        <input
+                          type="text"
+                          value={newSource.proxyHost || ''}
+                          onChange={e => setNewSource(prev => ({ ...prev, proxyHost: e.target.value }))}
+                          placeholder="127.0.0.1"
+                          className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">{t('radar.proxyPort')}</label>
+                        <input
+                          type="number"
+                          value={newSource.proxyPort || ''}
+                          onChange={e => setNewSource(prev => ({ ...prev, proxyPort: parseInt(e.target.value) || 0 }))}
+                          placeholder="7890"
+                          className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">{t('radar.proxyUsername')}</label>
+                        <input
+                          type="text"
+                          value={newSource.proxyUsername || ''}
+                          onChange={e => setNewSource(prev => ({ ...prev, proxyUsername: e.target.value }))}
+                          placeholder={t('radar.proxyUsernamePlaceholder')}
+                          className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">{t('radar.proxyPassword')}</label>
+                      <input
+                        type="password"
+                        value={newSource.proxyPassword || ''}
+                        onChange={e => setNewSource(prev => ({ ...prev, proxyPassword: e.target.value }))}
+                        placeholder={t('radar.proxyPasswordPlaceholder')}
+                        className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-2">

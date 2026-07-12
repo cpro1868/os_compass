@@ -743,7 +743,15 @@
     "sourceType": "信息源类型",
     "sourceUrl": "URL 地址",
     "platform": "平台（可选）",
-    "platformPlaceholder": "例如：github, gitee"
+    "platformPlaceholder": "例如：github, gitee",
+    "useProxy": "使用代理",
+    "proxyProtocol": "协议",
+    "proxyHost": "地址",
+    "proxyPort": "端口",
+    "proxyUsername": "用户名",
+    "proxyUsernamePlaceholder": "选填",
+    "proxyPassword": "密码",
+    "proxyPasswordPlaceholder": "选填"
   },
   "search": {
     "title": "意图搜索",
