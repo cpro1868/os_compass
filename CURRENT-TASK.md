@@ -12,29 +12,16 @@ in_progress
 
 实现二期 M13 功能：系统插件管理基础设施，信息源引擎、情报雷达插件（RSS/网站/TG 监控 + 收件箱）、意图搜索插件（三层优先级搜索 + ChatGPT 对话 UI）。
 
-## 当前 Task
-
-**Task 7: RadarPlugin 完整实现**
-
-## Task 依赖链
-
-```
-Task 1 ✅ (FeaturePlugin trait) ──> Task 3 ✅ (PluginManager) ──> Task 4 ✅ (插件命令)
-Task 2 ✅ (DB 表) ────────────────────────────────────────────> Task 4 ✅
-Task 3 ✅ ──> Task 5 ✅ (SourceAdapter) ──> Task 6 ✅ (LLM Parser) ──> Task 7 ──> Task 9 ──> Task 11 ──> Task 13 ──> Task 14
-Task 3 ✅ ──> Task 5 ✅ ──> Task 6 ✅ ──> Task 8 ──> Task 10 ──> Task 12 ──> Task 13 ──> Task 14
-```
-
 ## 完成进度
 
-- [x] Task 1: FeaturePlugin trait + 类型定义 (c0efc71)
-- [x] Task 2: feature_plugins 数据库表 (4c7f38d)
-- [x] Task 3: PluginManager + 占位插件 (2907ca5)
-- [x] Task 4: 插件管理 Tauri 命令 (b473b3e)
-- [x] Task 5: SourceAdapter + 4 种适配器 (9f661eb)
-- [x] Task 6: LLM 解析器 (1c2d20d)
-- [ ] Task 7: RadarPlugin 完整实现
-- [ ] Task 8: SearchPlugin 完整实现
+- [x] Task 1: FeaturePlugin trait + 类型定义 (4c7f38d)
+- [x] Task 2: feature_plugins 数据库表 (2907ca5)
+- [x] Task 3: PluginManager + 占位插件 (b473b3e)
+- [x] Task 4: 插件管理 Tauri 命令 (9f661eb)
+- [x] Task 5: SourceAdapter + 4 种适配器 (1c2d20d)
+- [x] Task 6: LLM 解析器 (c0efc71)
+- [x] Task 7: RadarPlugin 完整实现 (193464f)
+- [x] Task 8: SearchPlugin 完整实现 (2fcb5d4)
 - [ ] Task 9: 启动初始化 + 前端 API 层
 - [ ] Task 10: RadarInbox 前端视图
 - [ ] Task 11: SearchView 前端视图
