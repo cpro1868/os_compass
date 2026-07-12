@@ -6,7 +6,9 @@
   "nav": {
     "kanban": "看板视图",
     "list": "列表视图",
-    "archive": "归档"
+    "archive": "归档",
+    "radar": "情报雷达",
+    "search": "意图搜索"
   },
   "status": {
     "TO_EXPLORE": "待探索",
@@ -690,5 +692,63 @@
     "yes": "是",
     "no": "否",
     "ok": "确定"
+  },
+  "radar": {
+    "title": "情报雷达",
+    "subtitle": "二期功能 · 监控信息源更新，发现新开源项目",
+    "scanNow": "立即扫描",
+    "scanning": "扫描中...",
+    "tabs": {
+      "all": "全部",
+      "unread": "未读",
+      "imported": "已导入",
+      "ignored": "不感兴趣"
+    },
+    "sources": "信息源",
+    "addSource": "添加信息源",
+    "noSources": "暂无配置的信息源",
+    "neverScanned": "从未扫描",
+    "empty": "暂无内容",
+    "unknownProject": "未知项目",
+    "noDescription": "暂无描述",
+    "import": "导入",
+    "imported": "已导入",
+    "ignore": "不感兴趣",
+    "ignored": "已忽略",
+    "action": {
+      "importSuccess": "项目导入成功",
+      "ignoreSuccess": "已标记为不感兴趣",
+      "blacklistSuccess": "已加入黑名单"
+    },
+    "error": {
+      "loadFailed": "加载数据失败",
+      "scanFailed": "扫描失败",
+      "actionFailed": "操作失败"
+    },
+    "scanComplete": "扫描完成：{{count}} 个新项目"
+  },
+  "search": {
+    "title": "意图搜索",
+    "placeholder": "用自然语言描述你想找什么...",
+    "welcome": "你想找什么？",
+    "hint": "用自然语言描述你的需求",
+    "searching": "搜索中...",
+    "resultsCount": "找到 {{count}} 个结果",
+    "matchScore": "匹配度：{{score}}%",
+    "unknownProject": "未知项目",
+    "source": {
+      "local": "本地",
+      "cache": "缓存",
+      "web": "网络"
+    },
+    "history": "搜索历史",
+    "noHistory": "暂无搜索历史",
+    "clearHistory": "清除历史",
+    "historyCleared": "历史已清除",
+    "error": {
+      "loadHistoryFailed": "加载历史失败",
+      "searchFailed": "搜索失败",
+      "clearFailed": "清除失败"
+    }
   }
 }

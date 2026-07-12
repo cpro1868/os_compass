@@ -6,7 +6,9 @@
   "nav": {
     "kanban": "Kanban",
     "list": "List",
-    "archive": "Archive"
+    "archive": "Archive",
+    "radar": "Radar",
+    "search": "Search"
   },
   "status": {
     "TO_EXPLORE": "To Explore",
@@ -686,5 +688,63 @@
     "yes": "Yes",
     "no": "No",
     "ok": "OK"
+  },
+  "radar": {
+    "title": "Intelligence Radar",
+    "subtitle": "Phase 2 · Monitor source updates",
+    "scanNow": "Scan Now",
+    "scanning": "Scanning...",
+    "tabs": {
+      "all": "All",
+      "unread": "Unread",
+      "imported": "Imported",
+      "ignored": "Ignored"
+    },
+    "sources": "Sources",
+    "addSource": "Add Source",
+    "noSources": "No sources configured",
+    "neverScanned": "Never scanned",
+    "empty": "No items yet",
+    "unknownProject": "Unknown Project",
+    "noDescription": "No description available",
+    "import": "Import",
+    "imported": "Imported",
+    "ignore": "Ignore",
+    "ignored": "Ignored",
+    "action": {
+      "importSuccess": "Project imported successfully",
+      "ignoreSuccess": "Marked as ignored",
+      "blacklistSuccess": "Added to blacklist"
+    },
+    "error": {
+      "loadFailed": "Failed to load data",
+      "scanFailed": "Scan failed",
+      "actionFailed": "Action failed"
+    },
+    "scanComplete": "Scan complete: {{count}} new items"
+  },
+  "search": {
+    "title": "Intent Search",
+    "placeholder": "Describe what you're looking for...",
+    "welcome": "What would you like to find?",
+    "hint": "Describe your requirements in natural language",
+    "searching": "Searching...",
+    "resultsCount": "{{count}} results found",
+    "matchScore": "Match: {{score}}%",
+    "unknownProject": "Unknown Project",
+    "source": {
+      "local": "Local",
+      "cache": "Cache",
+      "web": "Web"
+    },
+    "history": "Search History",
+    "noHistory": "No search history",
+    "clearHistory": "Clear History",
+    "historyCleared": "History cleared",
+    "error": {
+      "loadHistoryFailed": "Failed to load history",
+      "searchFailed": "Search failed",
+      "clearFailed": "Failed to clear history"
+    }
   }
 }
