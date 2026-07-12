@@ -227,6 +227,25 @@ INSERT OR IGNORE INTO system_variables (key, value, is_secret) VALUES
 ('gitee_token', '', 1);
 
 DELETE FROM system_variables WHERE key LIKE 'settings.%';
+
+CREATE TABLE IF NOT EXISTS feature_plugins (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    plugin_type TEXT NOT NULL,
+    enabled INTEGER DEFAULT 0,
+    config TEXT,
+    version TEXT,
+    db_mode TEXT DEFAULT 'none',
+    db_path_template TEXT,
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_feature_plugins_enabled ON feature_plugins(enabled);
+
+INSERT OR IGNORE INTO feature_plugins (id, name, plugin_type, enabled, version, db_mode, db_path_template) VALUES
+('radar', '情报雷达', 'radar', 0, '1.0.0', 'vault', '${vault_dir}/plugin_${plugin_id}.db'),
+('search', '意图搜索', 'search', 0, '1.0.0', 'vault', '${vault_dir}/plugin_${plugin_id}.db');
 "#;
 
 pub fn switch_database(path: PathBuf) -> Result<(), String> {
@@ -252,4 +271,15 @@ pub fn init_database(app_dir: PathBuf) -> Result<()> {
     let mut global = DATABASE.lock().unwrap();
     *global = Some(db);
     Ok(())
+}
+
+pub fn open_db_at_path(path: &std::path::Path) -> Result<Connection, String> {
+    if let Some(parent) = path.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+    }
+    let conn = Connection::open(path).map_err(|e| e.to_string())?;
+    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;").map_err(|e| e.to_string())?;
+    Ok(conn)
 }
