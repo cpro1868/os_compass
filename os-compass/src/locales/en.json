@@ -92,11 +92,11 @@
   "sidebar": {
     "import": "Import",
     "search": "Search",
-    "category": "Categories",
-    "tag": "Tags",
-    "stats": "Stats",
+    "category": "Category",
+    "tag": "Tag",
+    "vault": "Vault",
     "settings": "Settings",
-    "vault": "Vaults"
+    "organization": "Organization"
   },
   "category": {
     "title": "Category Manager",

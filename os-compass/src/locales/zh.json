@@ -96,7 +96,8 @@
     "tag": "标签管理",
     "stats": "统计",
     "settings": "设置",
-    "vault": "仓库管理"
+    "vault": "仓库管理",
+    "organization": "组织管理"
   },
   "category": {
     "title": "分类管理",
