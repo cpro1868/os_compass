@@ -6,11 +6,24 @@
   <title>OS-Compass - 插件管理器</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .plugin-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .config-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+    .config-panel.open {
+      max-height: 500px;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-screen overflow-hidden">
   <div class="flex h-full">
     <!-- 左侧功能菜单 -->
-    <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+    <aside class="w-16 bg-gray-900 dark:bg-gray-800 flex flex-col items-center py-4 gap-4">
       <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
         <i class="fa-solid fa-compass text-xl"></i>
       </div>
@@ -20,9 +33,14 @@
         <span class="text-xs">导入</span>
       </button>
       
-      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+      <button onclick="location.href='search-view.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
         <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
         <span class="text-xs">搜索</span>
+      </button>
+      
+      <button onclick="location.href='radar-inbox.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-satellite-dish text-lg mb-1"></i>
+        <span class="text-xs">雷达</span>
       </button>
       
       <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
@@ -44,7 +62,7 @@
           <i class="fa-solid fa-gear"></i>
         </button>
         <!-- 当前页面高亮 -->
-        <button class="w-12 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-white">
+        <button class="w-12 h-10 rounded-lg bg-gray-700 flex items-center justify-center text-white">
           <i class="fa-solid fa-plug"></i>
         </button>
       </div>
@@ -53,99 +71,261 @@
     <!-- 主内容区 -->
     <main class="flex-1 flex flex-col min-w-0">
       <!-- 顶部栏 -->
-      <header class="bg-white border-b border-gray-200 px-6 py-4">
-        <div class="flex items-center gap-4">
-          <button onclick="location.href='main-interface.html'" class="text-gray-500 hover:text-gray-700">
-            <i class="fa-solid fa-arrow-left mr-2"></i>返回
-          </button>
-          <h1 class="text-xl font-bold">插件管理器</h1>
+      <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <button onclick="location.href='main-interface.html'" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+              <i class="fa-solid fa-arrow-left mr-2"></i>返回
+            </button>
+            <h1 class="text-xl font-bold">功能插件</h1>
+          </div>
+          <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <i class="fa-solid fa-circle-info"></i>
+            系统级插件配置存放在 ${AppData}/.os-compass/plugins.db
+          </div>
         </div>
       </header>
       
       <!-- 插件列表 -->
       <div class="flex-1 overflow-auto p-6">
-        <div class="max-w-4xl">
-          <!-- 内置插件：情报雷达 -->
-          <div class="bg-white rounded-xl border border-gray-200 p-6 mb-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-                  <i class="fa-solid fa-satellite-dish text-xl"></i>
+        <div class="max-w-4xl space-y-4">
+          
+          <!-- 情报雷达插件 -->
+          <div class="plugin-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200">
+            <div class="flex items-start justify-between">
+              <div class="flex items-start gap-4">
+                <div class="w-14 h-14 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
+                  <i class="fa-solid fa-satellite-dish text-2xl"></i>
                 </div>
                 <div>
-                  <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-2 mb-1">
                     <h3 class="text-lg font-bold">情报雷达</h3>
-                    <span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">内置</span>
+                    <span class="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 rounded">系统级</span>
+                    <span class="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">v1.0.0</span>
                   </div>
-                  <p class="text-sm text-gray-500">自动跟踪已关注项目的 Release、Issue、Star 变化</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">自动跟踪已关注项目的 Release、Issue、Star 变化，支持 RSS 订阅源</p>
+                  <div class="flex items-center gap-4 text-xs text-gray-400">
+                    <span><i class="fa-solid fa-database mr-1"></i>Vault 模式</span>
+                    <span><i class="fa-solid fa-folder mr-1"></i>数据跟随仓库</span>
+                  </div>
                 </div>
               </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-              </label>
+              <div class="flex items-center gap-4">
+                <span id="radar-status" class="text-sm text-green-600 dark:text-green-400">
+                  <i class="fa-solid fa-check-circle mr-1"></i>已启用
+                </span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="radar-toggle" checked class="sr-only peer" onchange="togglePlugin('radar', this.checked)">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-gray-600"></div>
+                </label>
+              </div>
             </div>
-            <div class="mt-4 pt-4 border-t border-gray-100">
+            
+            <!-- 统计信息 -->
+            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <div class="grid grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span class="text-gray-500 dark:text-gray-400">订阅源</span>
+                  <p class="font-medium mt-0.5">3 个</p>
+                </div>
+                <div>
+                  <span class="text-gray-500 dark:text-gray-400">待处理</span>
+                  <p class="font-medium mt-0.5 text-blue-600 dark:text-blue-400">5 条</p>
+                </div>
+                <div>
+                  <span class="text-gray-500 dark:text-gray-400">已导入</span>
+                  <p class="font-medium mt-0.5 text-green-600 dark:text-green-400">12 个</p>
+                </div>
+                <div>
+                  <span class="text-gray-500 dark:text-gray-400">最后扫描</span>
+                  <p class="font-medium mt-0.5">2 小时前</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 操作按钮 -->
+            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex gap-2">
+              <button onclick="toggleConfig('radar')" class="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition">
+                <i class="fa-solid fa-gear mr-1"></i>配置
+              </button>
+              <button onclick="location.href='radar-inbox.html'" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+                <i class="fa-solid fa-inbox mr-1"></i>查看收件箱
+              </button>
+            </div>
+            
+            <!-- 配置面板 -->
+            <div id="radar-config" class="config-panel">
+              <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">检查频率</label>
+                  <select class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option>每 6 小时</option>
+                    <option selected>每 12 小时</option>
+                    <option>每天</option>
+                    <option>每周</option>
+                  </select>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="radar-notify" class="rounded" checked>
+                  <label for="radar-notify" class="text-sm">启用通知提醒</label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="radar-auto-import" class="rounded">
+                  <label for="radar-auto-import" class="text-sm">自动导入高星项目（≥1000 stars）</label>
+                </div>
+                <div class="flex justify-end gap-2">
+                  <button onclick="toggleConfig('radar')" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">取消</button>
+                  <button class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg">保存配置</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 意图搜索插件 -->
+          <div class="plugin-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200">
+            <div class="flex items-start justify-between">
+              <div class="flex items-start gap-4">
+                <div class="w-14 h-14 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400">
+                  <i class="fa-solid fa-brain text-2xl"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <h3 class="text-lg font-bold">意图搜索</h3>
+                    <span class="px-2 py-0.5 text-xs bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400 rounded">系统级</span>
+                    <span class="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">v1.0.0</span>
+                  </div>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">基于自然语言需求，RAG 联网检索开源方案对比</p>
+                  <div class="flex items-center gap-4 text-xs text-gray-400">
+                    <span><i class="fa-solid fa-database mr-1"></i>Vault 模式</span>
+                    <span><i class="fa-solid fa-folder mr-1"></i>数据跟随仓库</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-4">
+                <span id="search-status" class="text-sm text-gray-400">
+                  <i class="fa-solid fa-circle mr-1"></i>未启用
+                </span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="search-toggle" class="sr-only peer" onchange="togglePlugin('search', this.checked)">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-gray-600"></div>
+                </label>
+              </div>
+            </div>
+            
+            <!-- 统计信息 -->
+            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
               <div class="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span class="text-gray-500">订阅源</span>
-                  <p class="font-medium">GitHub Releases</p>
+                  <span class="text-gray-500 dark:text-gray-400">搜索历史</span>
+                  <p class="font-medium mt-0.5">8 次</p>
                 </div>
                 <div>
-                  <span class="text-gray-500">检查频率</span>
-                  <p class="font-medium">每天</p>
+                  <span class="text-gray-500 dark:text-gray-400">缓存项目</span>
+                  <p class="font-medium mt-0.5">156 个</p>
                 </div>
                 <div>
-                  <span class="text-gray-500">跟踪项目</span>
-                  <p class="font-medium">12 个</p>
+                  <span class="text-gray-500 dark:text-gray-400">最后搜索</span>
+                  <p class="font-medium mt-0.5">昨天</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 操作按钮 -->
+            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex gap-2">
+              <button onclick="toggleConfig('search')" class="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition">
+                <i class="fa-solid fa-gear mr-1"></i>配置
+              </button>
+              <button onclick="location.href='search-view.html'" class="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
+                <i class="fa-solid fa-magnifying-glass mr-1"></i>打开搜索
+              </button>
+            </div>
+            
+            <!-- 配置面板 -->
+            <div id="search-config" class="config-panel">
+              <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">搜索策略</label>
+                  <select class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <option selected>本地优先 → 缓存 → 联网</option>
+                    <option>联网优先</option>
+                    <option>仅本地</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">缓存有效期</label>
+                  <select class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <option>7 天</option>
+                    <option selected>30 天</option>
+                    <option>90 天</option>
+                    <option>永不过期</option>
+                  </select>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="search-ai" class="rounded" checked>
+                  <label for="search-ai" class="text-sm">启用 AI 摘要分析</label>
+                </div>
+                <div class="flex justify-end gap-2">
+                  <button onclick="toggleConfig('search')" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">取消</button>
+                  <button class="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg">保存配置</button>
                 </div>
               </div>
             </div>
           </div>
           
-          <!-- 内置插件：意图搜索 -->
-          <div class="bg-white rounded-xl border border-gray-200 p-6 mb-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
-                  <i class="fa-solid fa-brain text-xl"></i>
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <h3 class="text-lg font-bold">意图搜索</h3>
-                    <span class="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded">内置</span>
-                  </div>
-                  <p class="text-sm text-gray-500">基于自然语言需求，RAG 联网检索开源方案对比</p>
-                </div>
+          <!-- 第三方插件区域 -->
+          <div class="bg-gray-100 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 p-8 text-center">
+            <div class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i class="fa-solid fa-puzzle-piece text-2xl text-gray-400"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-500 dark:text-gray-400 mb-2">第三方插件</h3>
+            <p class="text-sm text-gray-400 dark:text-gray-500 mb-4">从插件市场安装扩展（预计二期开放）</p>
+            <button disabled class="px-6 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded-lg cursor-not-allowed">
+              <i class="fa-solid fa-plus mr-1"></i>安装插件（敬请期待）
+            </button>
+          </div>
+          
+          <!-- 数据存储说明 -->
+          <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+            <h4 class="font-medium text-blue-800 dark:text-blue-300 mb-2">
+              <i class="fa-solid fa-info-circle mr-1"></i>数据存储说明
+            </h4>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="text-blue-600 dark:text-blue-400 font-medium">系统级配置</p>
+                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">${AppData}/.os-compass/plugins.db</p>
+                <p class="text-gray-400 dark:text-gray-500 text-xs">插件启用状态、配置信息</p>
               </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-              </label>
+              <div>
+                <p class="text-blue-600 dark:text-blue-400 font-medium">插件业务数据</p>
+                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{vault_dir}/plugin_*.db</p>
+                <p class="text-gray-400 dark:text-gray-500 text-xs">订阅源、扫描结果等（跟随仓库）</p>
+              </div>
             </div>
           </div>
           
-          <!-- 第三方插件 -->
-          <div class="bg-white rounded-xl border border-gray-200 p-6 opacity-60">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
-                  <i class="fa-solid fa-puzzle-piece text-xl"></i>
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <h3 class="text-lg font-bold">第三方插件</h3>
-                    <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">二期</span>
-                  </div>
-                  <p class="text-sm text-gray-500">从插件市场安装扩展（预计二期开放）</p>
-                </div>
-              </div>
-              <span class="text-sm text-gray-400">敬请期待</span>
-            </div>
-          </div>
         </div>
       </div>
     </main>
   </div>
+
+  <script>
+    function togglePlugin(pluginId, enabled) {
+      const status = document.getElementById(pluginId + '-status');
+      if (enabled) {
+        status.innerHTML = '<i class="fa-solid fa-check-circle mr-1"></i>已启用';
+        status.className = 'text-sm text-green-600 dark:text-green-400';
+      } else {
+        status.innerHTML = '<i class="fa-solid fa-circle mr-1"></i>未启用';
+        status.className = 'text-sm text-gray-400';
+      }
+      // TODO: 调用后端 API 保存状态
+      console.log('Toggle plugin:', pluginId, enabled);
+    }
+    
+    function toggleConfig(pluginId) {
+      const panel = document.getElementById(pluginId + '-config');
+      panel.classList.toggle('open');
+    }
+  </script>
 </body>
 </html>
