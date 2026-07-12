@@ -97,11 +97,31 @@ export function RadarInbox() {
         proxyPassword: '',
       });
       loadSources();
-    } catch (e) {
+    } catch {
       showToast(t('radar.error.addFailed'), 'error');
     } finally {
       setSaving(false);
     }
+  };
+
+  const onProxyProtocolChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setNewSource(prev => ({ ...prev, proxyProtocol: e.target.value }));
+  };
+
+  const onProxyHostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewSource(prev => ({ ...prev, proxyHost: e.target.value }));
+  };
+
+  const onProxyPortChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewSource(prev => ({ ...prev, proxyPort: parseInt(e.target.value) || 0 }));
+  };
+
+  const onProxyUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewSource(prev => ({ ...prev, proxyUsername: e.target.value }));
+  };
+
+  const onProxyPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewSource(prev => ({ ...prev, proxyPassword: e.target.value }));
   };
 
   const tabs = [
@@ -112,24 +132,24 @@ export function RadarInbox() {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 text-gray-100">
-      <header className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6 flex-shrink-0">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      <header className="h-16 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
             <i className="fa-solid fa-satellite-dish text-white" />
           </div>
           <div>
             <h1 className="font-semibold text-lg leading-tight">{t('radar.title')}</h1>
-            <p className="text-xs text-gray-400">{t('radar.subtitle')}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('radar.subtitle')}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={handleScan}
             disabled={scanning}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm rounded-lg flex items-center gap-2 transition cursor-pointer disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm rounded-lg flex items-center gap-2 transition cursor-pointer disabled:cursor-not-allowed"
           >
-            <i className={`fa-solid fa-rotate ${scanning ? 'spinning' : ''}`} />
+            <i className={`fa-solid fa-rotate ${scanning ? 'animate-spin' : ''}`} />
             <span>{scanning ? t('radar.scanning') : t('radar.scanNow')}</span>
           </button>
         </div>
@@ -137,20 +157,20 @@ export function RadarInbox() {
 
       <div className="flex flex-1 min-h-0">
         <main className="flex-1 flex flex-col min-w-0">
-          <div className="px-6 pt-4 pb-3 border-b border-gray-700 flex items-center gap-1 flex-shrink-0">
+          <div className="px-6 pt-4 pb-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-1 flex-shrink-0">
             {tabs.map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-3 py-1.5 text-sm rounded-lg transition ${
                   activeTab === tab.key
-                    ? 'bg-gray-700 text-white font-medium'
-                    : 'hover:bg-gray-700/60 text-gray-400 hover:text-white'
+                    ? 'bg-blue-600 text-white font-medium'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
                 }`}
               >
                 {tab.label}
-                <span className={activeTab === tab.key ? 'text-gray-400 ml-1' : `ml-1 ${
-                  tab.key === 'unread' ? 'text-blue-400' : 'text-gray-500'
+                <span className={`ml-1 ${
+                  activeTab === tab.key ? 'text-blue-200' : tab.key === 'unread' ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'
                 }`}>
                   {tab.count}
                 </span>
@@ -160,7 +180,7 @@ export function RadarInbox() {
 
           <div className="flex-1 overflow-auto p-6 space-y-3">
             {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-gray-500">
+              <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
                 <i className="fa-solid fa-inbox text-4xl mb-4" />
                 <p>{t('radar.empty')}</p>
               </div>
@@ -168,23 +188,23 @@ export function RadarInbox() {
               items.map(item => (
                 <div
                   key={item.id}
-                  className="bg-gray-800 border border-gray-700 rounded-xl p-4 hover:border-gray-600 transition"
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-gray-300 dark:hover:border-gray-600 transition"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-blue-900/40 rounded-lg flex items-center justify-center text-blue-400 flex-shrink-0">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0">
                       <i className="fa-solid fa-cube" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-sm">{item.project_name || t('radar.unknownProject')}</h3>
                         {item.language && (
-                          <span className="px-2 py-0.5 text-xs bg-gray-700 text-gray-300 rounded">{item.language}</span>
+                          <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">{item.language}</span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-400 mt-1.5 leading-relaxed">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
                         {item.description || t('radar.noDescription')}
                       </p>
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                         <i className="fa-regular fa-clock mr-1" />
                         {item.fetched_at}
                       </p>
@@ -201,7 +221,7 @@ export function RadarInbox() {
                           </button>
                           <button
                             onClick={() => handleAction(item.id, 'ignore')}
-                            className="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition cursor-pointer"
+                            className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer"
                           >
                             <i className="fa-regular fa-thumbs-down text-xs mr-1" />
                             {t('radar.ignore')}
@@ -210,18 +230,12 @@ export function RadarInbox() {
                       )}
                       {item.status !== 'unread' && (
                         <span className={`px-3 py-1.5 text-sm rounded-lg ${
-                          item.status === 'imported' ? 'text-green-400' : 'text-gray-500'
+                          item.status === 'imported' ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'
                         }`}>
                           {item.status === 'imported' ? (
-                            <>
-                              <i className="fa-solid fa-check mr-1" />
-                              {t('radar.imported')}
-                            </>
+                            <><i className="fa-solid fa-check mr-1" />{t('radar.imported')}</>
                           ) : (
-                            <>
-                              <i className="fa-solid fa-ban mr-1" />
-                              {t('radar.ignored')}
-                            </>
+                            <><i className="fa-solid fa-ban mr-1" />{t('radar.ignored')}</>
                           )}
                         </span>
                       )}
@@ -233,12 +247,12 @@ export function RadarInbox() {
           </div>
         </main>
 
-        <aside className="w-72 bg-gray-800 border-l border-gray-700 p-4 overflow-auto">
+        <aside className="w-72 bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-4 overflow-auto">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-medium text-sm">{t('radar.sources')}</h2>
             <button
               onClick={() => setShowAddSource(true)}
-              className="text-blue-400 hover:text-blue-300 text-xs cursor-pointer"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs cursor-pointer"
             >
               <i className="fa-solid fa-plus mr-1" />
               {t('radar.addSource')}
@@ -246,23 +260,23 @@ export function RadarInbox() {
           </div>
           <div className="space-y-2">
             {sources.length === 0 ? (
-              <p className="text-gray-500 text-sm text-center py-4">
+              <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-4">
                 {t('radar.noSources')}
               </p>
             ) : (
               sources.map(source => (
                 <div
                   key={source.id}
-                  className="px-3 py-2.5 rounded-lg hover:bg-gray-700/60 transition cursor-pointer"
+                  className="px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <span className={`w-2 h-2 rounded-full ${
                       source.last_status === 'success' ? 'bg-green-500' :
-                      source.last_status === 'error' ? 'bg-red-500' : 'bg-gray-500'
+                      source.last_status === 'error' ? 'bg-red-500' : 'bg-gray-400 dark:bg-gray-500'
                     }`} />
                     <span className="text-sm font-medium truncate">{source.name}</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                     {source.last_checked_at ? source.last_checked_at : t('radar.neverScanned')}
                   </p>
                 </div>
@@ -274,12 +288,12 @@ export function RadarInbox() {
 
       {showAddSource && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
-              <h2 className="text-lg font-semibold">{t('radar.addSource')}</h2>
+              <h2 className="text-lg font-semibold dark:text-gray-100">{t('radar.addSource')}</h2>
               <button
                 onClick={() => setShowAddSource(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               >
                 <i className="fa-solid fa-xmark" />
               </button>
@@ -287,22 +301,22 @@ export function RadarInbox() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">{t('radar.sourceName')}</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('radar.sourceName')}</label>
                 <input
                   type="text"
                   value={newSource.name}
                   onChange={e => setNewSource(prev => ({ ...prev, name: e.target.value }))}
                   placeholder={t('radar.sourceNamePlaceholder')}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">{t('radar.sourceType')}</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('radar.sourceType')}</label>
                 <select
                   value={newSource.sourceType}
                   onChange={e => setNewSource(prev => ({ ...prev, sourceType: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500"
                 >
                   <option value="rss">RSS Feed</option>
                   <option value="web_crawl">Web Crawl</option>
@@ -311,29 +325,29 @@ export function RadarInbox() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">{t('radar.sourceUrl')}</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('radar.sourceUrl')}</label>
                 <input
                   type="text"
                   value={newSource.url}
                   onChange={e => setNewSource(prev => ({ ...prev, url: e.target.value }))}
                   placeholder="https://..."
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">{t('radar.platform')}</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('radar.platform')}</label>
                 <input
                   type="text"
                   value={newSource.platform || ''}
                   onChange={e => setNewSource(prev => ({ ...prev, platform: e.target.value }))}
                   placeholder={t('radar.platformPlaceholder')}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
-              <div className="border-t border-gray-700 pt-4">
-                <label className="flex items-center gap-2 text-sm text-gray-400 mb-3">
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={newSource.proxyEnabled || false}
@@ -344,14 +358,14 @@ export function RadarInbox() {
                 </label>
 
                 {newSource.proxyEnabled && (
-                  <div className="space-y-3 pl-6">
+                  <div className="space-y-3 pl-6 mt-3">
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">{t('radar.proxyProtocol')}</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('radar.proxyProtocol')}</label>
                         <select
                           value={newSource.proxyProtocol || 'http'}
-                          onChange={e => setNewSource(prev => ({ ...prev, proxyProtocol: e.target.value }))}
-                          className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                          onChange={onProxyProtocolChange}
+                          className="w-full px-2 py-1.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:border-blue-500"
                         >
                           <option value="http">HTTP</option>
                           <option value="https">HTTPS</option>
@@ -359,56 +373,56 @@ export function RadarInbox() {
                         </select>
                       </div>
                       <div className="col-span-2">
-                        <label className="block text-xs text-gray-500 mb-1">{t('radar.proxyHost')}</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('radar.proxyHost')}</label>
                         <input
                           type="text"
                           value={newSource.proxyHost || ''}
-                          onChange={e => setNewSource(prev => ({ ...prev, proxyHost: e.target.value }))}
+                          onChange={onProxyHostChange}
                           placeholder="127.0.0.1"
-                          className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-500"
+                          className="w-full px-2 py-1.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 text-sm focus:outline-none focus:border-blue-500"
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">{t('radar.proxyPort')}</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('radar.proxyPort')}</label>
                         <input
                           type="number"
                           value={newSource.proxyPort || ''}
-                          onChange={e => setNewSource(prev => ({ ...prev, proxyPort: parseInt(e.target.value) || 0 }))}
+                          onChange={onProxyPortChange}
                           placeholder="7890"
-                          className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-500"
+                          className="w-full px-2 py-1.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 text-sm focus:outline-none focus:border-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">{t('radar.proxyUsername')}</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('radar.proxyUsername')}</label>
                         <input
                           type="text"
                           value={newSource.proxyUsername || ''}
-                          onChange={e => setNewSource(prev => ({ ...prev, proxyUsername: e.target.value }))}
+                          onChange={onProxyUsernameChange}
                           placeholder={t('radar.proxyUsernamePlaceholder')}
-                          className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-500"
+                          className="w-full px-2 py-1.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 text-sm focus:outline-none focus:border-blue-500"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">{t('radar.proxyPassword')}</label>
+                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('radar.proxyPassword')}</label>
                       <input
                         type="password"
                         value={newSource.proxyPassword || ''}
-                        onChange={e => setNewSource(prev => ({ ...prev, proxyPassword: e.target.value }))}
+                        onChange={onProxyPasswordChange}
                         placeholder={t('radar.proxyPasswordPlaceholder')}
-                        className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-500"
+                        className="w-full px-2 py-1.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 text-sm focus:outline-none focus:border-blue-500"
                       />
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-gray-700 flex-shrink-0">
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <button
                   onClick={() => setShowAddSource(false)}
-                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition cursor-pointer"
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition cursor-pointer"
                 >
                   {t('common.cancel')}
                 </button>
