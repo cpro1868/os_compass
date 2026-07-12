@@ -7,11 +7,12 @@ interface SidebarProps {
   onSettings: () => void;
   onOpenVault: () => void;
   onOpenCategory: () => void;
+  onOpenTag: () => void;
   currentView: string;
-  onViewChange: (view: "kanban" | "list" | "archive" | "category" | "tag" | "radar" | "search" | "organization") => void;
+  onViewChange: (view: "kanban" | "list" | "archive" | "category" | "tag" | "radar" | "search") => void;
 }
 
-export function Sidebar({ onSettings, onOpenVault, onOpenCategory, currentView, onViewChange }: SidebarProps) {
+export function Sidebar({ onSettings, onOpenVault, onOpenCategory, onOpenTag, currentView, onViewChange }: SidebarProps) {
   const { t } = useTranslation();
   const [vaultName, setVaultName] = useState<string>("");
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -105,17 +106,24 @@ export function Sidebar({ onSettings, onOpenVault, onOpenCategory, currentView, 
         </button>
       </div>
 
-      {/* 组织管理（分类+标签） */}
+      {/* 分类/标签 */}
       <button
         onClick={onOpenCategory}
-        className={`w-12 h-10 rounded-lg flex items-center justify-center transition mt-auto ${
-          currentView === "category" || currentView === "tag" || currentView === "organization"
-            ? "bg-gray-700 text-white"
-            : "text-gray-400 hover:bg-gray-800 hover:text-white"
+        className={`w-12 h-10 rounded-lg flex items-center justify-center transition ${
+          currentView === "category" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
         }`}
-        title={t("sidebar.organization") || "组织管理"}
+        title={t("sidebar.category")}
       >
-        <i className="fa-solid fa-layer-group"></i>
+        <i className="fa-solid fa-folder-tree"></i>
+      </button>
+      <button
+        onClick={onOpenTag}
+        className={`w-12 h-10 rounded-lg flex items-center justify-center transition ${
+          currentView === "tag" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+        }`}
+        title={t("sidebar.tag")}
+      >
+        <i className="fa-solid fa-tag"></i>
       </button>
 
       {/* 当前仓库信息 */}
