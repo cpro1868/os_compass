@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getCurrentVault } from "../api";
+import { getRadarUnreadCount } from "../api/radar";
 
 interface SidebarProps {
   onSettings: () => void;
@@ -8,12 +9,13 @@ interface SidebarProps {
   onOpenCategory: () => void;
   onOpenTag: () => void;
   currentView: string;
-  onViewChange: (view: "kanban" | "list" | "archive" | "category" | "tag") => void;
+  onViewChange: (view: "kanban" | "list" | "archive" | "category" | "tag" | "radar" | "search") => void;
 }
 
 export function Sidebar({ onSettings, onOpenVault, onOpenCategory, onOpenTag, currentView, onViewChange }: SidebarProps) {
   const { t } = useTranslation();
   const [vaultName, setVaultName] = useState<string>("");
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
   useEffect(() => {
     getCurrentVault().then((v) => {
@@ -26,6 +28,10 @@ export function Sidebar({ onSettings, onOpenVault, onOpenCategory, onOpenTag, cu
     };
     window.addEventListener("vault-changed", handler);
     return () => window.removeEventListener("vault-changed", handler);
+  }, []);
+
+  useEffect(() => {
+    getRadarUnreadCount().then(setUnreadCount).catch(() => {});
   }, []);
 
   return (
@@ -72,6 +78,31 @@ export function Sidebar({ onSettings, onOpenVault, onOpenCategory, onOpenTag, cu
           title={t("nav.list")}
         >
           <i className="fa-solid fa-list"></i>
+        </button>
+        <div className="relative">
+          <button
+            onClick={() => onViewChange("radar")}
+            className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center transition ${
+              currentView === "radar" ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+            }`}
+            title={t("nav.radar")}
+          >
+            <i className="fa-solid fa-satellite-dish text-lg mb-0.5"></i>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
+        <button
+          onClick={() => onViewChange("search")}
+          className={`w-12 h-12 rounded-xl flex items-center justify-center transition ${
+            currentView === "search" ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+          }`}
+          title={t("nav.search")}
+        >
+          <i className="fa-solid fa-magnifying-glass text-lg"></i>
         </button>
       </div>
 

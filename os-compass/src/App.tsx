@@ -18,8 +18,10 @@ import { CategoryManager } from "./components/CategoryManager";
 import { ArchiveView } from "./components/ArchiveView";
 import { TagManager } from "./components/TagManager";
 import { ErrorState } from "./components/ErrorState";
+import { RadarInbox } from "./components/RadarInbox";
+import { SearchView } from "./components/SearchView";
 
-type ViewMode = "kanban" | "list" | "archive" | "category" | "tag" | "stats";
+type ViewMode = "kanban" | "list" | "archive" | "category" | "tag" | "stats" | "radar" | "search";
 
 function App() {
   const { t } = useTranslation();
@@ -171,6 +173,7 @@ function App() {
       />
 
       <main className="flex-1 flex flex-col overflow-hidden">
+        {viewMode !== "radar" && viewMode !== "search" && (
         <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{viewTitle}</h1>
@@ -266,6 +269,7 @@ function App() {
             )}
           </div>
         </header>
+        )}
 
         <div className="flex-1 overflow-hidden">
           {error && (
@@ -340,6 +344,10 @@ function App() {
             <TagManager onBack={() => setViewMode("kanban")} />
           ) : viewMode === "stats" ? (
             <StatsView onBack={() => setViewMode("kanban")} />
+          ) : viewMode === "radar" ? (
+            <RadarInbox />
+          ) : viewMode === "search" ? (
+            <SearchView />
           ) : (
             <ArchiveView
               onBack={() => setViewMode("list")}
