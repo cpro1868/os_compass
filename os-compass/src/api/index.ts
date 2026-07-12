@@ -3,6 +3,9 @@ import type { Project, Category, Tag, ProjectNote } from "../types";
 export { tagApi, type Tag, type CreateTagInput } from "./tag";
 
 export * from "./extension";
+export * from "./plugin";
+export * from "./radar";
+export * from "./search";
 
 export interface ImportInput {
   url: string;
