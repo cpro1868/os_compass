@@ -328,6 +328,15 @@ pub fn run() {
             commands::get_plugin_config,
             commands::save_plugin_config,
             commands::plugin_get_db_path,
+            commands::list_radar_sources,
+            commands::add_radar_source,
+            commands::update_radar_source,
+            commands::delete_radar_source,
+            commands::get_radar_items,
+            commands::radar_item_action,
+            commands::trigger_radar_scan,
+            commands::get_radar_unread_count,
+            commands::clear_radar_cache,
             get_app_data_dir,
         ])
         .run(tauri::generate_context!())
