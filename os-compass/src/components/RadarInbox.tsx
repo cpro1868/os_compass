@@ -24,20 +24,20 @@ export function RadarInbox() {
     try {
       const data = await listRadarSources();
       setSources(data);
-    } catch {
-      showToast(t('radar.error.loadFailed'), 'error');
+    } catch (e) {
+      console.error('Failed to load sources:', e);
     }
-  }, [t, showToast]);
+  }, []);
 
   const loadItems = useCallback(async () => {
     try {
       const status = activeTab === 'all' ? undefined : activeTab;
       const data = await getRadarItems(status);
       setItems(data);
-    } catch {
-      showToast(t('radar.error.loadFailed'), 'error');
+    } catch (e) {
+      console.error('Failed to load items:', e);
     }
-  }, [activeTab, t, showToast]);
+  }, [activeTab]);
 
   useEffect(() => {
     loadSources();

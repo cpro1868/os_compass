@@ -49,7 +49,18 @@ interface SettingsDialogProps {
   onThemeChange?: (theme: string) => void;
 }
 
-type TabId = "general" | "download" | "llm" | "translation" | "variables" | "extensions";
+type TabId = "general" | "download" | "llm" | "translation" | "variables" | "extensions" | "plugins";
+
+interface FeaturePlugin {
+  id: string;
+  name: string;
+  plugin_type: string;
+  enabled: boolean;
+  config: string | null;
+  version: string;
+  db_mode: string;
+  db_path_template: string | null;
+}
 
 export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogProps) {
   const { t } = useTranslation();
@@ -60,6 +71,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
   const [saved, setSaved] = useState(false);
   const [variables, setVariables] = useState<SystemVariable[]>([]);
   const [extensions, setExtensions] = useState<SourcePlugin[]>([]);
+  const [featurePlugins, setFeaturePlugins] = useState<FeaturePlugin[]>([]);
   const [varModalOpen, setVarModalOpen] = useState(false);
   const [varForm, setVarForm] = useState({ key: "", value: "", isSecret: false });
   const [showVarValue, setShowVarValue] = useState(false);
@@ -116,6 +128,9 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
       invoke<SourcePlugin[]>("list_extensions")
         .then(setExtensions)
         .catch(console.error);
+      invoke<FeaturePlugin[]>("list_feature_plugins")
+        .then(setFeaturePlugins)
+        .catch(console.error);
     }
   }, [open]);
 
@@ -170,6 +185,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
     { id: "translation" as TabId, label: t("settings.tabs.translation") },
     { id: "variables" as TabId, label: t("settings.tabs.variables") },
     { id: "extensions" as TabId, label: t("settings.tabs.extensions") },
+    { id: "plugins" as TabId, label: t("settings.tabs.plugins") },
   ];
 
   if (!open) return null;
@@ -932,6 +948,63 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "plugins" && (
+            <div className="space-y-4">
+              <h3 className="font-medium">{t("settings.featurePlugins")}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t("settings.featurePluginsDesc")}</p>
+              <div className="space-y-3">
+                {featurePlugins.map((plugin) => (
+                  <div key={plugin.id} className="bg-gray-50 rounded-xl border p-4 dark:bg-gray-900 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                          {plugin.plugin_type === "radar" && <i className="fa-solid fa-satellite-dish text-xl"></i>}
+                          {plugin.plugin_type === "search" && <i className="fa-solid fa-magnifying-glass text-xl"></i>}
+                          {plugin.plugin_type !== "radar" && plugin.plugin_type !== "search" && <i className="fa-solid fa-puzzle-piece text-xl"></i>}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{plugin.name}</span>
+                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">
+                              v{plugin.version || "1.0.0"}
+                            </span>
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              plugin.enabled
+                                ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                            }`}>
+                              {plugin.enabled ? t("settings.enabled") : t("settings.disabled")}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {plugin.plugin_type} · {plugin.db_mode === "none" ? t("settings.dbModeNone") : t("settings.dbModeVault")}
+                          </p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={plugin.enabled}
+                          onChange={(e) => {
+                            invoke("set_plugin_enabled", { pluginId: plugin.id, enabled: e.target.checked });
+                            setFeaturePlugins(featurePlugins.map((p) =>
+                              p.id === plugin.id ? { ...p, enabled: e.target.checked } : p
+                            ));
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:bg-gray-700 dark:after:border-gray-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+                {featurePlugins.length === 0 && (
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t("settings.noPlugins")}</p>
+                )}
               </div>
             </div>
           )}

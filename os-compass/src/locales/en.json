@@ -525,7 +525,8 @@
       "llm": "LLM",
       "translation": "Translation",
       "variables": "Variables",
-      "extensions": "Extensions"
+      "extensions": "Extensions",
+      "plugins": "Feature Plugins"
     },
     "storage": "Storage",
     "dataDir": "Data Directory",
@@ -632,7 +633,14 @@
     "extensionVarsTip": "(configure in Variables tab)",
     "inputVariableValue": "Enter variable value",
     "hide": "Hide",
-    "show": "Show"
+    "show": "Show",
+    "featurePlugins": "Feature Plugins",
+    "featurePluginsDesc": "Enable or disable system plugins for Radar and Search features",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "dbModeNone": "No Database",
+    "dbModeVault": "Per-Vault DB",
+    "noPlugins": "No feature plugins installed"
   },
   "import": {
     "title": "Import Project",

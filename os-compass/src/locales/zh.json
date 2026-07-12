@@ -451,7 +451,8 @@
       "llm": "大模型",
       "translation": "翻译",
       "variables": "变量管理",
-      "extensions": "扩展配置"
+      "extensions": "扩展配置",
+      "plugins": "功能插件"
     },
     "storage": "存储设置",
     "dataDir": "数据目录",
@@ -558,7 +559,14 @@
     "extensionVarsTip": "（请在「变量管理」标签页配置）",
     "inputVariableValue": "输入变量值",
     "hide": "隐藏",
-    "show": "显示"
+    "show": "显示",
+    "featurePlugins": "功能插件",
+    "featurePluginsDesc": "启用或禁用情报雷达和意图搜索等功能插件",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "dbModeNone": "无数据库",
+    "dbModeVault": "独立数据库",
+    "noPlugins": "暂无功能插件"
   },
   "vault": {
     "title": "仓库管理",
