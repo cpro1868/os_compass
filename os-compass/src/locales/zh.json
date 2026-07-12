@@ -723,9 +723,18 @@
     "error": {
       "loadFailed": "加载数据失败",
       "scanFailed": "扫描失败",
-      "actionFailed": "操作失败"
+      "actionFailed": "操作失败",
+      "nameRequired": "名称和 URL 不能为空",
+      "addFailed": "添加信息源失败"
     },
-    "scanComplete": "扫描完成：{{count}} 个新项目"
+    "scanComplete": "扫描完成：{{count}} 个新项目",
+    "sourceAdded": "信息源添加成功",
+    "sourceName": "名称",
+    "sourceNamePlaceholder": "例如：GitHub Trending",
+    "sourceType": "信息源类型",
+    "sourceUrl": "URL 地址",
+    "platform": "平台（可选）",
+    "platformPlaceholder": "例如：github, gitee"
   },
   "search": {
     "title": "意图搜索",

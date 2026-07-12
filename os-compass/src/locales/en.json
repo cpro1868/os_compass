@@ -719,9 +719,18 @@
     "error": {
       "loadFailed": "Failed to load data",
       "scanFailed": "Scan failed",
-      "actionFailed": "Action failed"
+      "actionFailed": "Action failed",
+      "nameRequired": "Name and URL are required",
+      "addFailed": "Failed to add source"
     },
-    "scanComplete": "Scan complete: {{count}} new items"
+    "scanComplete": "Scan complete: {{count}} new items",
+    "sourceAdded": "Source added successfully",
+    "sourceName": "Name",
+    "sourceNamePlaceholder": "e.g., GitHub Trending",
+    "sourceType": "Source Type",
+    "sourceUrl": "URL",
+    "platform": "Platform (optional)",
+    "platformPlaceholder": "e.g., github, gitee"
   },
   "search": {
     "title": "Intent Search",

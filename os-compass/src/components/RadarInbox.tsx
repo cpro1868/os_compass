@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { listRadarSources, getRadarItems, triggerRadarScan, radarItemAction, RadarSource, RadarItem } from '../api/radar';
+import { listRadarSources, addRadarSource, getRadarItems, triggerRadarScan, radarItemAction, RadarSource, RadarItem } from '../api/radar';
 import { useToast } from '../hooks/useToast';
 
 export function RadarInbox() {
@@ -10,6 +10,15 @@ export function RadarInbox() {
   const [items, setItems] = useState<RadarItem[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [scanning, setScanning] = useState(false);
+  const [showAddSource, setShowAddSource] = useState(false);
+  const [newSource, setNewSource] = useState({
+    name: '',
+    url: '',
+    sourceType: 'rss',
+    platform: '',
+    checkInterval: 3600,
+  });
+  const [saving, setSaving] = useState(false);
 
   const loadSources = useCallback(async () => {
     try {
@@ -55,6 +64,31 @@ export function RadarInbox() {
       loadItems();
     } catch {
       showToast(t('radar.error.actionFailed'), 'error');
+    }
+  };
+
+  const handleAddSource = async () => {
+    if (!newSource.name.trim() || !newSource.url.trim()) {
+      showToast(t('radar.error.nameRequired'), 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      await addRadarSource(
+        newSource.name,
+        newSource.sourceType,
+        newSource.url,
+        newSource.platform || undefined,
+        newSource.checkInterval
+      );
+      showToast(t('radar.sourceAdded'), 'success');
+      setShowAddSource(false);
+      setNewSource({ name: '', url: '', sourceType: 'rss', platform: '', checkInterval: 3600 });
+      loadSources();
+    } catch (e) {
+      showToast(t('radar.error.addFailed'), 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -190,7 +224,10 @@ export function RadarInbox() {
         <aside className="w-72 bg-gray-800 border-l border-gray-700 p-4 overflow-auto">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-medium text-sm">{t('radar.sources')}</h2>
-            <button className="text-blue-400 hover:text-blue-300 text-xs">
+            <button
+              onClick={() => setShowAddSource(true)}
+              className="text-blue-400 hover:text-blue-300 text-xs cursor-pointer"
+            >
               <i className="fa-solid fa-plus mr-1" />
               {t('radar.addSource')}
             </button>
@@ -222,6 +259,86 @@ export function RadarInbox() {
           </div>
         </aside>
       </div>
+
+      {showAddSource && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">{t('radar.addSource')}</h2>
+              <button
+                onClick={() => setShowAddSource(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t('radar.sourceName')}</label>
+                <input
+                  type="text"
+                  value={newSource.name}
+                  onChange={e => setNewSource(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder={t('radar.sourceNamePlaceholder')}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t('radar.sourceType')}</label>
+                <select
+                  value={newSource.sourceType}
+                  onChange={e => setNewSource(prev => ({ ...prev, sourceType: e.target.value }))}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="rss">RSS Feed</option>
+                  <option value="web_crawl">Web Crawl</option>
+                  <option value="telegram">Telegram</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t('radar.sourceUrl')}</label>
+                <input
+                  type="text"
+                  value={newSource.url}
+                  onChange={e => setNewSource(prev => ({ ...prev, url: e.target.value }))}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t('radar.platform')}</label>
+                <input
+                  type="text"
+                  value={newSource.platform}
+                  onChange={e => setNewSource(prev => ({ ...prev, platform: e.target.value }))}
+                  placeholder={t('radar.platformPlaceholder')}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  onClick={() => setShowAddSource(false)}
+                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition cursor-pointer"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={handleAddSource}
+                  disabled={saving}
+                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? t('common.saving') : t('common.save')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
