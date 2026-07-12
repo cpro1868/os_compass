@@ -1,6 +1,8 @@
 pub mod github;
 pub mod gitee;
 pub mod crawler;
+pub mod radar;
+pub mod search;
 
 use serde::{Deserialize, Serialize};
 
