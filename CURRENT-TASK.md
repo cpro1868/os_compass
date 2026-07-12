@@ -2,54 +2,59 @@
 
 ## 任务标题
 
-Phase 1 打磨收尾：残余 i18n + 暗色模式全覆盖
+M13 Phase 2 开发：意图搜索与情报雷达
 
 ## 状态
 
-done
+in_progress
 
-## 完成内容
+## 阶段目标
 
-### 1. 残余 i18n 字符串补齐
-- [x] VaultDialog：33 个残余中文字符串替换为 t() 调用
-- [x] ProjectDetailDialog：21 个残余字符串国际化
-- [x] SettingsDialog：5 个残余字符串国际化
-- [x] ClonePanel：2 个残余字符串国际化
-- [x] VaultDialog 创建步骤数组 step text/successText 国际化
-- [x] ProjectDetailDialog 后台任务类型字符串国际化
+实现二期 M13 功能：系统插件管理基础设施、信息源引擎、情报雷达插件（RSS/网站/TG 监控 + 收件箱）、意图搜索插件（三层优先级搜索 + ChatGPT 对话 UI）。
 
-### 2. 翻译键扩展
-- [x] vault 命名空间新增 30+ 键
-- [x] detail 命名空间新增 15+ 键
-- [x] clone/settings 命名空间补充
-- [x] en.json 同步扩展
+## 当前 Task
 
-### 3. 暗色模式全覆盖
-- [x] 18 个组件添加 1026 个 dark: 变体类
-- [x] SettingsDialog: 169, ProjectDetailDialog: 201, VaultDialog: 157
-- [x] ListView: 56, ClonePanel: 61, ArchiveView: 40, StatsView: 43
-- [x] CategoryManager: 51, TagManager: 54, ImportModal: 46
-- [x] ImportConfirmDialog: 40, ReleasesPanel: 38, ManualAddDialog: 23
-- [x] MoveCategoryDialog: 12, EmptyState: 4, ErrorState: 6
+**Task 1: FeaturePlugin Trait + 类型定义**
 
-### 4. 验证
-- [x] TypeScript 类型检查通过
-- [x] 18/18 测试通过
-- [x] release 构建成功
-- [x] 产物已复制到 Previous 目录
+## Task 依赖链
 
-## Git 提交历史
-
-- `28a7d9c` chore: initial commit - Phase 1 MVP complete (M1-M12)
-- `709880f` fix: add crawler/webtomd source files
-- `2201846` chore: add test framework (vitest) + CI + pre-commit script
-- `65f3991` docs: update project status after engineering improvements
-- `7cb0ce9` feat: complete i18n residual strings + dark mode coverage
-
-## 构建命令
-
-```cmd
-$env:PATH="D:\Soft\msys64\ucrt64\bin;D:\Soft\msys64\usr\bin;$env:PATH"
-cd "G:\Projects\kimicode\os_compass\os-compass"
-pnpm tauri build
 ```
+Task 1 (FeaturePlugin trait) ──> Task 3 (PluginManager) ──> Task 4 (插件命令)
+Task 2 (DB 表) ────────────────────────────────────────────> Task 4
+Task 3 ──> Task 5 (SourceAdapter) ──> Task 6 (LLM Parser) ──> Task 7 (RadarPlugin) ──> Task 9 ──> Task 11 ──> Task 13 ──> Task 14
+Task 3 ──> Task 5 ──> Task 6 ──> Task 8 (SearchPlugin) ──> Task 10 ──> Task 12 ──> Task 13 ──> Task 14
+```
+
+## 参照文档
+
+- `docs/插件接入规范.md`
+- `docs/M13实施计划.md`
+- `docs/数据库设计说明书.md` §9
+- `docs/API接口设计说明书.md` §3.14-3.16
+
+## 全局约束
+
+- **二期功能标记**：所有代码和文档必须标注为二期（Phase 2）功能
+- **Rust 编译检查**：`cargo check --lib` 验证编译
+- **前端测试**：`cd os-compass; pnpm test`（vitest）
+- **类型检查**：`cd os-compass; pnpm tsc --noEmit`
+- **提交前检查**：`powershell -ExecutionPolicy Bypass -File scripts\pre-commit.ps1`
+- **暗色模式**：所有新增 UI 必须包含 `dark:` 样式
+- **i18n**：所有新增 UI 字符串必须使用 `useTranslation` + t() 调用
+- **不添加注释**：代码中不添加任何注释（除非用户要求）
+
+## 完成进度
+
+- [ ] Task 1: FeaturePlugin trait + 类型定义
+- [ ] Task 2: feature_plugins 数据库表
+- [ ] Task 3: PluginManager + 占位插件
+- [ ] Task 4: 插件管理 Tauri 命令
+- [ ] Task 5: SourceAdapter + 4 种适配器
+- [ ] Task 6: LLM 解析器
+- [ ] Task 7: RadarPlugin 完整实现
+- [ ] Task 8: SearchPlugin 完整实现
+- [ ] Task 9: 启动初始化 + 前端 API 层
+- [ ] Task 10: RadarInbox 前端视图
+- [ ] Task 11: SearchView 前端视图
+- [ ] Task 12: 前端集成
+- [ ] Task 13: i18n + 暗色 + 构建验证

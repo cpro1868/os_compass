@@ -2,6 +2,7 @@ pub mod commands;
 pub mod crypto;
 pub mod crawler_service;
 pub mod db;
+pub mod feature_plugin;
 pub mod health;
 pub mod llm;
 pub mod models;
