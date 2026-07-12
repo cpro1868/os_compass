@@ -27,31 +27,12 @@ impl Database {
                 println!("[db] External script failed: {}, falling back to embedded", e);
                 e
             })?;
-            drop(conn);
-            self.ensure_feature_plugins()?;
             return Ok(());
         }
 
         // 兜底：使用内嵌的脚本（防止脚本文件丢失导致无法启动）
         println!("[db] Initializing schema from embedded SQL");
         conn.execute_batch(INIT_SCHEMA_SQL)?;
-        drop(conn);
-        self.ensure_feature_plugins()?;
-        Ok(())
-    }
-
-    pub fn ensure_feature_plugins(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
-        conn.execute(
-            "INSERT OR IGNORE INTO feature_plugins (id, name, plugin_type, enabled, version, db_mode, db_path_template) VALUES
-             ('radar', '情报雷达', 'radar', 0, '1.0.0', 'vault', '${vault_dir}/plugin_${plugin_id}.db')",
-            [],
-        )?;
-        conn.execute(
-            "INSERT OR IGNORE INTO feature_plugins (id, name, plugin_type, enabled, version, db_mode, db_path_template) VALUES
-             ('search', '意图搜索', 'search', 0, '1.0.0', 'vault', '${vault_dir}/plugin_${plugin_id}.db')",
-            [],
-        )?;
         Ok(())
     }
 
