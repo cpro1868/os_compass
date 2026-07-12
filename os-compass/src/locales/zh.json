@@ -754,10 +754,14 @@
     "noHistory": "暂无搜索历史",
     "clearHistory": "清除历史",
     "historyCleared": "历史已清除",
+    "import": "导入",
+    "importSuccess": "项目导入成功",
+    "viewOnGitHub": "查看",
     "error": {
       "loadHistoryFailed": "加载历史失败",
       "searchFailed": "搜索失败",
-      "clearFailed": "清除失败"
+      "clearFailed": "清除失败",
+      "importFailed": "导入失败"
     }
   }
 }

@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef, KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { intentSearch, getSearchHistory, clearSearchHistory, SearchResult, SearchHistoryItem } from '../api/search';
-import { useToast } from '../hooks/useToast';
+import { intentSearch, getSearchHistory, clearSearchHistory, importSearchResult, SearchResult, SearchHistoryItem } from '../api/search';
+import { useToastStore } from '../stores/toastStore';
 
 export function SearchView() {
   const { t } = useTranslation();
-  const { showToast } = useToast();
+  const { showToast } = useToastStore();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult | null>(null);
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
@@ -53,6 +53,15 @@ export function SearchView() {
       showToast(t('search.historyCleared'), 'success');
     } catch {
       showToast(t('search.error.clearFailed'), 'error');
+    }
+  };
+
+  const handleImport = async (projectUrl: string, projectName: string) => {
+    try {
+      await importSearchResult(projectUrl, projectName);
+      showToast(t('search.importSuccess'), 'success');
+    } catch {
+      showToast(t('search.error.importFailed'), 'error');
     }
   };
 
@@ -149,6 +158,26 @@ export function SearchView() {
                           <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-gray-700 text-gray-400 rounded">
                             {result.language}
                           </span>
+                        )}
+                        {result.project_url && (
+                          <div className="flex items-center gap-2 mt-3">
+                            <a
+                              href={result.project_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition"
+                            >
+                              <i className="fa-solid fa-external-link-alt mr-1" />
+                              {t('search.viewOnGitHub')}
+                            </a>
+                            <button
+                              onClick={() => handleImport(result.project_url!, result.project_name || 'Unknown')}
+                              className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                            >
+                              <i className="fa-solid fa-download mr-1" />
+                              {t('search.import')}
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>

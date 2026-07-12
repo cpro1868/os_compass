@@ -20,6 +20,7 @@ import { TagManager } from "./components/TagManager";
 import { ErrorState } from "./components/ErrorState";
 import { RadarInbox } from "./components/RadarInbox";
 import { SearchView } from "./components/SearchView";
+import { ToastContainer } from "./stores/toastStore";
 
 type ViewMode = "kanban" | "list" | "archive" | "category" | "tag" | "stats" | "radar" | "search";
 
@@ -385,6 +386,7 @@ function App() {
           }}
         />
       )}
+      <ToastContainer />
     </div>
   );
 }

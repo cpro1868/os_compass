@@ -750,10 +750,14 @@
     "noHistory": "No search history",
     "clearHistory": "Clear History",
     "historyCleared": "History cleared",
+    "import": "Import",
+    "importSuccess": "Project imported successfully",
+    "viewOnGitHub": "View",
     "error": {
       "loadHistoryFailed": "Failed to load history",
       "searchFailed": "Search failed",
-      "clearFailed": "Failed to clear history"
+      "clearFailed": "Failed to clear history",
+      "importFailed": "Failed to import project"
     }
   }
 }

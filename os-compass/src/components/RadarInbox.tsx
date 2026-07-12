@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { listRadarSources, addRadarSource, getRadarItems, triggerRadarScan, radarItemAction, RadarSource, RadarItem } from '../api/radar';
-import { useToast } from '../hooks/useToast';
+import { useToastStore } from '../stores/toastStore';
 
 export function RadarInbox() {
   const { t } = useTranslation();
-  const { showToast } = useToast();
+  const { showToast } = useToastStore();
   const [sources, setSources] = useState<RadarSource[]>([]);
   const [items, setItems] = useState<RadarItem[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
