@@ -322,6 +322,11 @@ pub fn run() {
             commands::migrate_old_data,
             commands::get_old_db_path,
             commands::import_vault,
+            commands::list_feature_plugins,
+            commands::set_plugin_enabled,
+            commands::get_plugin_config,
+            commands::save_plugin_config,
+            commands::plugin_get_db_path,
             get_app_data_dir,
         ])
         .run(tauri::generate_context!())
