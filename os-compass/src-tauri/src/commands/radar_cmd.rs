@@ -38,6 +38,9 @@ pub struct RadarItem {
 fn get_radar_conn() -> Result<rusqlite::Connection, String> {
     let config = CURRENT_VAULT_CONFIG.lock().unwrap();
     let path = config.as_ref().ok_or("No vault opened")?;
+    if path.path.is_empty() {
+        return Err("Vault not initialized".to_string());
+    }
     let vault_dir = std::path::Path::new(&path.path);
     init_radar_db(vault_dir)
 }

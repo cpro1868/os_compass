@@ -9,16 +9,25 @@ pub fn list_feature_plugins() -> Result<Vec<PluginInfo>, String> {
 
 #[command]
 pub fn set_plugin_enabled(plugin_id: String, enabled: bool) -> Result<(), String> {
+    if plugin_id.is_empty() {
+        return Err("Plugin ID cannot be empty".to_string());
+    }
     PLUGIN_MANAGER.set_enabled(&plugin_id, enabled)
 }
 
 #[command]
 pub fn get_plugin_config(plugin_id: String) -> Result<Option<String>, String> {
+    if plugin_id.is_empty() {
+        return Err("Plugin ID cannot be empty".to_string());
+    }
     PLUGIN_MANAGER.get_config(&plugin_id)
 }
 
 #[command]
 pub fn save_plugin_config(plugin_id: String, config: String) -> Result<(), String> {
+    if plugin_id.is_empty() {
+        return Err("Plugin ID cannot be empty".to_string());
+    }
     PLUGIN_MANAGER.save_config(&plugin_id, &config)
 }
 
@@ -28,6 +37,9 @@ pub fn plugin_get_db_path(
     vault_dir: String,
     app_data_dir: String,
 ) -> Result<String, String> {
+    if plugin_id.is_empty() {
+        return Err("Plugin ID cannot be empty".to_string());
+    }
     let plugins = PLUGIN_MANAGER.list_plugins()?;
     let plugin = plugins.iter().find(|p| p.id == plugin_id)
         .ok_or_else(|| format!("Plugin not found: {}", plugin_id))?;
