@@ -6,6 +6,7 @@ pub mod feature_plugin;
 pub mod health;
 pub mod llm;
 pub mod models;
+pub mod plugin_config_db;
 pub mod plugin_manager;
 pub mod plugins;
 pub mod settings;
