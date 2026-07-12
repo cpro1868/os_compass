@@ -699,7 +699,7 @@
   },
   "radar": {
     "title": "Intelligence Radar",
-    "subtitle": "Phase 2 · Monitor source updates",
+    "subtitle": "Monitor source updates and discover new open source projects",
     "scanNow": "Scan Now",
     "scanning": "Scanning...",
     "tabs": {
