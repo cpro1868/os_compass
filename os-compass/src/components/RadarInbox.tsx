@@ -274,8 +274,8 @@ export function RadarInbox() {
 
       {showAddSource && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl border border-gray-700">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-700">
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h2 className="text-lg font-semibold">{t('radar.addSource')}</h2>
               <button
                 onClick={() => setShowAddSource(false)}
@@ -405,7 +405,7 @@ export function RadarInbox() {
                 )}
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-700 flex-shrink-0">
                 <button
                   onClick={() => setShowAddSource(false)}
                   className="px-4 py-2 text-sm text-gray-400 hover:text-white transition cursor-pointer"
