@@ -1469,6 +1469,16 @@ AI 智能分类项目。
 
 > **二期功能标记**：以下所有接口均为二期（Phase 2）设计。
 
+### 3.14.0 存储架构
+
+插件系统采用三层操作域设计：
+
+| 域 | 存储位置 | 说明 |
+|----|---------|------|
+| 插件域 | `${AppData}/.os-compass/plugins.db` | 插件元数据、启用状态、配置（系统级） |
+| 仓库域 | 当前仓库 `os_compass.db` | LLM、代理、Token 等（运行时注入） |
+| 业务域 | `{vault_dir}/plugin_*.db` | 插件业务数据（跟随仓库） |
+
 ### 3.14.1 list_feature_plugins
 
 获取所有功能插件列表。
@@ -1481,12 +1491,14 @@ AI 智能分类项目。
 
 ```typescript
 interface FeaturePluginInfo {
-  id: string;           // 插件 ID
-  name: string;         // 插件名称
-  plugin_type: string;  // 'radar' | 'search' | 'webhook' | 'importer'
-  enabled: boolean;     // 启用状态
-  config: string | null; // 配置 JSON
-  version: string | null;
+  id: string;             // 插件 ID
+  name: string;           // 插件名称
+  plugin_type: string;    // 'radar' | 'search' | 'webhook' | 'importer'
+  version: string;        // 插件版本
+  enabled: boolean;       // 启用状态（来自 plugins.db）
+  config: string | null;  // 配置 JSON（来自 plugins.db）
+  db_mode: string;        // 'main' | 'global' | 'vault' | 'none'
+  db_path_template: string | null; // 数据库路径模板
 }
 ```
 
@@ -1500,6 +1512,7 @@ interface FeaturePluginInfo {
 | 参数 | `{ pluginId: string, enabled: boolean }` |
 | 返回 | `void` |
 | 错误 | 插件不存在、插件初始化失败 |
+| 存储 | 写入 `${AppData}/.os-compass/plugins.db` |
 
 ### 3.14.3 get_plugin_config / save_plugin_config
 
@@ -1510,6 +1523,7 @@ interface FeaturePluginInfo {
 | 命令 | `get_plugin_config` / `save_plugin_config` |
 | 参数 | `{ pluginId: string }` / `{ pluginId: string, config: string }` |
 | 返回 | `string | null`（配置 JSON）/ `void` |
+| 存储 | 读写 `${AppData}/.os-compass/plugins.db` |
 
 ### 3.14.4 plugin_get_db_path
 
@@ -1521,6 +1535,22 @@ interface FeaturePluginInfo {
 | 参数 | `{ pluginId: string }` |
 | 返回 | `string`（.db 文件路径，如 `{vault_dir}/plugin_radar.db`） |
 | 说明 | 插件自行决定是否使用独立 .db。调用此命令获取路径后，插件自行打开连接。 |
+
+### 3.14.5 PluginContext（运行时注入）
+
+插件执行时，系统注入的上下文信息：
+
+```rust
+pub struct PluginContext {
+    pub vault_dir: PathBuf,        // 当前仓库目录
+    pub app_data_dir: PathBuf,     // 应用数据目录
+    pub config: Value,             // 插件配置（来自 plugins.db）
+    pub llm_config: Value,        // LLM 配置（来自当前仓库）
+    pub plugin_db_path: Option<PathBuf>, // 插件数据库路径
+}
+```
+
+> **注意**：LLM 配置、代理配置等运行时依赖来自当前仓库，插件域的配置仅包含插件自身的设置参数。
 
 ---
 
