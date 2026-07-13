@@ -566,7 +566,60 @@
     "disabled": "已禁用",
     "dbModeNone": "无数据库",
     "dbModeVault": "独立数据库",
-    "noPlugins": "暂无功能插件"
+    "noPlugins": "暂无功能插件",
+    "pluginConfig": {
+      "title": "插件配置",
+      "checkInterval": "检查频率",
+      "checkIntervalOptions": {
+        "6h": "每 6 小时",
+        "12h": "每 12 小时",
+        "1d": "每天",
+        "1w": "每周"
+      },
+      "notificationEnabled": "启用通知提醒",
+      "autoImport": "自动导入高星项目",
+      "autoImportStars": "自动导入高星项目（≥{{stars}} stars）",
+      "searchStrategy": "搜索策略",
+      "searchStrategyOptions": {
+        "localFirst": "本地优先 → 缓存 → 联网",
+        "webFirst": "联网优先",
+        "localOnly": "仅本地"
+      },
+      "cacheTtl": "缓存有效期",
+      "cacheTtlOptions": {
+        "7d": "7 天",
+        "30d": "30 天",
+        "90d": "90 天",
+        "never": "永不过期"
+      },
+      "aiSummary": "启用 AI 摘要分析",
+      "sources": "订阅源",
+      "pending": "待处理",
+      "imported": "已导入",
+      "lastScan": "最后扫描",
+      "searchHistory": "搜索历史",
+      "cachedProjects": "缓存项目",
+      "lastSearch": "最后搜索",
+      "never": "从未",
+      "hoursAgo": "{{hours}} 小时前",
+      "daysAgo": "{{days}} 天前",
+      "configure": "配置",
+      "viewInbox": "查看收件箱",
+      "openSearch": "打开搜索",
+      "saveConfig": "保存配置",
+      "cancel": "取消"
+    },
+    "storage": {
+      "info": "数据存储说明",
+      "pluginConfig": "系统级配置",
+      "pluginConfigDesc": "插件启用状态、配置信息",
+      "pluginData": "插件业务数据",
+      "pluginDataDesc": "订阅源、扫描结果等（跟随仓库）"
+    },
+    "pluginLevel": {
+      "system": "系统级",
+      "vault": "仓库级"
+    }
   },
   "vault": {
     "title": "仓库管理",

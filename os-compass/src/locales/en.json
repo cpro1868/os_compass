@@ -640,7 +640,60 @@
     "disabled": "Disabled",
     "dbModeNone": "No Database",
     "dbModeVault": "Per-Vault DB",
-    "noPlugins": "No feature plugins installed"
+    "noPlugins": "No feature plugins installed",
+    "pluginConfig": {
+      "title": "Plugin Configuration",
+      "checkInterval": "Check Interval",
+      "checkIntervalOptions": {
+        "6h": "Every 6 hours",
+        "12h": "Every 12 hours",
+        "1d": "Daily",
+        "1w": "Weekly"
+      },
+      "notificationEnabled": "Enable Notifications",
+      "autoImport": "Auto Import High-Star Projects",
+      "autoImportStars": "Auto import (≥{{stars}} stars)",
+      "searchStrategy": "Search Strategy",
+      "searchStrategyOptions": {
+        "localFirst": "Local → Cache → Web",
+        "webFirst": "Web First",
+        "localOnly": "Local Only"
+      },
+      "cacheTtl": "Cache TTL",
+      "cacheTtlOptions": {
+        "7d": "7 Days",
+        "30d": "30 Days",
+        "90d": "90 Days",
+        "never": "Never Expire"
+      },
+      "aiSummary": "Enable AI Summary",
+      "sources": "Sources",
+      "pending": "Pending",
+      "imported": "Imported",
+      "lastScan": "Last Scan",
+      "searchHistory": "Search History",
+      "cachedProjects": "Cached",
+      "lastSearch": "Last Search",
+      "never": "Never",
+      "hoursAgo": "{{hours}} hours ago",
+      "daysAgo": "{{days}} days ago",
+      "configure": "Configure",
+      "viewInbox": "View Inbox",
+      "openSearch": "Open Search",
+      "saveConfig": "Save Config",
+      "cancel": "Cancel"
+    },
+    "storage": {
+      "info": "Data Storage",
+      "pluginConfig": "System Config",
+      "pluginConfigDesc": "Plugin enabled status and configuration",
+      "pluginData": "Plugin Data",
+      "pluginDataDesc": "Sources, scan results (follows vault)"
+    },
+    "pluginLevel": {
+      "system": "System",
+      "vault": "Vault"
+    }
   },
   "import": {
     "title": "Import Project",

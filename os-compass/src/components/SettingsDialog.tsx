@@ -72,6 +72,9 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
   const [variables, setVariables] = useState<SystemVariable[]>([]);
   const [extensions, setExtensions] = useState<SourcePlugin[]>([]);
   const [featurePlugins, setFeaturePlugins] = useState<FeaturePlugin[]>([]);
+  const [vaultDir, setVaultDir] = useState<string>("");
+  const [pluginConfigOpen, setPluginConfigOpen] = useState(false);
+  const [editingPlugin, setEditingPlugin] = useState<FeaturePlugin | null>(null);
   const [varModalOpen, setVarModalOpen] = useState(false);
   const [varForm, setVarForm] = useState({ key: "", value: "", isSecret: false });
   const [showVarValue, setShowVarValue] = useState(false);
@@ -131,8 +134,16 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
       invoke<FeaturePlugin[]>("list_feature_plugins")
         .then(setFeaturePlugins)
         .catch(console.error);
+      invoke<string>("get_vault_dir")
+        .then(setVaultDir)
+        .catch(() => setVaultDir(""));
     }
   }, [open]);
+
+  const handleConfigurePlugin = (plugin: FeaturePlugin) => {
+    setEditingPlugin(plugin);
+    setPluginConfigOpen(true);
+  };
 
   const validateProxy = (enabled: boolean, host: string, port: number, name: string): string | null => {
     if (!enabled) return null;
@@ -954,57 +965,57 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
 
           {activeTab === "plugins" && (
             <div className="space-y-4">
-              <h3 className="font-medium">{t("settings.featurePlugins")}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{t("settings.featurePluginsDesc")}</p>
-              <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-lg">{t("settings.featurePlugins")}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("settings.featurePluginsDesc")}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
                 {featurePlugins.map((plugin) => (
-                  <div key={plugin.id} className="bg-gray-50 rounded-xl border p-4 dark:bg-gray-900 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-                          {plugin.plugin_type === "radar" && <i className="fa-solid fa-satellite-dish text-xl"></i>}
-                          {plugin.plugin_type === "search" && <i className="fa-solid fa-magnifying-glass text-xl"></i>}
-                          {plugin.plugin_type !== "radar" && plugin.plugin_type !== "search" && <i className="fa-solid fa-puzzle-piece text-xl"></i>}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{plugin.name}</span>
-                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">
-                              v{plugin.version || "1.0.0"}
-                            </span>
-                            <span className={`text-xs px-2 py-0.5 rounded ${
-                              plugin.enabled
-                                ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
-                            }`}>
-                              {plugin.enabled ? t("settings.enabled") : t("settings.disabled")}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {plugin.plugin_type} · {plugin.db_mode === "none" ? t("settings.dbModeNone") : t("settings.dbModeVault")}
-                          </p>
-                        </div>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={plugin.enabled}
-                          onChange={(e) => {
-                            invoke("set_plugin_enabled", { pluginId: plugin.id, enabled: e.target.checked });
-                            setFeaturePlugins(featurePlugins.map((p) =>
-                              p.id === plugin.id ? { ...p, enabled: e.target.checked } : p
-                            ));
-                          }}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:bg-gray-700 dark:after:border-gray-600"></div>
-                      </label>
-                    </div>
-                  </div>
+                  <PluginCard
+                    key={plugin.id}
+                    plugin={plugin}
+                    onToggle={async (enabled) => {
+                      try {
+                        await invoke("set_plugin_enabled", { pluginId: plugin.id, enabled });
+                        setFeaturePlugins(featurePlugins.map((p) =>
+                          p.id === plugin.id ? { ...p, enabled } : p
+                        ));
+                      } catch (e) {
+                        console.error("Failed to toggle plugin:", e);
+                      }
+                    }}
+                    onConfigure={() => handleConfigurePlugin(plugin)}
+                  />
                 ))}
+
                 {featurePlugins.length === 0 && (
-                  <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t("settings.noPlugins")}</p>
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                    <i className="fa-solid fa-plug text-4xl mb-4 opacity-50"></i>
+                    <p>{t("settings.noPlugins")}</p>
+                  </div>
                 )}
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+                <h4 className="font-medium text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                  <i className="fa-solid fa-info-circle"></i>
+                  {t("settings.storage.info")}
+                </h4>
+                <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                  <div>
+                    <p className="text-blue-600 dark:text-blue-400 font-medium">{t("settings.storage.pluginConfig")}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 font-mono">$&#123;AppData&#125;/.os-compass/plugins.db</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs">{t("settings.storage.pluginConfigDesc")}</p>
+                  </div>
+                  <div>
+                    <p className="text-blue-600 dark:text-blue-400 font-medium">{t("settings.storage.pluginData")}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 font-mono">{vaultDir}/plugin_*.db</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs">{t("settings.storage.pluginDataDesc")}</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1117,6 +1128,351 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
           </div>
         </div>
       )}
+
+      {pluginConfigOpen && editingPlugin && (
+        <PluginConfigModal
+          plugin={editingPlugin}
+          vaultDir={vaultDir}
+          onClose={() => {
+            setPluginConfigOpen(false);
+            setEditingPlugin(null);
+          }}
+          onSave={async (config) => {
+            try {
+              await invoke("save_plugin_config", { pluginId: editingPlugin.id, config });
+              setPluginConfigOpen(false);
+              setEditingPlugin(null);
+            } catch (e) {
+              console.error("Failed to save plugin config:", e);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+interface PluginCardProps {
+  plugin: FeaturePlugin;
+  onToggle: (enabled: boolean) => void;
+  onConfigure: () => void;
+}
+
+function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
+  const { t } = useTranslation();
+  const [showConfig, setShowConfig] = useState(false);
+  const isRadar = plugin.plugin_type === "radar";
+  const color = isRadar ? "blue" : "purple";
+  const icon = isRadar ? "satellite-dish" : "brain";
+
+  const config = plugin.config ? JSON.parse(plugin.config) : {};
+  const stats = isRadar ? {
+    sources: config.sources || 0,
+    pending: config.pending || 0,
+    imported: config.imported || 0,
+    lastScan: config.lastScan || null,
+  } : {
+    history: config.history || 0,
+    cached: config.cached || 0,
+    lastSearch: config.lastSearch || null,
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200">
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-4">
+          <div className={`w-14 h-14 bg-${color}-100 dark:bg-${color}-900/40 rounded-xl flex items-center justify-center text-${color}-600 dark:text-${color}-400`}>
+            <i className={`fa-solid fa-${icon} text-2xl`}></i>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-lg font-bold">{plugin.name}</h3>
+              <span className={`px-2 py-0.5 text-xs bg-${color}-100 dark:bg-${color}-900/40 text-${color}-700 dark:text-${color}-400 rounded`}>
+                {t("settings.pluginLevel.system")}
+              </span>
+              <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+                v{plugin.version || "1.0.0"}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              {isRadar
+                ? "自动跟踪已关注项目的 Release、Issue、Star 变化"
+                : "基于自然语言需求，RAG 联网检索开源方案对比"}
+            </p>
+            <div className="flex items-center gap-4 text-xs text-gray-400">
+              <span><i className="fa-solid fa-database mr-1"></i>{t("settings.dbModeVault")}</span>
+              <span><i className="fa-solid fa-folder mr-1"></i>{t("settings.storage.pluginDataDesc")}</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className={`text-sm ${plugin.enabled ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>
+            <i className={`fa-solid ${plugin.enabled ? "fa-check-circle" : "fa-circle"} mr-1`}></i>
+            {plugin.enabled ? t("settings.enabled") : t("settings.disabled")}
+          </span>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={plugin.enabled}
+              onChange={(e) => onToggle(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-${color}-600 dark:bg-gray-700 dark:after:border-gray-600`}></div>
+          </label>
+        </div>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <div className="grid grid-cols-4 gap-4 text-sm">
+          {isRadar ? (
+            <>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">{t("settings.pluginConfig.sources")}</span>
+                <p className="font-medium mt-0.5">{stats.sources} 个</p>
+              </div>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">{t("settings.pluginConfig.pending")}</span>
+                <p className="font-medium mt-0.5 text-blue-600 dark:text-blue-400">{stats.pending} 条</p>
+              </div>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">{t("settings.pluginConfig.imported")}</span>
+                <p className="font-medium mt-0.5 text-green-600 dark:text-green-400">{stats.imported} 个</p>
+              </div>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">{t("settings.pluginConfig.lastScan")}</span>
+                <p className="font-medium mt-0.5">{stats.lastScan || t("settings.pluginConfig.never")}</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">{t("settings.pluginConfig.searchHistory")}</span>
+                <p className="font-medium mt-0.5">{stats.history} 次</p>
+              </div>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">{t("settings.pluginConfig.cachedProjects")}</span>
+                <p className="font-medium mt-0.5">{stats.cached} 个</p>
+              </div>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">{t("settings.pluginConfig.lastSearch")}</span>
+                <p className="font-medium mt-0.5">{stats.lastSearch || t("settings.pluginConfig.never")}</p>
+              </div>
+              <div></div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex gap-2">
+        <button
+          onClick={() => setShowConfig(!showConfig)}
+          className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition"
+        >
+          <i className="fa-solid fa-gear mr-1"></i>
+          {t("settings.pluginConfig.configure")}
+        </button>
+        {isRadar && (
+          <button className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+            <i className="fa-solid fa-inbox mr-1"></i>
+            {t("settings.pluginConfig.viewInbox")}
+          </button>
+        )}
+        {!isRadar && (
+          <button className="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
+            <i className="fa-solid fa-magnifying-glass mr-1"></i>
+            {t("settings.pluginConfig.openSearch")}
+          </button>
+        )}
+      </div>
+
+      {showConfig && (
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
+          {isRadar ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t("settings.pluginConfig.checkInterval")}</label>
+                <select
+                  defaultValue={config.checkInterval || "12h"}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg"
+                >
+                  <option value="6h">{t("settings.pluginConfig.checkIntervalOptions.6h")}</option>
+                  <option value="12h">{t("settings.pluginConfig.checkIntervalOptions.12h")}</option>
+                  <option value="1d">{t("settings.pluginConfig.checkIntervalOptions.1d")}</option>
+                  <option value="1w">{t("settings.pluginConfig.checkIntervalOptions.1w")}</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="notify" defaultChecked={config.notificationEnabled} className="rounded" />
+                <label htmlFor="notify" className="text-sm">{t("settings.pluginConfig.notificationEnabled")}</label>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t("settings.pluginConfig.searchStrategy")}</label>
+                <select
+                  defaultValue={config.searchStrategy || "localFirst"}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg"
+                >
+                  <option value="localFirst">{t("settings.pluginConfig.searchStrategyOptions.localFirst")}</option>
+                  <option value="webFirst">{t("settings.pluginConfig.searchStrategyOptions.webFirst")}</option>
+                  <option value="localOnly">{t("settings.pluginConfig.searchStrategyOptions.localOnly")}</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="aiSummary" defaultChecked={config.aiSummary !== false} className="rounded" />
+                <label htmlFor="aiSummary" className="text-sm">{t("settings.pluginConfig.aiSummary")}</label>
+              </div>
+            </>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => setShowConfig(false)}
+              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              {t("settings.pluginConfig.cancel")}
+            </button>
+            <button
+              onClick={onConfigure}
+              className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+            >
+              {t("settings.pluginConfig.saveConfig")}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface PluginConfigModalProps {
+  plugin: FeaturePlugin;
+  vaultDir: string;
+  onClose: () => void;
+  onSave: (config: string) => void;
+}
+
+function PluginConfigModal({ plugin, vaultDir, onClose, onSave }: PluginConfigModalProps) {
+  const { t } = useTranslation();
+  const [config, setConfig] = useState<Record<string, any>>(
+    plugin.config ? JSON.parse(plugin.config) : {}
+  );
+  const isRadar = plugin.plugin_type === "radar";
+
+  const handleSave = () => {
+    onSave(JSON.stringify(config, null, 2));
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">
+              {t("settings.pluginConfig.title")} - {plugin.name}
+            </h3>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <i className="fa-solid fa-xmark text-xl"></i>
+            </button>
+          </div>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 text-sm">
+            <p className="text-gray-500 dark:text-gray-400 mb-1">{t("settings.storage.pluginData")}</p>
+            <p className="font-mono text-xs break-all">{vaultDir}/plugin_{plugin.id}.db</p>
+          </div>
+
+          {isRadar ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t("settings.pluginConfig.checkInterval")}</label>
+                <select
+                  value={config.checkInterval || "12h"}
+                  onChange={(e) => setConfig({ ...config, checkInterval: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg"
+                >
+                  <option value="6h">{t("settings.pluginConfig.checkIntervalOptions.6h")}</option>
+                  <option value="12h">{t("settings.pluginConfig.checkIntervalOptions.12h")}</option>
+                  <option value="1d">{t("settings.pluginConfig.checkIntervalOptions.1d")}</option>
+                  <option value="1w">{t("settings.pluginConfig.checkIntervalOptions.1w")}</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="notifyEnabled"
+                  checked={config.notificationEnabled !== false}
+                  onChange={(e) => setConfig({ ...config, notificationEnabled: e.target.checked })}
+                  className="rounded"
+                />
+                <label htmlFor="notifyEnabled" className="text-sm">{t("settings.pluginConfig.notificationEnabled")}</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="autoImport"
+                  checked={config.autoImport || false}
+                  onChange={(e) => setConfig({ ...config, autoImport: e.target.checked })}
+                  className="rounded"
+                />
+                <label htmlFor="autoImport" className="text-sm">{t("settings.pluginConfig.autoImportStars", { stars: 1000 })}</label>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t("settings.pluginConfig.searchStrategy")}</label>
+                <select
+                  value={config.searchStrategy || "localFirst"}
+                  onChange={(e) => setConfig({ ...config, searchStrategy: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg"
+                >
+                  <option value="localFirst">{t("settings.pluginConfig.searchStrategyOptions.localFirst")}</option>
+                  <option value="webFirst">{t("settings.pluginConfig.searchStrategyOptions.webFirst")}</option>
+                  <option value="localOnly">{t("settings.pluginConfig.searchStrategyOptions.localOnly")}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t("settings.pluginConfig.cacheTtl")}</label>
+                <select
+                  value={config.cacheTtl || "30d"}
+                  onChange={(e) => setConfig({ ...config, cacheTtl: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg"
+                >
+                  <option value="7d">{t("settings.pluginConfig.cacheTtlOptions.7d")}</option>
+                  <option value="30d">{t("settings.pluginConfig.cacheTtlOptions.30d")}</option>
+                  <option value="90d">{t("settings.pluginConfig.cacheTtlOptions.90d")}</option>
+                  <option value="never">{t("settings.pluginConfig.cacheTtlOptions.never")}</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="aiSummary"
+                  checked={config.aiSummary !== false}
+                  onChange={(e) => setConfig({ ...config, aiSummary: e.target.checked })}
+                  className="rounded"
+                />
+                <label htmlFor="aiSummary" className="text-sm">{t("settings.pluginConfig.aiSummary")}</label>
+              </div>
+            </>
+          )}
+        </div>
+        <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            {t("settings.pluginConfig.cancel")}
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          >
+            {t("settings.pluginConfig.saveConfig")}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

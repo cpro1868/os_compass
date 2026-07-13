@@ -32,6 +32,14 @@ fn get_app_data_dir(app: tauri::AppHandle) -> String {
         .unwrap_or_default()
 }
 
+#[command]
+fn get_vault_dir() -> String {
+    PROJECT_DIR.lock().unwrap()
+        .as_ref()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default()
+}
+
 fn find_git_root(path: &std::path::Path) -> Option<std::path::PathBuf> {
     let mut current = path;
     loop {
@@ -348,6 +356,7 @@ pub fn run() {
             commands::refresh_search_cache,
             commands::import_search_result,
             get_app_data_dir,
+            get_vault_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
