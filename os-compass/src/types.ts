@@ -89,6 +89,7 @@ export interface SourcePlugin {
   enabled: boolean;
   version: string | null;
   requiredVariables: VariableDef[];
+  urlPatterns?: string[];
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -125,4 +126,14 @@ export function parseLanguages(languages: string | null): string[] {
     }
   }
   return [];
+}
+
+export interface AiResult {
+  summary: string | null;
+  use_cases: string | null;
+  risks: string | null;
+  dependencies: string | null;
+  health_score: number | null;
+  health_rating: string | null;
+  error: string | null;
 }

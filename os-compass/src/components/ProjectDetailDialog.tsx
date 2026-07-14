@@ -437,7 +437,11 @@ const handleAnalyze = useCallback(async () => {
     try {
       await clearTranslations(project.id);
       const result = await invoke<AiResult>("analyze_project", { id: project.id });
-      setAiResult(result);
+      if (result.error) {
+        showToast(`${t("detail.reanalyzeFailed")}: ${result.error}`, "error");
+      } else {
+        setAiResult(result);
+      }
     } catch (e) {
       showToast(`${t("detail.reanalyzeFailed")}: ${String(e)}`, "error");
     } finally {
