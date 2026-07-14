@@ -127,32 +127,7 @@ CREATE TABLE IF NOT EXISTS project_notes (
     updated_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 
-CREATE TABLE IF NOT EXISTS system_variables (
-    key TEXT PRIMARY KEY,
-    value TEXT,
-    is_secret INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-
-CREATE TABLE IF NOT EXISTS app_settings (
-    key TEXT PRIMARY KEY,
-    value TEXT,
-    is_secret INTEGER DEFAULT 0,
-    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-
-CREATE TABLE IF NOT EXISTS source_plugins (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    plugin_class TEXT NOT NULL,
-    description TEXT,
-    enabled INTEGER DEFAULT 1,
-    version TEXT,
-    required_variables TEXT,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
+-- NOTE: system_variables and app_settings moved to system_settings.db (V2.0)
 
 CREATE TABLE IF NOT EXISTS readme_variants (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -214,19 +189,8 @@ CREATE INDEX IF NOT EXISTS idx_releases_published ON project_releases(published_
 
 INSERT OR IGNORE INTO categories (id, name, sort_order) VALUES (1, '未分类', 0);
 
-INSERT OR IGNORE INTO source_plugins (id, name, plugin_class, description, enabled, version, required_variables) VALUES
-('github', 'GitHub', 'plugins::GitHubPlugin', '获取 GitHub 项目信息、健康度评分', 1, '1.0.0',
- '[{"key": "github_token", "name": "GitHub Token", "description": "GitHub Personal Access Token，用于访问 GitHub API","secret": true}, {"key": "github_proxy", "name": "GitHub 代理地址", "description": "访问 GitHub API 使用的代理地址","secret": false}]'),
-('gitee', 'Gitee', 'plugins::GiteePlugin', '获取 Gitee 项目信息、健康度评分', 1, '1.0.0',
- '[{"key": "gitee_token", "name": "Gitee 私有令牌", "description": "Gitee 私有令牌，用于访问 Gitee API","secret": true}]'),
-('crawler', '通用爬虫', 'plugins::CrawlerPlugin', '无 Token 时的降级方案', 1, '1.0.0', '[]');
-
-INSERT OR IGNORE INTO system_variables (key, value, is_secret) VALUES
-('github_token', '', 1),
-('github_proxy', '', 0),
-('gitee_token', '', 1);
-
-DELETE FROM system_variables WHERE key LIKE 'settings.%';
+-- NOTE: source_plugins moved to system_settings.db (V2.0)
+-- NOTE: system_variables moved to system_settings.db (V2.0)
 
 CREATE TABLE IF NOT EXISTS feature_plugins (
     id TEXT PRIMARY KEY,

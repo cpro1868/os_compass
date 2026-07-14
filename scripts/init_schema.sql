@@ -73,36 +73,7 @@ CREATE TABLE IF NOT EXISTS project_notes (
     updated_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 
--- 2. System variables (user + extension variables)
-CREATE TABLE IF NOT EXISTS system_variables (
-    key TEXT PRIMARY KEY,
-    value TEXT,
-    is_secret INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-
--- 3. App settings (system configuration)
-CREATE TABLE IF NOT EXISTS app_settings (
-    key TEXT PRIMARY KEY,
-    value TEXT,
-    is_secret INTEGER DEFAULT 0,
-    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-
--- 4. Source plugins (扩展插件配置：支持从哪些平台导入项目)
-CREATE TABLE IF NOT EXISTS source_plugins (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    plugin_class TEXT NOT NULL,
-    description TEXT,
-    enabled INTEGER DEFAULT 1,
-    version TEXT,
-    required_variables TEXT,
-    url_patterns TEXT,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
+-- NOTE: system_variables, app_settings, source_plugins moved to system_settings.db (V2.0)
 
 -- 5. README variants
 CREATE TABLE IF NOT EXISTS readme_variants (
@@ -170,21 +141,7 @@ CREATE INDEX IF NOT EXISTS idx_releases_published ON project_releases(published_
 -- 10. Seed data
 INSERT OR IGNORE INTO categories (id, name, sort_order) VALUES (1, '未分类', 0);
 
-INSERT OR IGNORE INTO source_plugins (id, name, plugin_class, description, enabled, version, required_variables, url_patterns) VALUES
-('github', 'GitHub', 'plugins::GitHubPlugin', 'Fetch GitHub project info and health score', 1, '1.0.0',
- '[{"key": "github_token", "name": "GitHub Token", "description": "GitHub Personal Access Token for GitHub API access","secret": true}, {"key": "github_proxy", "name": "GitHub Proxy", "description": "Proxy address for GitHub API access","secret": false}]',
- '["github.com", "www.github.com"]'),
-('gitee', 'Gitee', 'plugins::GiteePlugin', 'Fetch Gitee project info and health score', 1, '1.0.0',
- '[{"key": "gitee_token", "name": "Gitee Token", "description": "Gitee private token for Gitee API access","secret": true}]',
- '["gitee.com", "www.gitee.com"]'),
-('crawler', 'Crawler', 'plugins::CrawlerPlugin', 'Fallback when no Token available', 1, '1.0.0', '[]', '[]');
-
-INSERT OR IGNORE INTO system_variables (key, value, is_secret) VALUES
-('github_token', '', 1),
-('github_proxy', '', 0),
-('gitee_token', '', 1);
-
-DELETE FROM system_variables WHERE key LIKE 'settings.%';
+-- NOTE: source_plugins and system_variables moved to system_settings.db (V2.0)
 
 -- 11. Feature plugins (Radar & Search)
 CREATE TABLE IF NOT EXISTS feature_plugins (

@@ -1,18 +1,9 @@
-use crate::db::DATABASE;
-use serde::{Deserialize, Serialize};
+use crate::system_db;
+use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VariableDef {
-    pub key: String,
-    pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    pub secret: bool,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "default")]
-    pub default: Option<String>,
-}
+pub use system_db::VariableDef;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct SourcePlugin {
     pub id: String,
     pub name: String,
@@ -22,116 +13,57 @@ pub struct SourcePlugin {
     pub enabled: bool,
     pub version: Option<String>,
     #[serde(rename = "requiredVariables")]
-    pub required_variables: Vec<VariableDef>,
+    pub required_variables: Vec<system_db::VariableDef>,
+    #[serde(rename = "urlPatterns", skip_serializing_if = "Option::is_none")]
+    pub url_patterns: Option<Vec<String>>,
     #[serde(rename = "createdAt", skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
     #[serde(rename = "updatedAt", skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
 }
 
+impl From<system_db::SourcePluginInfo> for SourcePlugin {
+    fn from(info: system_db::SourcePluginInfo) -> Self {
+        SourcePlugin {
+            id: info.id,
+            name: info.name,
+            plugin_class: info.plugin_class,
+            description: info.description,
+            enabled: info.enabled,
+            version: info.version,
+            required_variables: info.required_variables,
+            url_patterns: info.url_patterns,
+            created_at: info.created_at,
+            updated_at: info.updated_at,
+        }
+    }
+}
+
 #[tauri::command]
 pub fn list_extensions() -> Result<Vec<SourcePlugin>, String> {
-    let db = DATABASE.lock().map_err(|e| e.to_string())?;
-    let db = db.as_ref().ok_or("Database not initialized")?;
-    let conn = db.get_connection();
-    let mut stmt = conn
-        .prepare("SELECT id, name, plugin_class, description, enabled, version, required_variables, created_at, updated_at FROM source_plugins ORDER BY id")
-        .map_err(|e| e.to_string())?;
-    let plugins = stmt
-        .query_map([], |row| {
-            let required_variables_json: Option<String> = row.get(6)?;
-            let required_variables: Vec<VariableDef> = required_variables_json
-                .and_then(|json| serde_json::from_str(&json).ok())
-                .unwrap_or_default();
-            Ok(SourcePlugin {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                plugin_class: row.get(2)?,
-                description: row.get(3)?,
-                enabled: row.get::<_, i32>(4)? != 0,
-                version: row.get(5)?,
-                required_variables,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-            })
-        })
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
-    Ok(plugins)
+    let plugins = system_db::list_source_plugins()?;
+    Ok(plugins.into_iter().map(SourcePlugin::from).collect())
 }
 
 #[tauri::command]
 pub fn get_extension(id: String) -> Result<Option<SourcePlugin>, String> {
-    let db = DATABASE.lock().map_err(|e| e.to_string())?;
-    let db = db.as_ref().ok_or("Database not initialized")?;
-    let conn = db.get_connection();
-    let mut stmt = conn
-        .prepare("SELECT id, name, plugin_class, description, enabled, version, required_variables, created_at, updated_at FROM source_plugins WHERE id = ?")
-        .map_err(|e| e.to_string())?;
-    let plugin = stmt
-        .query_row([&id], |row| {
-            let required_variables_json: Option<String> = row.get(6)?;
-            let required_variables: Vec<VariableDef> = required_variables_json
-                .and_then(|json| serde_json::from_str(&json).ok())
-                .unwrap_or_default();
-            Ok(SourcePlugin {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                plugin_class: row.get(2)?,
-                description: row.get(3)?,
-                enabled: row.get::<_, i32>(4)? != 0,
-                version: row.get(5)?,
-                required_variables,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-            })
-        })
-        .ok();
-    Ok(plugin)
+    match system_db::get_source_plugin(&id)? {
+        Some(info) => Ok(Some(SourcePlugin::from(info))),
+        None => Ok(None),
+    }
 }
 
 #[tauri::command]
 pub fn set_extension_enabled(id: String, enabled: bool) -> Result<(), String> {
-    let db = DATABASE.lock().map_err(|e| e.to_string())?;
-    let db = db.as_ref().ok_or("Database not initialized")?;
-    let conn = db.get_connection();
-    conn.execute(
-        "UPDATE source_plugins SET enabled = ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
-        rusqlite::params![enabled as i32, id],
-    )
-    .map_err(|e| e.to_string())?;
-    Ok(())
+    system_db::toggle_source_plugin(&id, enabled)
 }
 
 #[tauri::command]
 pub fn get_enabled_extensions() -> Result<Vec<SourcePlugin>, String> {
-    let db = DATABASE.lock().map_err(|e| e.to_string())?;
-    let db = db.as_ref().ok_or("Database not initialized")?;
-    let conn = db.get_connection();
-    let mut stmt = conn
-        .prepare("SELECT id, name, plugin_class, description, enabled, version, required_variables, created_at, updated_at FROM source_plugins WHERE enabled = 1 ORDER BY id")
-        .map_err(|e| e.to_string())?;
-    let plugins = stmt
-        .query_map([], |row| {
-            let required_variables_json: Option<String> = row.get(6)?;
-            let required_variables: Vec<VariableDef> = required_variables_json
-                .and_then(|json| serde_json::from_str(&json).ok())
-                .unwrap_or_default();
-            Ok(SourcePlugin {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                plugin_class: row.get(2)?,
-                description: row.get(3)?,
-                enabled: row.get::<_, i32>(4)? != 0,
-                version: row.get(5)?,
-                required_variables,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-            })
-        })
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
-    Ok(plugins)
+    let plugins = system_db::list_source_plugins()?;
+    Ok(plugins
+        .into_iter()
+        .filter(|p| p.enabled)
+        .map(SourcePlugin::from)
+        .collect())
 }
