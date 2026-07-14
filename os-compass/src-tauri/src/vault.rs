@@ -257,7 +257,7 @@ pub fn migrate_to_vault(app: AppHandle, vault_path: String, old_db_path: PathBuf
     let old_conn = Connection::open(&old_db_path).map_err(|e| e.to_string())?;
     let mut new_conn = Connection::open(&new_db_path).map_err(|e| e.to_string())?;
 
-    let tables = ["categories", "tags", "project_tags", "projects", "translations", "system_variables", "source_plugins", "project_releases", "project_notes"];
+    let tables = ["categories", "tags", "project_tags", "projects", "translations", "project_releases", "project_notes"];
 
     for table in tables {
         let count: i64 = old_conn.query_row(
@@ -513,7 +513,6 @@ fn check_vault_integrity(path: &str) -> Result<VaultIntegrityInfo, String> {
 
     let required_tables: Vec<&str> = vec![
         "categories", "tags", "projects", "project_tags", "project_notes",
-        "system_variables", "app_settings", "source_plugins",
         "readme_variants", "translations", "project_clone", "project_releases",
     ];
 
@@ -541,7 +540,6 @@ fn check_vault_integrity(path: &str) -> Result<VaultIntegrityInfo, String> {
     let key_cols = [
         ("tags", vec!["source"]),
         ("projects", vec!["data_status", "lifecycle_status"]),
-        ("system_variables", vec!["is_secret"]),
     ];
     for (table, cols) in &key_cols {
         let pragma_sql = format!("PRAGMA table_info({})", table);
@@ -562,31 +560,8 @@ fn check_vault_integrity(path: &str) -> Result<VaultIntegrityInfo, String> {
         .map_err(|e| format!("读取 .cryptokey 失败：{}", e))?;
     let crypto_key = crate::crypto::key_from_base64(key_content.trim())
         .map_err(|_| ".cryptokey 文件格式无效，无法解密敏感数据".to_string())?;
-    let crypto = crate::crypto::CryptoManager::new(&crypto_key);
 
-    let (has_encrypted, sample_value) = conn
-        .query_row(
-            "SELECT value FROM system_variables WHERE is_secret = 1 AND value != '' LIMIT 1",
-            [],
-            |row| row.get::<_, String>(0),
-        )
-        .map(|v| (true, Some(v)))
-        .or_else(|_| {
-            conn.query_row(
-                "SELECT value FROM app_settings WHERE is_secret = 1 AND value != '' LIMIT 1",
-                [],
-                |row| row.get::<_, String>(0),
-            )
-            .map(|v| (true, Some(v)))
-        })
-        .unwrap_or((false, None));
-
-    if has_encrypted {
-        if let Some(value) = sample_value {
-            crypto.decrypt(&value)
-                .map_err(|_| ".cryptokey 与数据库加密数据不匹配，请确认密钥文件来自同一仓库".to_string())?;
-        }
-    }
+    // V2.0: system_variables 已移到系统库，仓库库不再存储敏感数据
 
     let project_count = conn
         .query_row(

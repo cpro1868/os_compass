@@ -1,4 +1,5 @@
 use crate::db::DATABASE;
+use crate::system_db;
 use crate::vault::VaultConfig;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -103,154 +104,150 @@ impl From<&AppSettings> for VaultConfig {
     }
 }
 
-fn get_setting(db: &rusqlite::Connection, key: &str) -> Option<String> {
-    let result: (String, i32) = db.query_row(
-        "SELECT value, is_secret FROM app_settings WHERE key = ?",
-        [key],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-    )
-    .ok()?;
-
-    let (value, is_secret) = result;
-    if is_secret != 0 {
-        // 敏感字段：解密后返回
-        match crate::crypto::decrypt_string(&value) {
-            Ok(plaintext) => Some(plaintext),
-            Err(e) => {
-                // 解密失败：保留密文，不清理，避免密钥临时不匹配导致数据永久丢失
-                println!("[settings] WARNING: Cannot decrypt key='{}' (len={}): {}. Data preserved.", key, value.len(), e);
-                None
-            }
-        }
-    } else {
-        Some(value)
-    }
-}
-
-fn set_setting(db: &rusqlite::Connection, key: &str, value: &str, is_secret: bool) -> Result<(), String> {
-    let stored_value = if is_secret {
-        crate::crypto::encrypt_string(value)?
-    } else {
-        value.to_string()
-    };
-    
-    db.execute(
-        "INSERT INTO app_settings (key, value, is_secret, updated_at) VALUES (?, ?, ?, datetime('now', 'localtime'))
-         ON CONFLICT(key) DO UPDATE SET value = excluded.value, is_secret = excluded.is_secret, updated_at = datetime('now', 'localtime')",
-        rusqlite::params![key, stored_value, is_secret as i32],
-    )
-    .map_err(|e| e.to_string())?;
-    Ok(())
-}
-
 pub fn get_settings() -> AppSettings {
     let mut settings = AppSettings::default();
 
-    // 先从 app_settings 表读取
-    let mut need_migration = false;
-    {
-        let db_guard = match DATABASE.lock() {
-            Ok(db) => db,
-            Err(_) => return settings,
-        };
-        let db = match db_guard.as_ref() {
-            Some(db) => db,
-            None => return settings,
-        };
-        let conn = db.get_connection();
+    let get = |key: &str| -> Option<String> { system_db::get_system_setting(key) };
+    let get_bool = |key: &str, default: bool| -> bool {
+        get(key).map(|v| v == "1" || v.to_lowercase() == "true").unwrap_or(default)
+    };
+    let get_i32 = |key: &str, default: i32| -> i32 {
+        get(key).and_then(|v| v.parse().ok()).unwrap_or(default)
+    };
 
-        let get = |key: &str| -> Option<String> { get_setting(&conn, key) };
-        let get_bool = |key: &str, default: bool| -> bool {
-            get(key).map(|v| v == "1" || v.to_lowercase() == "true").unwrap_or(default)
-        };
-        let get_i32 = |key: &str, default: i32| -> i32 {
-            get(key).and_then(|v| v.parse().ok()).unwrap_or(default)
-        };
-
-        let api_key = get("settings.llm_api_key");
-        let api_base = get("settings.llm_api_base");
-        let model = get("settings.llm_model");
-
-        // 判断是否需要迁移：
-        // 1. api_key 解密失败（None）→ 需要迁移
-        // 2. 表完全为空 → 需要迁移
-        let table_count: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM app_settings",
-            [],
-            |row| row.get(0),
-        ).unwrap_or(0);
-
-        if api_key.is_none() && table_count > 0 {
-            // api_key 解密失败但表里有数据 → 密钥不匹配，需要迁移
-            println!("[settings] API key decryption failed, need migration from settings.db");
-            need_migration = true;
-        } else if table_count == 0 {
-            // 表为空，需要迁移
-            need_migration = true;
-        }
-
-        if !need_migration {
-            // 正常读取
-            settings.theme = get("settings.theme").unwrap_or_else(|| "dark".to_string());
-            settings.default_language = get("settings.default_language").unwrap_or_else(|| "zh-CN".to_string());
-            settings.auto_translate_readme = get_bool("settings.auto_translate_readme", true);
-            settings.auto_translate_report = get_bool("settings.auto_translate_report", true);
-            if let Some(dp) = get("settings.download_path") {
-                if !dp.is_empty() { settings.download_path = dp; }
-            }
-            settings.default_editor = get("settings.default_editor").unwrap_or_else(|| "code".to_string());
-            settings.llm_provider = get("settings.llm_provider").unwrap_or_else(|| "openai".to_string());
-            settings.llm_api_base = api_base.unwrap_or_else(|| "https://api.openai.com/v1".to_string());
-            settings.llm_api_key = api_key.unwrap_or_default();
-            settings.llm_model = model.unwrap_or_else(|| "gpt-4o-mini".to_string());
-            settings.llm_proxy_enabled = get_bool("settings.llm_proxy_enabled", false);
-            settings.llm_proxy_protocol = get("settings.llm_proxy_protocol").unwrap_or_else(|| "http".to_string());
-            settings.llm_proxy_host = get("settings.llm_proxy_host").unwrap_or_default();
-            settings.llm_proxy_port = get_i32("settings.llm_proxy_port", 0);
-            settings.llm_proxy_username = get("settings.llm_proxy_username").unwrap_or_default();
-            settings.llm_proxy_password = get("settings.llm_proxy_password").unwrap_or_default();
-            settings.proxy_enabled = get_bool("settings.proxy_enabled", false);
-            settings.proxy_protocol = get("settings.proxy_protocol").unwrap_or_else(|| "http".to_string());
-            settings.proxy_host = get("settings.proxy_host").unwrap_or_default();
-            settings.proxy_port = get_i32("settings.proxy_port", 0);
-            settings.proxy_username = get("settings.proxy_username").unwrap_or_default();
-            settings.proxy_password = get("settings.proxy_password").unwrap_or_default();
-            settings.crawler_enabled = get_bool("settings.crawler_enabled", true);
-            settings.crawler_api_url = get("settings.crawler_api_url").unwrap_or_default();
-            settings.readme_update_frequency = get("settings.readme_update_frequency").unwrap_or_else(|| "smart".to_string());
-            settings.translate_engine = get("settings.translate_engine").unwrap_or_else(|| "auto".to_string());
-            settings.google_api_key = get("settings.google_api_key").unwrap_or_default();
-            settings.google_proxy_enabled = get_bool("settings.google_proxy_enabled", false);
-            settings.google_proxy_protocol = get("settings.google_proxy_protocol").unwrap_or_else(|| "http".to_string());
-            settings.google_proxy_host = get("settings.google_proxy_host").unwrap_or_default();
-            settings.google_proxy_port = get_i32("settings.google_proxy_port", 0);
-            settings.google_proxy_username = get("settings.google_proxy_username").unwrap_or_default();
-            settings.google_proxy_password = get("settings.google_proxy_password").unwrap_or_default();
-        }
+    if let Some(v) = get("settings.theme") {
+        if !v.is_empty() { settings.theme = v; }
     }
-
-    if need_migration {
-        // 清空 app_settings 中所有旧数据
-        if let Ok(db_guard) = DATABASE.lock() {
-            if let Some(db) = db_guard.as_ref() {
-                let conn = db.get_connection();
-                let _ = conn.execute("DELETE FROM app_settings WHERE key LIKE 'settings.%'", []);
-            }
-        }
-
-        // 从 settings.db 迁移（明文存储，最可靠）
-        if let Some(config) = read_legacy_settings_db() {
-            println!("[settings] Migrating from settings.db");
-            apply_legacy_settings(&mut settings, &config);
-            let _ = save_settings(&settings);
-        } else if let Some(config) = read_legacy_config() {
-            println!("[settings] Migrating from config.json");
-            apply_legacy_settings(&mut settings, &config);
-            let _ = save_settings(&settings);
-        }
+    if let Some(v) = get("settings.default_language") {
+        if !v.is_empty() { settings.default_language = v; }
+    }
+    if let Some(v) = get("settings.auto_translate_readme") {
+        settings.auto_translate_readme = v == "1" || v.to_lowercase() == "true";
+    }
+    if let Some(v) = get("settings.auto_translate_report") {
+        settings.auto_translate_report = v == "1" || v.to_lowercase() == "true";
+    }
+    if let Some(dp) = get("settings.download_path") {
+        if !dp.is_empty() { settings.download_path = dp; }
+    }
+    if let Some(v) = get("settings.default_editor") {
+        if !v.is_empty() { settings.default_editor = v; }
+    }
+    if let Some(v) = get("settings.llm_provider") {
+        if !v.is_empty() { settings.llm_provider = v; }
+    }
+    if let Some(v) = get("settings.llm_api_base") {
+        if !v.is_empty() { settings.llm_api_base = v; }
+    }
+    if let Some(v) = get("settings.llm_api_key") {
+        if !v.is_empty() { settings.llm_api_key = v; }
+    }
+    if let Some(v) = get("settings.llm_model") {
+        if !v.is_empty() { settings.llm_model = v; }
+    }
+    settings.llm_proxy_enabled = get_bool("settings.llm_proxy_enabled", false);
+    if let Some(v) = get("settings.llm_proxy_protocol") {
+        if !v.is_empty() { settings.llm_proxy_protocol = v; }
+    }
+    if let Some(v) = get("settings.llm_proxy_host") {
+        if !v.is_empty() { settings.llm_proxy_host = v; }
+    }
+    settings.llm_proxy_port = get_i32("settings.llm_proxy_port", 0);
+    if let Some(v) = get("settings.llm_proxy_username") {
+        if !v.is_empty() { settings.llm_proxy_username = v; }
+    }
+    if let Some(v) = get("settings.llm_proxy_password") {
+        if !v.is_empty() { settings.llm_proxy_password = v; }
+    }
+    settings.proxy_enabled = get_bool("settings.proxy_enabled", false);
+    if let Some(v) = get("settings.proxy_protocol") {
+        if !v.is_empty() { settings.proxy_protocol = v; }
+    }
+    if let Some(v) = get("settings.proxy_host") {
+        if !v.is_empty() { settings.proxy_host = v; }
+    }
+    settings.proxy_port = get_i32("settings.proxy_port", 0);
+    if let Some(v) = get("settings.proxy_username") {
+        if !v.is_empty() { settings.proxy_username = v; }
+    }
+    if let Some(v) = get("settings.proxy_password") {
+        if !v.is_empty() { settings.proxy_password = v; }
+    }
+    settings.crawler_enabled = get_bool("settings.crawler_enabled", true);
+    if let Some(v) = get("settings.crawler_api_url") {
+        if !v.is_empty() { settings.crawler_api_url = v; }
+    }
+    if let Some(v) = get("settings.readme_update_frequency") {
+        if !v.is_empty() { settings.readme_update_frequency = v; }
+    }
+    if let Some(v) = get("settings.translate_engine") {
+        if !v.is_empty() { settings.translate_engine = v; }
+    }
+    if let Some(v) = get("settings.google_api_key") {
+        if !v.is_empty() { settings.google_api_key = v; }
+    }
+    settings.google_proxy_enabled = get_bool("settings.google_proxy_enabled", false);
+    if let Some(v) = get("settings.google_proxy_protocol") {
+        if !v.is_empty() { settings.google_proxy_protocol = v; }
+    }
+    if let Some(v) = get("settings.google_proxy_host") {
+        if !v.is_empty() { settings.google_proxy_host = v; }
+    }
+    settings.google_proxy_port = get_i32("settings.google_proxy_port", 0);
+    if let Some(v) = get("settings.google_proxy_username") {
+        if !v.is_empty() { settings.google_proxy_username = v; }
+    }
+    if let Some(v) = get("settings.google_proxy_password") {
+        if !v.is_empty() { settings.google_proxy_password = v; }
     }
 
     settings
+}
+
+pub fn save_settings(settings: &AppSettings) -> Result<(), String> {
+    let set = |key: &str, value: &str, is_secret: bool| {
+        system_db::set_system_setting(key, value, is_secret)
+    };
+
+    set("settings.theme", &settings.theme, false)?;
+    set("settings.default_language", &settings.default_language, false)?;
+    set("settings.auto_translate_readme", if settings.auto_translate_readme { "1" } else { "0" }, false)?;
+    set("settings.auto_translate_report", if settings.auto_translate_report { "1" } else { "0" }, false)?;
+    set("settings.download_path", &settings.download_path, false)?;
+    set("settings.default_editor", &settings.default_editor, false)?;
+    set("settings.llm_provider", &settings.llm_provider, false)?;
+    set("settings.llm_api_base", &settings.llm_api_base, false)?;
+    if !settings.llm_api_key.is_empty() {
+        set("settings.llm_api_key", &settings.llm_api_key, true)?;
+    }
+    set("settings.llm_model", &settings.llm_model, false)?;
+    set("settings.llm_proxy_enabled", if settings.llm_proxy_enabled { "1" } else { "0" }, false)?;
+    set("settings.llm_proxy_protocol", &settings.llm_proxy_protocol, false)?;
+    set("settings.llm_proxy_host", &settings.llm_proxy_host, false)?;
+    set("settings.llm_proxy_port", &settings.llm_proxy_port.to_string(), false)?;
+    set("settings.llm_proxy_username", &settings.llm_proxy_username, false)?;
+    set("settings.llm_proxy_password", &settings.llm_proxy_password, false)?;
+    set("settings.proxy_enabled", if settings.proxy_enabled { "1" } else { "0" }, false)?;
+    set("settings.proxy_protocol", &settings.proxy_protocol, false)?;
+    set("settings.proxy_host", &settings.proxy_host, false)?;
+    set("settings.proxy_port", &settings.proxy_port.to_string(), false)?;
+    set("settings.proxy_username", &settings.proxy_username, false)?;
+    set("settings.proxy_password", &settings.proxy_password, false)?;
+    set("settings.crawler_enabled", if settings.crawler_enabled { "1" } else { "0" }, false)?;
+    set("settings.crawler_api_url", &settings.crawler_api_url, false)?;
+    set("settings.readme_update_frequency", &settings.readme_update_frequency, false)?;
+    set("settings.translate_engine", &settings.translate_engine, false)?;
+    if !settings.google_api_key.is_empty() {
+        set("settings.google_api_key", &settings.google_api_key, true)?;
+    }
+    set("settings.google_proxy_enabled", if settings.google_proxy_enabled { "1" } else { "0" }, false)?;
+    set("settings.google_proxy_protocol", &settings.google_proxy_protocol, false)?;
+    set("settings.google_proxy_host", &settings.google_proxy_host, false)?;
+    set("settings.google_proxy_port", &settings.google_proxy_port.to_string(), false)?;
+    set("settings.google_proxy_username", &settings.google_proxy_username, false)?;
+    set("settings.google_proxy_password", &settings.google_proxy_password, false)?;
+
+    Ok(())
 }
 
 fn apply_legacy_settings(settings: &mut AppSettings, config: &LegacyConfig) {
@@ -437,52 +434,6 @@ struct LegacyConfig {
     google_proxy_username: String,
     #[serde(default)]
     google_proxy_password: String,
-}
-
-pub fn save_settings(settings: &AppSettings) -> Result<(), String> {
-    let db_guard = DATABASE.lock().map_err(|e| e.to_string())?;
-    let db = db_guard.as_ref().ok_or("Database not initialized")?;
-    let conn = db.get_connection();
-
-    let set = |key: &str, value: &str, is_secret: bool| set_setting(&conn, key, value, is_secret);
-    let set_bool = |key: &str, value: bool| set(key, if value { "1" } else { "0" }, false);
-    let set_i32 = |key: &str, value: i32| set(key, &value.to_string(), false);
-
-    set("settings.theme", &settings.theme, false)?;
-    set("settings.default_language", &settings.default_language, false)?;
-    set_bool("settings.auto_translate_readme", settings.auto_translate_readme)?;
-    set_bool("settings.auto_translate_report", settings.auto_translate_report)?;
-    set("settings.download_path", &settings.download_path, false)?;
-    set("settings.default_editor", &settings.default_editor, false)?;
-    set("settings.llm_provider", &settings.llm_provider, false)?;
-    set("settings.llm_api_base", &settings.llm_api_base, false)?;
-    set("settings.llm_api_key", &settings.llm_api_key, true)?;
-    set("settings.llm_model", &settings.llm_model, false)?;
-    set_bool("settings.llm_proxy_enabled", settings.llm_proxy_enabled)?;
-    set("settings.llm_proxy_protocol", &settings.llm_proxy_protocol, false)?;
-    set("settings.llm_proxy_host", &settings.llm_proxy_host, false)?;
-    set_i32("settings.llm_proxy_port", settings.llm_proxy_port)?;
-    set("settings.llm_proxy_username", &settings.llm_proxy_username, true)?;
-    set("settings.llm_proxy_password", &settings.llm_proxy_password, true)?;
-    set_bool("settings.proxy_enabled", settings.proxy_enabled)?;
-    set("settings.proxy_protocol", &settings.proxy_protocol, false)?;
-    set("settings.proxy_host", &settings.proxy_host, false)?;
-    set_i32("settings.proxy_port", settings.proxy_port)?;
-    set("settings.proxy_username", &settings.proxy_username, true)?;
-    set("settings.proxy_password", &settings.proxy_password, true)?;
-    set_bool("settings.crawler_enabled", settings.crawler_enabled)?;
-    set("settings.crawler_api_url", &settings.crawler_api_url, false)?;
-    set("settings.readme_update_frequency", &settings.readme_update_frequency, false)?;
-    set("settings.translate_engine", &settings.translate_engine, false)?;
-    set("settings.google_api_key", &settings.google_api_key, true)?;
-    set_bool("settings.google_proxy_enabled", settings.google_proxy_enabled)?;
-    set("settings.google_proxy_protocol", &settings.google_proxy_protocol, false)?;
-    set("settings.google_proxy_host", &settings.google_proxy_host, false)?;
-    set_i32("settings.google_proxy_port", settings.google_proxy_port)?;
-    set("settings.google_proxy_username", &settings.google_proxy_username, true)?;
-    set("settings.google_proxy_password", &settings.google_proxy_password, true)?;
-
-    Ok(())
 }
 
 pub fn get_app_data_dir(app: &tauri::AppHandle) -> PathBuf {
