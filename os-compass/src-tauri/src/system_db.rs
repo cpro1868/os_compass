@@ -58,7 +58,16 @@ impl SystemDb {
             );
 
             CREATE INDEX IF NOT EXISTS idx_plugins_enabled ON source_plugins(enabled);
+            "#,
+        )?;
 
+        let _: Result<usize, _> = conn.execute(
+            "ALTER TABLE app_settings ADD COLUMN is_secret INTEGER DEFAULT 0",
+            [],
+        );
+
+        conn.execute(
+            r#"
             INSERT OR IGNORE INTO source_plugins (id, name, plugin_class, description, enabled, version, required_variables, url_patterns) VALUES
             ('github', 'GitHub', 'plugins::GitHubPlugin', '获取 GitHub 项目信息、健康度评分', 1, '1.0.0',
              '[{"key": "github_token", "name": "GitHub Token", "description": "GitHub Personal Access Token，用于访问 GitHub API","secret": true}, {"key": "github_proxy", "name": "GitHub 代理地址", "description": "访问 GitHub API 使用的代理地址","secret": false}]',
@@ -66,13 +75,19 @@ impl SystemDb {
             ('gitee', 'Gitee', 'plugins::GiteePlugin', '获取 Gitee 项目信息、健康度评分', 1, '1.0.0',
              '[{"key": "gitee_token", "name": "Gitee 私有令牌", "description": "Gitee 私有令牌，用于访问 Gitee API","secret": true}]',
              '["gitee.com", "www.gitee.com"]'),
-            ('crawler', '通用爬虫', 'plugins::CrawlerPlugin', '无 Token 时的降级方案', 1, '1.0.0', '[]', '[]');
+            ('crawler', '通用爬虫', 'plugins::CrawlerPlugin', '无 Token 时的降级方案', 1, '1.0.0', '[]', '[]')
+            "#,
+            [],
+        )?;
 
+        conn.execute(
+            r#"
             INSERT OR IGNORE INTO system_variables (key, encrypted_value, is_secret) VALUES
             ('github_token', '', 1),
             ('github_proxy', '', 0),
-            ('gitee_token', '', 1);
+            ('gitee_token', '', 1)
             "#,
+            [],
         )?;
 
         Ok(())
