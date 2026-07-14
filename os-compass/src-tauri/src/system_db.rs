@@ -200,6 +200,11 @@ pub fn set_system_setting(key: &str, value: &str, is_secret: bool) -> Result<(),
     let db = db_lock.as_ref().ok_or("System DB not initialized")?;
     let conn = db.get_connection();
 
+    let _: Result<usize, _> = conn.execute(
+        "ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS is_secret INTEGER DEFAULT 0",
+        [],
+    );
+
     let stored_value = if is_secret {
         crate::crypto::encrypt_string(value)?
     } else {
