@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
     updated_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 
--- 4. Source plugins
+-- 4. Source plugins (扩展插件配置：支持从哪些平台导入项目)
 CREATE TABLE IF NOT EXISTS source_plugins (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS source_plugins (
     enabled INTEGER DEFAULT 1,
     version TEXT,
     required_variables TEXT,
+    url_patterns TEXT,
     created_at TEXT DEFAULT (datetime('now', 'localtime')),
     updated_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
@@ -169,12 +170,14 @@ CREATE INDEX IF NOT EXISTS idx_releases_published ON project_releases(published_
 -- 10. Seed data
 INSERT OR IGNORE INTO categories (id, name, sort_order) VALUES (1, '未分类', 0);
 
-INSERT OR IGNORE INTO source_plugins (id, name, plugin_class, description, enabled, version, required_variables) VALUES
+INSERT OR IGNORE INTO source_plugins (id, name, plugin_class, description, enabled, version, required_variables, url_patterns) VALUES
 ('github', 'GitHub', 'plugins::GitHubPlugin', 'Fetch GitHub project info and health score', 1, '1.0.0',
- '[{"key": "github_token", "name": "GitHub Token", "description": "GitHub Personal Access Token for GitHub API access","secret": true}, {"key": "github_proxy", "name": "GitHub Proxy", "description": "Proxy address for GitHub API access","secret": false}]'),
+ '[{"key": "github_token", "name": "GitHub Token", "description": "GitHub Personal Access Token for GitHub API access","secret": true}, {"key": "github_proxy", "name": "GitHub Proxy", "description": "Proxy address for GitHub API access","secret": false}]',
+ '["github.com", "www.github.com"]'),
 ('gitee', 'Gitee', 'plugins::GiteePlugin', 'Fetch Gitee project info and health score', 1, '1.0.0',
- '[{"key": "gitee_token", "name": "Gitee Token", "description": "Gitee private token for Gitee API access","secret": true}]'),
-('crawler', 'Crawler', 'plugins::CrawlerPlugin', 'Fallback when no Token available', 1, '1.0.0', '[]');
+ '[{"key": "gitee_token", "name": "Gitee Token", "description": "Gitee private token for Gitee API access","secret": true}]',
+ '["gitee.com", "www.gitee.com"]'),
+('crawler', 'Crawler', 'plugins::CrawlerPlugin', 'Fallback when no Token available', 1, '1.0.0', '[]', '[]');
 
 INSERT OR IGNORE INTO system_variables (key, value, is_secret) VALUES
 ('github_token', '', 1),
