@@ -25,6 +25,7 @@ impl SystemDb {
             CREATE TABLE IF NOT EXISTS app_settings (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL,
+                is_secret INTEGER DEFAULT 0,
                 updated_at TEXT DEFAULT (datetime('now', 'localtime'))
             );
 
@@ -66,6 +67,11 @@ impl SystemDb {
              '[{"key": "gitee_token", "name": "Gitee 私有令牌", "description": "Gitee 私有令牌，用于访问 Gitee API","secret": true}]',
              '["gitee.com", "www.gitee.com"]'),
             ('crawler', '通用爬虫', 'plugins::CrawlerPlugin', '无 Token 时的降级方案', 1, '1.0.0', '[]', '[]');
+
+            INSERT OR IGNORE INTO system_variables (key, encrypted_value, is_secret) VALUES
+            ('github_token', '', 1),
+            ('github_proxy', '', 0),
+            ('gitee_token', '', 1);
             "#,
         )?;
 
@@ -186,9 +192,9 @@ pub fn set_system_setting(key: &str, value: &str, is_secret: bool) -> Result<(),
     };
 
     conn.execute(
-        "INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, datetime('now', 'localtime'))
-         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now', 'localtime')",
-        rusqlite::params![key, stored_value],
+        "INSERT INTO app_settings (key, value, is_secret, updated_at) VALUES (?, ?, ?, datetime('now', 'localtime'))
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, is_secret = excluded.is_secret, updated_at = datetime('now', 'localtime')",
+        rusqlite::params![key, stored_value, is_secret as i32],
     )
     .map_err(|e| e.to_string())?;
 
