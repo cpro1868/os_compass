@@ -173,24 +173,49 @@ pub fn get_system_setting(key: &str) -> Option<String> {
 
     let conn = db.get_connection();
 
-    let result: (String, i32) = conn
-        .query_row(
-            "SELECT value, is_secret FROM app_settings WHERE key = ?",
-            [key],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        )
-        .ok()?;
-
-    let (value, is_secret) = result;
-    if is_secret != 0 {
-        match crate::crypto::decrypt_string(&value) {
-            Ok(plaintext) => Some(plaintext),
-            Err(e) => {
-                println!("[system_db] WARNING: Cannot decrypt key='{}': {}.", key, e);
-                None
+    let has_is_secret = {
+        let mut stmt = conn.prepare("PRAGMA table_info(app_settings)").ok()?;
+        let mut rows = stmt.query([]).ok()?;
+        let mut found = false;
+        while let Some(row) = rows.next().ok()? {
+            let name: String = row.get(1).ok()?;
+            if name == "is_secret" {
+                found = true;
+                break;
             }
         }
+        found
+    };
+
+    if has_is_secret {
+        let result: (String, i32) = conn
+            .query_row(
+                "SELECT value, is_secret FROM app_settings WHERE key = ?",
+                [key],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .ok()?;
+
+        let (value, is_secret) = result;
+        if is_secret != 0 {
+            match crate::crypto::decrypt_string(&value) {
+                Ok(plaintext) => Some(plaintext),
+                Err(e) => {
+                    println!("[system_db] WARNING: Cannot decrypt key='{}': {}.", key, e);
+                    None
+                }
+            }
+        } else {
+            Some(value)
+        }
     } else {
+        let value: String = conn
+            .query_row(
+                "SELECT value FROM app_settings WHERE key = ?",
+                [key],
+                |row| row.get(0),
+            )
+            .ok()?;
         Some(value)
     }
 }
@@ -200,10 +225,24 @@ pub fn set_system_setting(key: &str, value: &str, is_secret: bool) -> Result<(),
     let db = db_lock.as_ref().ok_or("System DB not initialized")?;
     let conn = db.get_connection();
 
-    let _: Result<usize, _> = conn.execute(
-        "ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS is_secret INTEGER DEFAULT 0",
-        [],
-    );
+    let has_is_secret = {
+        let mut stmt = conn.prepare("PRAGMA table_info(app_settings)").map_err(|e| e.to_string())?;
+        let mut rows = stmt.query([]).map_err(|e| e.to_string())?;
+        let mut found = false;
+        while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+            let name: String = row.get(1).map_err(|e| e.to_string())?;
+            if name == "is_secret" {
+                found = true;
+                break;
+            }
+        }
+        found
+    };
+
+    if !has_is_secret {
+        conn.execute("ALTER TABLE app_settings ADD COLUMN is_secret INTEGER DEFAULT 0", [])
+            .map_err(|e| e.to_string())?;
+    }
 
     let stored_value = if is_secret {
         crate::crypto::encrypt_string(value)?
