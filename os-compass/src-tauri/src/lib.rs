@@ -5,12 +5,14 @@ pub mod db;
 pub mod feature_plugin;
 pub mod health;
 pub mod llm;
+pub mod migrator;
 pub mod models;
 pub mod plugin_config_db;
 pub mod plugin_manager;
 pub mod plugins;
 pub mod settings;
 pub mod source_engine;
+pub mod system_db;
 pub mod translate;
 pub mod vault;
 
@@ -67,6 +69,12 @@ pub fn run() {
             let app_dir = app.path().app_data_dir().expect("Failed to get app data dir");
             println!("App data directory: {:?}", app_dir);
             std::fs::create_dir_all(&app_dir).expect("Failed to create app data dir");
+
+            if let Err(e) = system_db::init_system_db(&app_dir) {
+                eprintln!("[system_db] Failed to initialize system DB: {}", e);
+            } else {
+                println!("[system_db] System DB initialized successfully");
+            }
 
             let vaults_root = app_dir.join("vaults");
             let default_vault_path = app_dir.join("os_compass.db");
@@ -268,6 +276,8 @@ pub fn run() {
             commands::get_settings,
             commands::save_settings,
             commands::analyze_project,
+            commands::test_llm_direct,
+            commands::debug_llm_status,
             commands::calculate_project_health,
             commands::crypto_status,
             commands::encrypt_data,

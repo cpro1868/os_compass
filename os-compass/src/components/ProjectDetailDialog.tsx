@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { refreshProjectReadme } from "../api";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { saveRunbook, tagApi, type Tag, saveReadmeTranslation, clearTranslations, deleteProject } from "../api";
+import { saveRunbook, tagApi, type Tag, saveReadmeTranslation, clearTranslations, deleteProject, testLlmDirect } from "../api";
 import { getCategories } from "../api";
 import { noteApi } from "../api/note";
 import { ClonePanel } from "./ClonePanel";
@@ -436,16 +436,23 @@ const handleAnalyze = useCallback(async () => {
     setIsOverviewTranslated(false);
     try {
       await clearTranslations(project.id);
+      console.log("[analyze] Starting analyze_project for id:", project.id);
+      const startTime = Date.now();
       const result = await invoke<AiResult>("analyze_project", { id: project.id });
+      const elapsed = Date.now() - startTime;
+      console.log("[analyze] Got result after", elapsed, "ms:", result);
       if (result.error) {
+        console.error("[analyze] Error:", result.error);
         showToast(`${t("detail.reanalyzeFailed")}: ${result.error}`, "error");
       } else {
         setAiResult(result);
       }
     } catch (e) {
+      console.error("[analyze] Exception:", e);
       showToast(`${t("detail.reanalyzeFailed")}: ${String(e)}`, "error");
     } finally {
       setAnalyzing(false);
+      console.log("[analyze] Done, analyzing=false");
     }
   }, [project.id]);
 
@@ -1061,6 +1068,21 @@ const handleAnalyze = useCallback(async () => {
                       {(translatedSummary || translatedUseCases || translatedRisks) && (
                         <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950 px-2 py-0.5 rounded">{t("detail.translated")}</span>
                       )}
+                      <button
+                        onClick={async () => {
+                          try {
+                            const result = await testLlmDirect(project.id);
+                            console.log("test_llm_direct result:", result);
+                            showToast(result.success ? `测试成功 (${result.elapsed_ms}ms)` : `测试失败: ${result.error}`, result.success ? "success" : "error");
+                          } catch (e) {
+                            console.error("test_llm_direct error:", e);
+                            showToast(`测试失败: ${e}`, "error");
+                          }
+                        }}
+                        className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                      >
+                        <i className="fa-solid fa-bug mr-1"></i>调试
+                      </button>
                       <button
                         onClick={handleAnalyze}
                         className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
