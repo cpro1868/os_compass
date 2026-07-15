@@ -2,6 +2,26 @@
 
 # Session Log
 
+## 2026-07-15 下午 (18:00)
+
+### 会话主题：修复加密密钥架构问题
+
+**问题**：切换仓库后 API Key 无法解密
+
+**根因**：存在两个不同的密钥
+- `com.administrator.os-compass\.cryptokey`（系统级）
+- `vault\.cryptokey`（vault 密钥）
+
+`system_settings.db` 使用系统级密钥加密，但启动时加载 vault 密钥。
+
+**修复**：
+1. 始终使用系统级密钥（`app_data_dir/.cryptokey`）
+2. 不再跟随 vault 切换改变密钥
+
+**提交**：bb8c9da fix: use system-level crypto key for all encrypted data
+
+---
+
 ## 2026-07-15 下午 (17:45)
 
 ### 会话主题：修复切换仓库导致 API Key 无法解密问题
