@@ -2,6 +2,20 @@
 
 # Session Log
 
+## 2026-07-15 下午 (17:45)
+
+### 会话主题：修复切换仓库导致 API Key 无法解密问题
+
+**问题**：切换仓库后 LLM API Key 无法加载
+
+**根因**：`open_vault` 函数在切换仓库时会用新 vault 的加密密钥重新初始化加密服务
+
+**修复**：移除 `open_vault` 中的 `init_crypto` 调用
+
+**提交**：51805fe fix: prevent crypto re-initialization on vault switch
+
+---
+
 ## 2026-07-15 下午 (17:35)
 
 ### 会话主题：README 显示问题修复
