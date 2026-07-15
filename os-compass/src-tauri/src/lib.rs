@@ -175,17 +175,16 @@ pub fn run() {
                 }
             }
 
-            // 加密密钥：跟随当前仓库目录（每个仓库独立密钥）
-            let vault_dir_for_key = current_vault_dir.clone()
-                .unwrap_or_else(|| app_dir.clone());
-            let key_path = vault_dir_for_key.join(".cryptokey");
-            println!("Using crypto key path: {:?}", key_path);
+            // 加密密钥：系统级密钥，存储在 app_data_dir，不跟随仓库切换
+            // 所有系统级配置（llm_api_key 等）使用此密钥加密
+            let key_path = app_dir.join(".cryptokey");
+            println!("Using system-level crypto key path: {:?}", key_path);
             let crypto_key = if key_path.exists() {
                 match std::fs::read_to_string(&key_path) {
                     Ok(content) => {
                         match crypto::key_from_base64(content.trim()) {
                             Ok(k) => {
-                                println!("Loaded persisted crypto key from vault");
+                                println!("Loaded system-level crypto key");
                                 k
                             }
                             Err(_) => {
@@ -202,26 +201,27 @@ pub fn run() {
                     }
                 }
             } else {
-                // 兼容：从旧的 app_data_dir/.cryptokey 迁移过来
-                let legacy_key_path = app_dir.join(".cryptokey");
+                // 兼容：从 vault 目录的 .cryptokey 迁移过来
+                let vault_dir = current_vault_dir.clone()
+                    .unwrap_or_else(|| app_dir.clone());
+                let legacy_key_path = vault_dir.join(".cryptokey");
                 if legacy_key_path.exists() {
                     if let Ok(content) = std::fs::read_to_string(&legacy_key_path) {
                         if let Ok(k) = crypto::key_from_base64(content.trim()) {
                             let _ = std::fs::write(&key_path, crypto::key_to_base64(&k));
-                            println!("Migrated crypto key from app_data_dir to vault dir");
+                            println!("Migrated crypto key from vault dir to system dir");
                             crypto::init_crypto(k);
                             let _ = crate::settings::get_settings();
-                            // 检查是否有无法解密的密文（仅警告，不清空）
                             crate::commands::variables::cleanup_undecryptable_secrets();
-                            println!("Database, settings, and crypto initialized (legacy key path)");
+                            println!("Database, settings, and crypto initialized (legacy vault key)");
                             return Ok(());
                         }
                     }
                 }
-                // 首次启动：生成新密钥并保存到仓库目录
+                // 首次启动：生成新密钥
                 let k = crypto::generate_key();
                 let _ = std::fs::write(&key_path, crypto::key_to_base64(&k));
-                println!("Generated and saved new crypto key to vault dir");
+                println!("Generated new system-level crypto key");
                 k
             };
             crypto::init_crypto(crypto_key);
