@@ -352,3 +352,28 @@ export async function importVault(name: string, path: string): Promise<Vault> {
 export async function executeClone(projectId: number, gitUrl: string, projectName: string): Promise<string> {
   return invoke("execute_clone", { project_id: projectId, git_url: gitUrl, project_name: projectName });
 }
+
+export interface LlmDebugInfo {
+  llm_configured: boolean;
+  api_key_len: number;
+  api_key_preview: string;
+  api_base: string;
+  model: string;
+  proxy_enabled: boolean;
+  error: string | null;
+}
+
+export async function debugLlmStatus(): Promise<LlmDebugInfo> {
+  return invoke("debug_llm_status");
+}
+
+export interface TestLlmResult {
+  success: boolean;
+  elapsed_ms: number;
+  response_preview: string;
+  error: string | null;
+}
+
+export async function testLlmDirect(projectId: number): Promise<TestLlmResult> {
+  return invoke("test_llm_direct", { projectId });
+}

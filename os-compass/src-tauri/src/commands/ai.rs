@@ -170,22 +170,30 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
 
     let llm = match LlmClient::from_settings() {
         Some(llm) => llm,
-        None => return AiAnalysisResult {
-            summary: None,
-            use_cases: None,
-            risks: None,
-            dependencies: None,
-            health_score: Some(project_data.3.overall),
-            health_rating: Some(project_data.4.clone()),
-            error: Some("LLM not configured".to_string()),
-        },
+        None => {
+            eprintln!("[analyze_project] LLM not configured");
+            return AiAnalysisResult {
+                summary: None,
+                use_cases: None,
+                risks: None,
+                dependencies: None,
+                health_score: Some(project_data.3.overall),
+                health_rating: Some(project_data.4.clone()),
+                error: Some("LLM not configured".to_string()),
+            }
+        }
     };
+
+    let readme_len = project_data.1.as_ref().map(|r| r.len()).unwrap_or(0);
+    eprintln!("[analyze_project] Processing README ({} chars) for project '{}'...", readme_len, project_data.2);
 
     let system_msg = build_system_prompt();
 
     let readme_snippet = project_data.1.as_ref()
         .map(|r| crate::llm::preprocess_readme_for_analysis(r))
         .unwrap_or_else(|| "No README available".to_string());
+
+    eprintln!("[analyze_project] Prompt prepared, sending to LLM (prompt length: {})...", readme_snippet.len());
 
     let user_msg = LlmMessage {
         role: "user".to_string(),
@@ -196,6 +204,7 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
         ),
     };
 
+    eprintln!("[analyze_project] Waiting for LLM response (timeout: 180s)...");
     let (summary, use_cases, risks, dependencies) = match llm.chat(vec![system_msg, user_msg]).await {
         Ok(response) => {
             println!("[AI_ANALYZE] LLM response (first 500 chars): {}", response.chars().take(500).collect::<String>());
@@ -857,4 +866,139 @@ pub fn list_available_models(provider: String, api_base: String, api_key: String
     }
 
     Ok(models)
+}
+
+#[derive(Serialize)]
+pub struct LlmDebugInfo {
+    pub llm_configured: bool,
+    pub api_key_len: usize,
+    pub api_key_preview: String,
+    pub api_base: String,
+    pub model: String,
+    pub proxy_enabled: bool,
+    pub error: Option<String>,
+}
+
+#[tauri::command]
+pub fn debug_llm_status() -> LlmDebugInfo {
+    println!("[debug_llm_status] Called");
+    let s = crate::settings::get_settings();
+
+    let api_key_preview = if s.llm_api_key.is_empty() {
+        String::new()
+    } else {
+        s.llm_api_key.chars().take(5).collect::<String>() + "..."
+    };
+
+    LlmDebugInfo {
+        llm_configured: !s.llm_api_key.is_empty(),
+        api_key_len: s.llm_api_key.len(),
+        api_key_preview,
+        api_base: s.llm_api_base.clone(),
+        model: s.llm_model.clone(),
+        proxy_enabled: s.llm_proxy_enabled,
+        error: None,
+    }
+}
+
+#[derive(Serialize)]
+pub struct TestLlmResult {
+    pub success: bool,
+    pub elapsed_ms: u64,
+    pub response_preview: String,
+    pub error: Option<String>,
+}
+
+#[tauri::command]
+pub async fn test_llm_direct(project_id: i64) -> TestLlmResult {
+    use std::time::Instant;
+
+    println!("[test_llm_direct] Testing LLM for project_id={}", project_id);
+
+    let start = Instant::now();
+
+    let project_data = {
+        let db = match DATABASE.lock() {
+            Ok(db) => db,
+            Err(e) => return TestLlmResult {
+                success: false,
+                elapsed_ms: start.elapsed().as_millis() as u64,
+                response_preview: String::new(),
+                error: Some(format!("DB lock error: {}", e)),
+            },
+        };
+
+        let db = match db.as_ref() {
+            Some(db) => db,
+            None => return TestLlmResult {
+                success: false,
+                elapsed_ms: start.elapsed().as_millis() as u64,
+                response_preview: String::new(),
+                error: Some("Database not initialized".to_string()),
+            },
+        };
+
+        let conn = db.get_connection();
+
+        let (readme_content, name): (Option<String>, String) = conn.query_row(
+            "SELECT readme_content, name FROM projects WHERE id = ?",
+            [project_id],
+            |row| Ok((row.get::<_, Option<String>>(0)?, row.get::<_, String>(1)?)),
+        ).unwrap_or((None, "Unknown".to_string()));
+
+        drop(conn);
+        drop(db);
+        drop(db);
+
+        (readme_content, name)
+    };
+
+    println!("[test_llm_direct] Project loaded: {}, readme len={}", project_data.1, project_data.0.as_ref().map(|s| s.len()).unwrap_or(0));
+
+    let llm = match crate::llm::LlmClient::from_settings() {
+        Some(llm) => llm,
+        None => return TestLlmResult {
+            success: false,
+            elapsed_ms: start.elapsed().as_millis() as u64,
+            response_preview: String::new(),
+            error: Some("LLM not configured".to_string()),
+        },
+    };
+
+    println!("[test_llm_direct] LLM client created");
+
+    let system_msg = crate::llm::build_system_prompt();
+    let readme_snippet = project_data.0.as_ref()
+        .map(|r| crate::llm::preprocess_readme_for_analysis(r))
+        .unwrap_or_else(|| "No README available".to_string());
+
+    let user_msg = crate::llm::LlmMessage {
+        role: "user".to_string(),
+        content: format!("Project: {}\n\nREADME Content:\n{}\n\nPlease analyze this project briefly in one sentence.", project_data.1, readme_snippet),
+    };
+
+    println!("[test_llm_direct] Calling LLM...");
+
+    match llm.chat(vec![system_msg, user_msg]).await {
+        Ok(response) => {
+            let elapsed = start.elapsed().as_millis() as u64;
+            println!("[test_llm_direct] Success after {}ms", elapsed);
+            TestLlmResult {
+                success: true,
+                elapsed_ms: elapsed,
+                response_preview: response.chars().take(500).collect(),
+                error: None,
+            }
+        }
+        Err(e) => {
+            let elapsed = start.elapsed().as_millis() as u64;
+            println!("[test_llm_direct] Failed after {}ms: {}", elapsed, e);
+            TestLlmResult {
+                success: false,
+                elapsed_ms: elapsed,
+                response_preview: String::new(),
+                error: Some(e),
+            }
+        }
+    }
 }

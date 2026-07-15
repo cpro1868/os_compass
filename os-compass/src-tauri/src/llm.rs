@@ -57,6 +57,8 @@ impl LlmClient {
     pub fn from_settings() -> Option<Self> {
         let s = settings::get_settings();
 
+        println!("[LLM] from_settings: api_key present={}, len={}", !s.llm_api_key.is_empty(), s.llm_api_key.len());
+
         if s.llm_api_key.is_empty() {
             println!("[LLM] API key is empty, LLM not configured");
             return None;
@@ -108,7 +110,7 @@ impl LlmClient {
         }
 
         let client = client_builder
-            .timeout(std::time::Duration::from_secs(60))
+            .timeout(std::time::Duration::from_secs(180))
             .build()
             .map_err(|e| format!("Failed to create client: {}", e))?;
 
@@ -119,12 +121,28 @@ impl LlmClient {
             .json(&request)
             .send()
             .await
-            .map_err(|e| format!("Request failed: {}", e))?;
+            .map_err(|e| {
+                if e.is_timeout() {
+                    format!("LLM 请求超时（等待超过180秒）")
+                } else if e.is_connect() {
+                    format!("无法连接到 LLM 服务器")
+                } else {
+                    format!("LLM 请求失败: {}", e)
+                }
+            })?;
 
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            return Err(format!("API error {}: {}", status, body));
+            if status.as_u16() == 401 {
+                return Err("LLM API 认证失败：API Key 无效或已过期".to_string());
+            } else if status.as_u16() == 429 {
+                return Err("LLM API 请求过于频繁：请稍后重试".to_string());
+            } else if status.as_u16() >= 500 {
+                return Err(format!("LLM 服务器错误 ({}): 请稍后重试", status));
+            } else {
+                return Err(format!("LLM API 错误 ({}): {}", status, body.chars().take(200).collect::<String>()));
+            }
         }
 
         let chat_response: OpenAIResponse = response
