@@ -2,6 +2,37 @@
 
 # Session Log
 
+## 2026-07-15 下午 (17:19)
+
+### 会话主题：OpenHarness 分析卡住问题定位
+
+**问题**：OpenHarness 项目点击"重新分析"后长时间无响应（超过5分钟）
+
+**排查结果**：
+1. **后端验证** - 创建独立测试程序 `debug_full` 模拟 `analyze_project` 流程
+   - ✅ API Key 解密正常：`sk-o4KSSPt7QqGI18ozxCRoy5Jc9wRAKmKlv4kqpd0sKUH7tafJ`
+   - ✅ HTTP 请求成功：8秒返回 200 OK
+   - ✅ JSON 解析成功：数据完整
+
+2. **后端代码改进**：
+   - LLM 超时从 60s 增加到 180s
+   - 添加详细错误分类（超时/连接/401/429/500）
+   - 添加 `debug_llm_status` 命令检查配置
+   - 添加 `test_llm_direct` 命令直接测试
+
+3. **前端调试功能**：
+   - 在 AI 报告区域添加"调试"按钮
+   - 调用 `test_llm_direct` 并显示结果
+
+**结论**：
+- 后端 `analyze_project` 逻辑完全正常
+- 问题疑似在前端 UI 状态更新或 Tauri invoke 调用层
+- 用户确认调试功能可用
+
+**提交**：4a0b750 feat: add LLM debug commands and improve error handling
+
+---
+
 ## 2026-07-15 上午 (11:23)
 
 ### 会话主题：LLM 代理问题定位
