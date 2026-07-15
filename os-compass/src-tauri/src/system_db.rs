@@ -188,6 +188,7 @@ pub fn get_system_setting(key: &str) -> Option<String> {
     };
 
     if has_is_secret {
+        println!("[system_db] get_system_setting: key='{}', has is_secret column", key);
         let result: (String, i32) = conn
             .query_row(
                 "SELECT value, is_secret FROM app_settings WHERE key = ?",
@@ -197,11 +198,16 @@ pub fn get_system_setting(key: &str) -> Option<String> {
             .ok()?;
 
         let (value, is_secret) = result;
+        println!("[system_db] get_system_setting: key='{}', is_secret={}", key, is_secret);
         if is_secret != 0 {
+            println!("[system_db] Decrypting key='{}', value len={}", key, value.len());
             match crate::crypto::decrypt_string(&value) {
-                Ok(plaintext) => Some(plaintext),
+                Ok(plaintext) => {
+                    println!("[system_db] Decrypted successfully, plaintext len={}", plaintext.len());
+                    Some(plaintext)
+                }
                 Err(e) => {
-                    println!("[system_db] WARNING: Cannot decrypt key='{}': {}.", key, e);
+                    println!("[system_db] ERROR decrypting key='{}': {}", key, e);
                     None
                 }
             }
@@ -209,6 +215,7 @@ pub fn get_system_setting(key: &str) -> Option<String> {
             Some(value)
         }
     } else {
+        println!("[system_db] get_system_setting: key='{}', no is_secret column (legacy table)", key);
         let value: String = conn
             .query_row(
                 "SELECT value FROM app_settings WHERE key = ?",
@@ -216,7 +223,17 @@ pub fn get_system_setting(key: &str) -> Option<String> {
                 |row| row.get(0),
             )
             .ok()?;
-        Some(value)
+        println!("[system_db] get_system_setting: key='{}', value len={}, attempting decrypt", key, value.len());
+        match crate::crypto::decrypt_string(&value) {
+            Ok(plaintext) => {
+                println!("[system_db] Decrypted successfully, plaintext len={}", plaintext.len());
+                Some(plaintext)
+            }
+            Err(_) => {
+                println!("[system_db] Decrypt failed, returning raw value");
+                Some(value)
+            }
+        }
     }
 }
 
@@ -245,7 +262,17 @@ pub fn set_system_setting(key: &str, value: &str, is_secret: bool) -> Result<(),
     }
 
     let stored_value = if is_secret {
-        crate::crypto::encrypt_string(value)?
+        println!("[system_db] Encrypting key='{}' (len={})", key, value.len());
+        match crate::crypto::encrypt_string(value) {
+            Ok(encrypted) => {
+                println!("[system_db] Encrypted successfully, result len={}", encrypted.len());
+                encrypted
+            }
+            Err(e) => {
+                println!("[system_db] ERROR encrypting key='{}': {}", key, e);
+                return Err(format!("Failed to encrypt: {}", e));
+            }
+        }
     } else {
         value.to_string()
     };
