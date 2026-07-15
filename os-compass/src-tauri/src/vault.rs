@@ -377,38 +377,9 @@ pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
         *current_config = Some(config);
     }
 
-    // 切换仓库时重新加载该仓库的加密密钥
-    let vault_dir = PathBuf::from(&path);
-    let key_path = vault_dir.join(".cryptokey");
-    let crypto_key = if key_path.exists() {
-        match std::fs::read_to_string(&key_path) {
-            Ok(content) => {
-                match crate::crypto::key_from_base64(content.trim()) {
-                    Ok(k) => {
-                        println!("[vault] Loaded crypto key for vault: {}", path);
-                        k
-                    }
-                    Err(_) => {
-                        let k = crate::crypto::generate_key();
-                        let _ = std::fs::write(&key_path, crate::crypto::key_to_base64(&k));
-                        k
-                    }
-                }
-            }
-            Err(_) => {
-                let k = crate::crypto::generate_key();
-                let _ = std::fs::write(&key_path, crate::crypto::key_to_base64(&k));
-                k
-            }
-        }
-    } else {
-        // 新仓库或旧仓库：生成新密钥
-        let k = crate::crypto::generate_key();
-        let _ = std::fs::write(&key_path, crate::crypto::key_to_base64(&k));
-        println!("[vault] Generated new crypto key for vault: {}", path);
-        k
-    };
-    crate::crypto::init_crypto(crypto_key);
+    // 注意：不再在切换仓库时重新初始化加密密钥
+    // 系统级配置（llm_api_key 等）使用系统级密钥，与 vault 无关
+    // 加密密钥在应用启动时初始化一次，保持不变
 
     let last_vault_path = get_last_vault_path(&app);
     if let Some(parent) = last_vault_path.parent() {
