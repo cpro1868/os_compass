@@ -107,6 +107,21 @@ Week 4: Task 20 雷达 UI 优化 + Task 21 链接导入增强
 
 **提交**：6cb34ca fix: add url_patterns column to source_plugins table
 
+### 2026-07-15 上午 - Bug 修复 + 问题定位
+
+**已修复 Bug**：
+1. ❌ ~~扩展配置丢失~~ → ✅ source_plugins 移至系统库
+2. ❌ ~~LLM 配置保存不生效~~ → ✅ app_settings 表 is_secret 列问题
+3. ❌ ~~重新分析无错误提示~~ → ✅ 添加错误 Toast 显示
+
+**问题定位**：
+- 重新分析 OpenHarness 超时 → LLM API (`api.sfkey.cn`) 直连超时
+- 使用 `github_proxy` (127.0.0.1:8964) 可访问 → 需要启用 LLM 代理
+
+**用户要求**：
+- 定位问题时不要擅自修改代码
+- 每次会话要及时更新会话记录
+
 ### 2026-07-14 下午 - 文档完善
 
 **动作**：
