@@ -2,6 +2,24 @@
 
 # Session Log
 
+## 2026-07-15 下午 (17:35)
+
+### 会话主题：README 显示问题修复
+
+**问题**：
+1. README 显示格式混乱，markdown 解析不彻底
+2. 部分图片加载不出来，怀疑是相对路径问题
+
+**解决方案**：
+1. 给 `MarkdownRenderer` 添加 `baseUrl` prop
+2. 新增 `resolveRelativeImageUrls()` 函数处理相对路径
+3. 将 GitHub URL 转换为 Raw URL
+4. 启用 marked 的 `breaks` 和 `gfm` 选项
+
+**提交**：5607e13 fix: improve MarkdownRenderer to handle relative image URLs
+
+---
+
 ## 2026-07-15 下午 (17:19)
 
 ### 会话主题：OpenHarness 分析卡住问题定位
