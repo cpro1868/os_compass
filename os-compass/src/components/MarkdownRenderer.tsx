@@ -1,19 +1,54 @@
-import { useEffect, useRef } from "react";
-import { marked } from "marked";
+import { useEffect, useRef, useMemo } from "react";
+import { marked, Renderer } from "marked";
 import hljs from "highlight.js";
 import DOMPurify from "dompurify";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import "highlight.js/styles/github.css";
 
-const renderer = new marked.Renderer();
-renderer.code = function({ text, lang }: { text: string; lang?: string }) {
-  const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
-  const highlighted = hljs.highlight(text, { language }).value;
-  return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
-};
+function resolveRelativeImageUrls(content: string, baseUrl: string): string {
+  if (!baseUrl) return content;
+
+  const githubRawBase = baseUrl
+    .replace("github.com", "raw.githubusercontent.com")
+    .replace("/tree/", "/");
+
+  return content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, path) => {
+    if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("//")) {
+      return match;
+    }
+    const resolvedUrl = path.startsWith("/")
+      ? `${githubRawBase.replace(/\/[^/]+\/[^/]+\/?$/, "")}${path}`
+      : `${githubRawBase}/${path}`;
+    return `![${alt}](${resolvedUrl})`;
+  });
+}
+
+function createRenderer(): Renderer {
+  const renderer = new Renderer();
+
+  renderer.code = function({ text, lang }: { text: string; lang?: string }) {
+    const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
+    const highlighted = hljs.highlight(text, { language }).value;
+    return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+  };
+
+  renderer.link = function({ href, title, text }: { href: string; title?: string | null; text: string }) {
+    const titleAttr = title ? ` title="${title}"` : "";
+    return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+  };
+
+  renderer.image = function({ href, title, text }: { href: string; title?: string | null; text: string }) {
+    const titleAttr = title ? ` title="${title}"` : "";
+    return `<img src="${href}" alt="${text}"${titleAttr} loading="lazy" />`;
+  };
+
+  return renderer;
+}
 
 marked.setOptions({
-  renderer,
+  renderer: createRenderer(),
+  breaks: true,
+  gfm: true,
 });
 
 async function handleLinkClick(e: MouseEvent) {
@@ -35,24 +70,25 @@ async function handleLinkClick(e: MouseEvent) {
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  baseUrl?: string;
 }
 
-export function MarkdownRenderer({ content, className = "" }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, className = "", baseUrl }: MarkdownRendererProps) {
   const ref = useRef<HTMLDivElement>(null);
 
+  const processedContent = useMemo(() => {
+    if (!content) return "";
+    const withResolvedUrls = baseUrl ? resolveRelativeImageUrls(content, baseUrl) : content;
+    const html = marked.parse(withResolvedUrls) as string;
+    return DOMPurify.sanitize(html, {
+      ADD_ATTR: ["target", "class", "rel", "loading"],
+      ALLOW_DATA_ATTR: false,
+    });
+  }, [content, baseUrl]);
+
   useEffect(() => {
-    if (ref.current && content) {
-      const html = marked.parse(content) as string;
-      const sanitized = DOMPurify.sanitize(html, {
-        ADD_ATTR: ["target", "class"],
-      });
-      ref.current.innerHTML = sanitized;
-
-      ref.current.querySelectorAll("a").forEach((a) => {
-        a.setAttribute("target", "_blank");
-        a.setAttribute("rel", "noopener noreferrer");
-      });
-
+    if (ref.current && processedContent) {
+      ref.current.innerHTML = processedContent;
       ref.current.addEventListener("click", handleLinkClick);
     }
 
@@ -61,7 +97,7 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
         ref.current.removeEventListener("click", handleLinkClick);
       }
     };
-  }, [content]);
+  }, [processedContent]);
 
   return (
     <div
@@ -71,12 +107,12 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
   );
 }
 
-export function renderMarkdown(content: string): string {
-  const html = marked.parse(content) as string;
-  const sanitized = DOMPurify.sanitize(html, {
-    ADD_ATTR: ["target", "class"],
+export function renderMarkdown(content: string, baseUrl?: string): string {
+  const withResolvedUrls = baseUrl ? resolveRelativeImageUrls(content, baseUrl) : content;
+  const html = marked.parse(withResolvedUrls) as string;
+  return DOMPurify.sanitize(html, {
+    ADD_ATTR: ["target", "class", "rel", "loading"],
   });
-  return `<div class="markdown-content">${sanitized}</div>`;
 }
 
 export { handleLinkClick };

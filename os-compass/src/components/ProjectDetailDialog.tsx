@@ -1233,7 +1233,7 @@ const handleAnalyze = useCallback(async () => {
                       </div>
                     ) : (
                       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                        <MarkdownRenderer content={runbookContent} className="prose dark:prose-invert prose-sm max-w-none readme-content text-sm" />
+                        <MarkdownRenderer content={runbookContent} className="prose dark:prose-invert prose-sm max-w-none readme-content text-sm" baseUrl={project.url || undefined} />
                       </div>
                     )
                   ) : (
@@ -1354,7 +1354,7 @@ const handleAnalyze = useCallback(async () => {
                 if (content) {
                   return (
                     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 overflow-auto max-h-[60vh]">
-                      <MarkdownRenderer content={content} className="text-sm" />
+                      <MarkdownRenderer content={content} className="text-sm" baseUrl={project.url || undefined} />
                     </div>
                   );
                 } else {
