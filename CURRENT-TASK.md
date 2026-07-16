@@ -92,6 +92,63 @@ Week 4: Task 20 雷达 UI 优化 + Task 21 链接导入增强
 
 ## 会话日志
 
+### 2026-07-17 01:42 - 情报雷达 Telegram 适配器系统性修复
+
+**问题**：
+1. Telegram 采集无数据 - 只提取链接，没提取消息内容
+2. 代理配置没有读取信息源自己的设置
+3. URL 提取模式硬编码（包含 GitLab），应从 source_plugins.url_patterns 读取
+4. 没有编辑/删除信息源功能
+5. 错误信息没有显示
+
+**系统性修复**：
+1. **数据架构**：
+   - 信息源（radar_sources）→ 系统库 plugin_config.db
+   - 采集数据（radar_items）→ 仓库 plugin_radar.db
+
+2. **代理配置** - radar.rs：
+   - 优先读取信息源自己的代理配置
+   - 其次读取全局代理设置
+
+3. **Telegram 适配器** - telegram_adapter.rs：
+   - 提取消息内容，不只是链接
+   - 4种解析方式（Widget/Legacy/Simple/Text）
+   - 从 source_plugins.url_patterns 读取支持的平台
+   - 请求延迟 800ms、cookies 保持
+
+4. **前端 UI** - RadarInbox.tsx：
+   - 添加编辑按钮（铅笔图标）
+   - 添加删除按钮（垃圾桶图标）
+   - 错误状态显示
+
+**提交**：
+- ebfc24b: radar_sources to system DB
+- a924ac5: radar proxy config + edit/delete UI
+- 170d185: telegram browser UA
+- ac8315b: telegram session handling
+- bdd5a7a: telegram extracts message content
+- 200c3a8: telegram multi-parser
+- d0436ba: telegram reads URL patterns from source_plugins
+
+**状态**：🔄 待测试验证
+
+---
+
+### 2026-07-16 23:01 - 情报雷达修复
+
+**问题**：
+1. 采集时没有读取信息源配置的代理
+2. 前端没有编辑/删除信息源功能
+
+**修复**：
+1. radar.rs - 优先使用信息源自己的代理
+2. RadarInbox.tsx - 添加编辑/删除按钮
+3. rss_adapter.rs - 增强 RSS 解析
+
+**状态**：✅ 修复完成
+
+---
+
 ### 2026-07-16 18:01 - 情报雷达数据架构重构
 
 **问题**：用户反馈情报雷达采集后无数据

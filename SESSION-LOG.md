@@ -2,6 +2,49 @@
 
 # Session Log
 
+## 2026-07-17 01:42
+
+### 会话主题：情报雷达 Telegram 适配器修复
+
+**问题**：
+1. Telegram 采集无数据 - 之前只提取链接，没有提取消息内容
+2. 代理配置没有读取信息源自己的设置
+3. URL 提取模式硬编码了 GitLab，应该从 source_plugins.url_patterns 读取
+4. 没有编辑/删除信息源功能
+5. 错误信息没有显示
+
+**系统性修复**：
+
+1. **数据架构**
+   - 信息源（radar_sources）→ 系统库 plugin_config.db
+   - 采集数据（radar_items）→ 仓库 plugin_radar.db
+
+2. **代理配置** - radar.rs
+   - 优先读取信息源自己的代理配置
+   - 其次读取全局代理
+
+3. **Telegram 适配器** - telegram_adapter.rs
+   - 提取消息内容，不只是链接
+   - 4种解析方式（Widget/Legacy/Simple/Text）
+   - 从 source_plugins.url_patterns 读取支持的平台
+   - 请求延迟、cookies 保持
+
+4. **前端 UI** - RadarInbox.tsx
+   - 添加编辑按钮
+   - 添加删除按钮
+   - 错误状态显示
+
+**提交记录**：
+- ebfc24b: radar_sources to system DB
+- a924ac5: radar proxy config + edit/delete UI
+- 170d185: telegram adapter browser UA
+- ac8315b: telegram session handling
+- bdd5a7a: telegram extracts message content
+- 200c3a8: telegram multi-parser extraction
+- d0436ba: telegram reads URL patterns from source_plugins
+
+---
+
 ## 2026-07-16 18:01
 
 ### 会话主题：情报雷达数据架构重构
@@ -19,7 +62,7 @@
 
 **构建**：成功
 
-**提交**：待提交
+**提交**：ebfc24b
 
 ---
 
