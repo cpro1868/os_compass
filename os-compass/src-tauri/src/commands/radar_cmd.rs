@@ -1,6 +1,7 @@
 use crate::db::open_db_at_path;
 use crate::feature_plugin::PluginContext;
 use crate::plugins::radar::{init_radar_db, radar_scan_all};
+use crate::plugin_config_db::PLUGIN_CONFIG_DB;
 use crate::plugin_manager::PLUGIN_MANAGER;
 use crate::settings::get_settings;
 use crate::vault::CURRENT_VAULT_CONFIG;
@@ -41,51 +42,74 @@ pub struct RadarItem {
     pub fetched_at: String,
 }
 
-fn get_radar_conn() -> Result<rusqlite::Connection, String> {
-    let config = CURRENT_VAULT_CONFIG.lock().unwrap();
-    let path = config.as_ref().ok_or("No vault opened")?;
-    if path.path.is_empty() {
-        return Err("Vault not initialized".to_string());
+fn check_plugin_enabled(plugin_id: &str) -> Result<(), String> {
+    println!("[radar] check_plugin_enabled: {}", plugin_id);
+    let enabled = PLUGIN_MANAGER.is_enabled(plugin_id).unwrap_or(false);
+    println!("[radar] is_enabled: {}", enabled);
+    if !enabled {
+        return Err(format!("Plugin '{}' is disabled", plugin_id));
     }
-    let vault_dir = std::path::Path::new(&path.path);
+    Ok(())
+}
+
+#[command]
+pub fn debug_vault_status() -> String {
+    let config_guard = CURRENT_VAULT_CONFIG.lock().unwrap();
+    let status = format!("CURRENT_VAULT_CONFIG: {:?}, last_vault.txt: {:?}",
+        config_guard,
+        std::fs::read_to_string(
+            std::env::var("APPDATA").unwrap_or_default().to_string() + "\\com.administrator.os-compass\\last-vault.txt"
+        ).ok()
+    );
+    println!("[debug_vault_status] {}", status);
+    status
+}
+
+fn get_radar_conn() -> Result<rusqlite::Connection, String> {
+    check_plugin_enabled("radar")?;
+    let config_guard = CURRENT_VAULT_CONFIG.lock().unwrap();
+
+    let path_value = match config_guard.as_ref() {
+        Some(cfg) if !cfg.path.is_empty() => cfg.path.clone(),
+        other => {
+            println!("[radar] CURRENT_VAULT_CONFIG = {:?}", other);
+            let last_vault = std::fs::read_to_string(
+                std::env::var("APPDATA").unwrap_or_default().to_string() + "\\com.administrator.os-compass\\last-vault.txt"
+            ).ok();
+            println!("[radar] last-vault.txt = {:?}", last_vault);
+            return Err(format!("No vault opened. Config: {:?}, last_vault.txt: {:?}", other, last_vault));
+        }
+    };
+
+    println!("[radar] get_radar_conn: vault path = {:?}", path_value);
+    // path_value is now the vault directory, we need its parent to get radar_db
+    let vault_dir = std::path::Path::new(&path_value);
+    println!("[radar] get_radar_conn: vault_dir = {:?}", vault_dir);
+    drop(config_guard);
     init_radar_db(vault_dir)
 }
 
 #[command]
 pub fn list_radar_sources() -> Result<Vec<RadarSource>, String> {
-    let conn = get_radar_conn()?;
-    let mut stmt = conn
-        .prepare("SELECT id, name, source_type, url, platform, enabled, check_interval, proxy_enabled, proxy_protocol, proxy_host, proxy_port, proxy_username, proxy_password, last_checked_at, last_status, last_error FROM radar_sources ORDER BY created_at DESC")
-        .map_err(|e| e.to_string())?;
-
-    let rows = stmt
-        .query_map([], |row| {
-            Ok(RadarSource {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                source_type: row.get(2)?,
-                url: row.get(3)?,
-                platform: row.get(4)?,
-                enabled: row.get::<_, i32>(5)? == 1,
-                check_interval: row.get(6)?,
-                proxy_enabled: row.get::<_, i32>(7)? == 1,
-                proxy_protocol: row.get::<_, Option<String>>(8)?.unwrap_or_else(|| "http".to_string()),
-                proxy_host: row.get(9)?,
-                proxy_port: row.get(10)?,
-                proxy_username: row.get(11)?,
-                proxy_password: row.get(12)?,
-                last_checked_at: row.get(13)?,
-                last_status: row.get(14)?,
-                last_error: row.get(15)?,
-            })
-        })
-        .map_err(|e| e.to_string())?;
-
-    let mut sources = Vec::new();
-    for row in rows {
-        sources.push(row.map_err(|e| e.to_string())?);
-    }
-    Ok(sources)
+    let sources = PLUGIN_CONFIG_DB.list_radar_sources();
+    Ok(sources.into_iter().map(|r| RadarSource {
+        id: r.id,
+        name: r.name,
+        source_type: r.source_type,
+        url: r.url,
+        platform: r.platform,
+        enabled: true,
+        check_interval: r.check_interval,
+        proxy_enabled: r.proxy_enabled,
+        proxy_protocol: r.proxy_protocol,
+        proxy_host: if r.proxy_host.is_empty() { None } else { Some(r.proxy_host) },
+        proxy_port: r.proxy_port as i64,
+        proxy_username: if r.proxy_username.is_empty() { None } else { Some(r.proxy_username) },
+        proxy_password: if r.proxy_password.is_empty() { None } else { Some(r.proxy_password) },
+        last_checked_at: r.last_checked_at,
+        last_status: r.last_status,
+        last_error: r.last_error,
+    }).collect())
 }
 
 #[command]
@@ -102,17 +126,23 @@ pub fn add_radar_source(
     proxy_username: Option<String>,
     proxy_password: Option<String>,
 ) -> Result<RadarSource, String> {
-    let conn = get_radar_conn()?;
-    let interval = check_interval.unwrap_or(86400);
-    let proxy_en = proxy_enabled.unwrap_or(false);
     let proxy_proto = proxy_protocol.unwrap_or_else(|| "http".to_string());
+    let proxy_host_val = proxy_host.clone().unwrap_or_default();
+    let proxy_username_val = proxy_username.clone().unwrap_or_default();
+    let proxy_password_val = proxy_password.clone().unwrap_or_default();
 
-    conn.execute(
-        "INSERT INTO radar_sources (name, source_type, url, platform, check_interval, proxy_enabled, proxy_protocol, proxy_host, proxy_port, proxy_username, proxy_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        params![name, source_type, url, platform, interval, proxy_en, proxy_proto, proxy_host, proxy_port, proxy_username, proxy_password],
+    let id = PLUGIN_CONFIG_DB.add_radar_source(
+        &name,
+        &source_type,
+        &url,
+        platform.as_deref(),
+        proxy_enabled.unwrap_or(false),
+        &proxy_proto,
+        &proxy_host_val,
+        proxy_port.unwrap_or(0) as i32,
+        &proxy_username_val,
+        &proxy_password_val,
     ).map_err(|e| e.to_string())?;
-
-    let id = conn.last_insert_rowid();
 
     Ok(RadarSource {
         id,
@@ -121,13 +151,13 @@ pub fn add_radar_source(
         url,
         platform,
         enabled: true,
-        check_interval: interval,
-        proxy_enabled: proxy_en,
+        check_interval: check_interval.unwrap_or(86400),
+        proxy_enabled: proxy_enabled.unwrap_or(false),
         proxy_protocol: proxy_proto,
-        proxy_host,
+        proxy_host: proxy_host.filter(|s| !s.is_empty()),
         proxy_port: proxy_port.unwrap_or(0),
-        proxy_username,
-        proxy_password,
+        proxy_username: proxy_username.filter(|s| !s.is_empty()),
+        proxy_password: proxy_password.filter(|s| !s.is_empty()),
         last_checked_at: None,
         last_status: None,
         last_error: None,
@@ -148,58 +178,24 @@ pub fn update_radar_source(
     proxy_username: Option<String>,
     proxy_password: Option<String>,
 ) -> Result<(), String> {
-    let conn = get_radar_conn()?;
-
-    if let Some(n) = name {
-        conn.execute("UPDATE radar_sources SET name = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![n, id])
-            .map_err(|e| e.to_string())?;
-    }
-    if let Some(u) = url {
-        conn.execute("UPDATE radar_sources SET url = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![u, id])
-            .map_err(|e| e.to_string())?;
-    }
-    if let Some(e) = enabled {
-        conn.execute("UPDATE radar_sources SET enabled = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![if e { 1 } else { 0 }, id])
-            .map_err(|e| e.to_string())?;
-    }
-    if let Some(i) = check_interval {
-        conn.execute("UPDATE radar_sources SET check_interval = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![i, id])
-            .map_err(|e| e.to_string())?;
-    }
-    if let Some(e) = proxy_enabled {
-        conn.execute("UPDATE radar_sources SET proxy_enabled = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![if e { 1 } else { 0 }, id])
-            .map_err(|e| e.to_string())?;
-    }
-    if let Some(p) = proxy_protocol {
-        conn.execute("UPDATE radar_sources SET proxy_protocol = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![p, id])
-            .map_err(|e| e.to_string())?;
-    }
-    if proxy_host.is_some() {
-        conn.execute("UPDATE radar_sources SET proxy_host = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![proxy_host, id])
-            .map_err(|e| e.to_string())?;
-    }
-    if let Some(p) = proxy_port {
-        conn.execute("UPDATE radar_sources SET proxy_port = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![p, id])
-            .map_err(|e| e.to_string())?;
-    }
-    if proxy_username.is_some() {
-        conn.execute("UPDATE radar_sources SET proxy_username = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![proxy_username, id])
-            .map_err(|e| e.to_string())?;
-    }
-    if proxy_password.is_some() {
-        conn.execute("UPDATE radar_sources SET proxy_password = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", params![proxy_password, id])
-            .map_err(|e| e.to_string())?;
-    }
-
-    Ok(())
+    PLUGIN_CONFIG_DB.update_radar_source(
+        id,
+        name.as_deref(),
+        url.as_deref(),
+        enabled,
+        check_interval,
+        proxy_enabled,
+        proxy_protocol.as_deref(),
+        proxy_host.as_deref(),
+        proxy_port.map(|p| p as i32),
+        proxy_username.as_deref(),
+        proxy_password.as_deref(),
+    ).map_err(|e| e.to_string())
 }
 
 #[command]
 pub fn delete_radar_source(id: i64) -> Result<(), String> {
-    let conn = get_radar_conn()?;
-    conn.execute("DELETE FROM radar_sources WHERE id = ?", params![id])
-        .map_err(|e| e.to_string())?;
-    Ok(())
+    PLUGIN_CONFIG_DB.delete_radar_source(id).map_err(|e| e.to_string())
 }
 
 #[command]

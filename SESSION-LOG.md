@@ -2,6 +2,27 @@
 
 # Session Log
 
+## 2026-07-16 18:01
+
+### 会话主题：情报雷达数据架构重构
+
+**问题**：用户反馈情报雷达采集后无数据
+
+**需求**：信息源放系统库，采集数据放仓库
+
+**修复**：
+1. 系统库 plugin_config.db 添加 radar_sources 表
+2. PLUGIN_CONFIG_DB 添加 CRUD 方法
+3. radar_cmd.rs 全部改用 PLUGIN_CONFIG_DB
+4. radar.rs 扫描时从系统库读取信息源
+5. vault 数据库移除 radar_sources 表
+
+**构建**：成功
+
+**提交**：待提交
+
+---
+
 ## 2026-07-15 下午 (18:00)
 
 ### 会话主题：修复加密密钥架构问题

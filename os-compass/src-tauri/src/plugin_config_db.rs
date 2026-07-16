@@ -44,13 +44,33 @@ impl PluginConfigDb {
                 created_at TEXT DEFAULT (datetime('now', 'localtime')),
                 updated_at TEXT DEFAULT (datetime('now', 'localtime'))
             );
-            
+
             CREATE TABLE IF NOT EXISTS vault_plugins (
                 vault_path TEXT NOT NULL,
                 plugin_id TEXT NOT NULL,
                 enabled INTEGER DEFAULT 0,
                 config TEXT,
                 PRIMARY KEY (vault_path, plugin_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS radar_sources (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                source_type TEXT NOT NULL,
+                url TEXT NOT NULL,
+                platform TEXT,
+                check_interval INTEGER DEFAULT 3600,
+                proxy_enabled INTEGER DEFAULT 0,
+                proxy_protocol TEXT DEFAULT 'http',
+                proxy_host TEXT,
+                proxy_port INTEGER DEFAULT 0,
+                proxy_username TEXT,
+                proxy_password TEXT,
+                last_checked_at TEXT,
+                last_status TEXT,
+                last_error TEXT,
+                created_at TEXT DEFAULT (datetime('now', 'localtime')),
+                updated_at TEXT DEFAULT (datetime('now', 'localtime'))
             );
             "#
         )?;
@@ -136,6 +156,120 @@ impl PluginConfigDb {
         )?;
         Ok(())
     }
+
+    // ========== Radar Sources (系统级) ==========
+
+    pub fn add_radar_source(&self, name: &str, source_type: &str, url: &str, platform: Option<&str>, proxy_enabled: bool, proxy_protocol: &str, proxy_host: &str, proxy_port: i32, proxy_username: &str, proxy_password: &str) -> Result<i64> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO radar_sources (name, source_type, url, platform, check_interval, proxy_enabled, proxy_protocol, proxy_host, proxy_port, proxy_username, proxy_password)
+             VALUES (?, ?, ?, ?, 3600, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![name, source_type, url, platform, proxy_enabled as i32, proxy_protocol, proxy_host, proxy_port, proxy_username, proxy_password],
+        )?;
+        Ok(conn.last_insert_rowid())
+    }
+
+    pub fn list_radar_sources(&self) -> Vec<RadarSourceRow> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = match conn.prepare(
+            "SELECT id, name, source_type, url, platform, check_interval, proxy_enabled, proxy_protocol, proxy_host, proxy_port, proxy_username, proxy_password, last_checked_at, last_status, last_error FROM radar_sources ORDER BY created_at DESC"
+        ) {
+            Ok(s) => s,
+            Err(_) => return Vec::new(),
+        };
+        stmt.query_map([], |row| {
+            Ok(RadarSourceRow {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                source_type: row.get(2)?,
+                url: row.get(3)?,
+                platform: row.get(4)?,
+                check_interval: row.get::<_, Option<i64>>(5)?.unwrap_or(3600),
+                proxy_enabled: row.get::<_, Option<i32>>(6)?.unwrap_or(0) == 1,
+                proxy_protocol: row.get::<_, Option<String>>(7)?.unwrap_or_else(|| "http".to_string()),
+                proxy_host: row.get::<_, Option<String>>(8)?.unwrap_or_default(),
+                proxy_port: row.get::<_, Option<i64>>(9)?.unwrap_or(0) as i32,
+                proxy_username: row.get::<_, Option<String>>(10)?.unwrap_or_default(),
+                proxy_password: row.get::<_, Option<String>>(11)?.unwrap_or_default(),
+                last_checked_at: row.get(12)?,
+                last_status: row.get(13)?,
+                last_error: row.get(14)?,
+            })
+        }).ok()
+        .map(|iter| iter.filter_map(|r| r.ok()).collect())
+        .unwrap_or_default()
+    }
+
+    pub fn update_radar_source_status(&self, id: i64, status: &str, error: Option<&str>) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE radar_sources SET last_checked_at = datetime('now', 'localtime'), last_status = ?, last_error = ? WHERE id = ?",
+            rusqlite::params![status, error, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_radar_source(&self, id: i64, name: Option<&str>, url: Option<&str>, enabled: Option<bool>, check_interval: Option<i64>, proxy_enabled: Option<bool>, proxy_protocol: Option<&str>, proxy_host: Option<&str>, proxy_port: Option<i32>, proxy_username: Option<&str>, proxy_password: Option<&str>) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+
+        if let Some(n) = name {
+            conn.execute("UPDATE radar_sources SET name = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", rusqlite::params![n, id])?;
+        }
+        if let Some(u) = url {
+            conn.execute("UPDATE radar_sources SET url = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", rusqlite::params![u, id])?;
+        }
+        if let Some(e) = enabled {
+            conn.execute("UPDATE radar_sources SET enabled = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", rusqlite::params![if e { 1 } else { 0 }, id])?;
+        }
+        if let Some(i) = check_interval {
+            conn.execute("UPDATE radar_sources SET check_interval = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", rusqlite::params![i, id])?;
+        }
+        if let Some(e) = proxy_enabled {
+            conn.execute("UPDATE radar_sources SET proxy_enabled = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", rusqlite::params![if e { 1 } else { 0 }, id])?;
+        }
+        if let Some(p) = proxy_protocol {
+            conn.execute("UPDATE radar_sources SET proxy_protocol = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", rusqlite::params![p, id])?;
+        }
+        if let Some(h) = proxy_host {
+            conn.execute("UPDATE radar_sources SET proxy_host = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", rusqlite::params![h, id])?;
+        }
+        if let Some(p) = proxy_port {
+            conn.execute("UPDATE radar_sources SET proxy_port = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", rusqlite::params![p, id])?;
+        }
+        if let Some(u) = proxy_username {
+            conn.execute("UPDATE radar_sources SET proxy_username = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", rusqlite::params![u, id])?;
+        }
+        if let Some(p) = proxy_password {
+            conn.execute("UPDATE radar_sources SET proxy_password = ?, updated_at = datetime('now', 'localtime') WHERE id = ?", rusqlite::params![p, id])?;
+        }
+
+        Ok(())
+    }
+
+    pub fn delete_radar_source(&self, id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM radar_sources WHERE id = ?", rusqlite::params![id])?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RadarSourceRow {
+    pub id: i64,
+    pub name: String,
+    pub source_type: String,
+    pub url: String,
+    pub platform: Option<String>,
+    pub check_interval: i64,
+    pub proxy_enabled: bool,
+    pub proxy_protocol: String,
+    pub proxy_host: String,
+    pub proxy_port: i32,
+    pub proxy_username: String,
+    pub proxy_password: String,
+    pub last_checked_at: Option<String>,
+    pub last_status: Option<String>,
+    pub last_error: Option<String>,
 }
 
 fn get_plugin_config_db_path() -> PathBuf {
