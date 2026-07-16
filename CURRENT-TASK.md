@@ -92,6 +92,23 @@ Week 4: Task 20 雷达 UI 优化 + Task 21 链接导入增强
 
 ## 会话日志
 
+### 2026-07-16 18:01 - 情报雷达数据架构重构
+
+**问题**：用户反馈情报雷达采集后无数据
+
+**需求**：信息源放系统库（plugin_config.db），采集数据放仓库（plugin_radar.db）
+
+**修复**：
+1. 系统库添加 radar_sources 表和相关 CRUD 方法
+2. PLUGIN_CONFIG_DB 添加雷达信息源管理方法
+3. radar_cmd.rs 全部改用 PLUGIN_CONFIG_DB
+4. radar.rs 扫描时从系统库读取信息源
+5. vault 数据库移除 radar_sources 表（只保留采集数据）
+
+**状态**：✅ 架构重构完成
+
+---
+
 ### 2026-07-14 晚间 - Bug 修复
 
 **问题**：

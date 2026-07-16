@@ -2,6 +2,7 @@ use crate::db::open_db_at_path;
 use crate::feature_plugin::{
     DbMode, FeaturePlugin, FeaturePluginType, FeatureResult, PluginContext, PluginError,
 };
+use crate::plugin_config_db::PLUGIN_CONFIG_DB;
 use crate::settings::get_settings;
 use crate::source_engine::{get_adapter, llm_parser::parse_content_with_llm, SourceType};
 use async_trait::async_trait;
@@ -26,32 +27,12 @@ pub fn init_radar_db(vault_dir: &std::path::Path) -> Result<rusqlite::Connection
     let db_path = vault_dir.join("plugin_radar.db");
     let conn = open_db_at_path(&db_path)?;
 
+    // vault 数据库只存储采集的数据（radar_items），信息源在系统库
     conn.execute_batch(
         r#"
-        CREATE TABLE IF NOT EXISTS radar_sources (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            source_type TEXT NOT NULL,
-            url TEXT NOT NULL,
-            platform TEXT,
-            enabled INTEGER DEFAULT 1,
-            check_interval INTEGER DEFAULT 86400,
-            proxy_enabled INTEGER DEFAULT 0,
-            proxy_protocol TEXT DEFAULT 'http',
-            proxy_host TEXT,
-            proxy_port INTEGER DEFAULT 0,
-            proxy_username TEXT,
-            proxy_password TEXT,
-            last_checked_at TEXT,
-            last_status TEXT,
-            last_error TEXT,
-            created_at TEXT DEFAULT (datetime('now', 'localtime')),
-            updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-        );
-
         CREATE TABLE IF NOT EXISTS radar_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            source_id INTEGER NOT NULL REFERENCES radar_sources(id) ON DELETE CASCADE,
+            source_id INTEGER NOT NULL,
             url_hash TEXT NOT NULL UNIQUE,
             project_name TEXT,
             project_url TEXT,
@@ -76,7 +57,6 @@ pub fn init_radar_db(vault_dir: &std::path::Path) -> Result<rusqlite::Connection
 
         CREATE INDEX IF NOT EXISTS idx_radar_items_status ON radar_items(status);
         CREATE INDEX IF NOT EXISTS idx_radar_items_source ON radar_items(source_id);
-        CREATE INDEX IF NOT EXISTS idx_radar_sources_enabled ON radar_sources(enabled);
         "#,
     )
     .map_err(|e| e.to_string())?;
@@ -113,10 +93,7 @@ pub async fn radar_scan_source(
     let contents = match adapter.fetch(url, proxy).await {
         Ok(c) => c,
         Err(e) => {
-            conn.execute(
-                "UPDATE radar_sources SET last_checked_at = datetime('now', 'localtime'), last_status = 'error', last_error = ? WHERE id = ?",
-                params![e.to_string(), source_id],
-            ).ok();
+            PLUGIN_CONFIG_DB.update_radar_source_status(source_id, "error", Some(&e.to_string())).ok();
             errors += 1;
             return Ok((scanned, new_items, errors));
         }
@@ -179,10 +156,7 @@ pub async fn radar_scan_source(
         }
     }
 
-    conn.execute(
-        "UPDATE radar_sources SET last_checked_at = datetime('now', 'localtime'), last_status = 'success', last_error = NULL WHERE id = ?",
-        params![source_id],
-    ).ok();
+    PLUGIN_CONFIG_DB.update_radar_source_status(source_id, "success", None).ok();
 
     Ok((scanned, new_items, errors))
 }
@@ -190,20 +164,19 @@ pub async fn radar_scan_source(
 pub async fn radar_scan_all(vault_dir: &std::path::Path) -> Result<(i64, i64, i64), String> {
     let conn = init_radar_db(vault_dir)?;
 
-    let mut stmt = conn.prepare("SELECT id, source_type, url FROM radar_sources WHERE enabled = 1")
-        .map_err(|e| e.to_string())?;
-
-    let sources: Vec<(i64, String, String)> = stmt
-        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
-        .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .collect();
+    // 从系统库读取信息源
+    let system_sources = PLUGIN_CONFIG_DB.list_radar_sources();
+    println!("[radar] Found {} sources in system DB", system_sources.len());
 
     let mut total_scanned = 0i64;
     let mut total_new = 0i64;
     let mut total_errors = 0i64;
 
-    for (source_id, source_type, url) in sources {
+    for source in system_sources {
+        let source_id = source.id;
+        let source_type = source.source_type.clone();
+        let url = source.url.clone();
+
         match radar_scan_source(&conn, source_id, &source_type, &url).await {
             Ok((s, n, e)) => {
                 total_scanned += s;
