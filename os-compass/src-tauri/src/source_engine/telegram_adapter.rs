@@ -1,17 +1,46 @@
 use crate::source_engine::{RawContent, SourceAdapter, SourceError, SourceType};
+use crate::system_db;
 use async_trait::async_trait;
 use regex::Regex;
 use std::time::Duration;
 
 pub struct TelegramAdapter {
     cookie_store: std::sync::Mutex<Option<String>>,
+    url_patterns: std::sync::Mutex<Vec<String>>,
 }
 
 impl TelegramAdapter {
     pub fn new() -> Self {
+        let patterns = Self::load_url_patterns();
         TelegramAdapter {
             cookie_store: std::sync::Mutex::new(None),
+            url_patterns: std::sync::Mutex::new(patterns),
         }
+    }
+
+    fn load_url_patterns() -> Vec<String> {
+        if let Ok(plugins) = system_db::list_source_plugins() {
+            let mut patterns = Vec::new();
+            for plugin in plugins {
+                if let Some(urls) = plugin.url_patterns {
+                    for url in urls {
+                        patterns.push(url);
+                    }
+                }
+            }
+            if patterns.is_empty() {
+                patterns.push("github.com".to_string());
+                patterns.push("gitee.com".to_string());
+            }
+            println!("[telegram] Loaded {} URL patterns from source_plugins", patterns.len());
+            return patterns;
+        }
+        println!("[telegram] Failed to load source_plugins, using defaults");
+        vec!["github.com".to_string(), "gitee.com".to_string()]
+    }
+
+    fn get_url_patterns(&self) -> Vec<String> {
+        self.url_patterns.lock().unwrap().clone()
     }
 
     fn normalize_url(url: &str) -> Option<String> {
@@ -57,15 +86,13 @@ impl TelegramAdapter {
     }
 
     fn extract_links_from_text(&self, text: &str) -> Vec<String> {
-        let patterns = [
-            r"https?://(?:www\.)?github\.com/[\w\-]+/[\w\.\-]+",
-            r"https?://(?:www\.)?gitee\.com/[\w\-]+/[\w\.\-]+",
-            r"https?://(?:www\.)?gitlab\.com/[\w\-]+/[\w\.\-]+",
-        ];
-
+        let patterns = self.get_url_patterns();
         let mut links = Vec::new();
-        for pattern in &patterns {
-            if let Ok(re) = Regex::new(pattern) {
+
+        for domain in &patterns {
+            let escaped_domain = domain.replace(".", r"\.");
+            let pattern = format!(r"https?://(?:www\.)?{}/[\w\-]+/[\w\.\-]+", escaped_domain);
+            if let Ok(re) = Regex::new(&pattern) {
                 for cap in re.find_iter(text) {
                     links.push(cap.as_str().to_string());
                 }
