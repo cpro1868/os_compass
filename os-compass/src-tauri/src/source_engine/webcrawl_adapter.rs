@@ -28,7 +28,7 @@ impl SourceAdapter for WebCrawlAdapter {
         SourceType::WebCrawl
     }
 
-    async fn fetch(&self, url: &str, proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
+    async fn fetch(&mut self, url: &str, proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
         let settings = crate::settings::get_settings();
         let crawler_api_url = if settings.crawler_api_url.is_empty() {
             "http://localhost:8080/crawl".to_string()

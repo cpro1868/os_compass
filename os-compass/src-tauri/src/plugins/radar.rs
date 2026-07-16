@@ -82,7 +82,7 @@ pub async fn radar_scan_source(
     println!("[radar] Scanning source_id={}, type={}, url={}", source_id, source_type, url);
 
     let st = SourceType::from_str(source_type).unwrap_or(SourceType::Rss);
-    let adapter = get_adapter(st);
+    let mut adapter = get_adapter(st);
 
     let sources = PLUGIN_CONFIG_DB.list_radar_sources();
     let source_config = sources.iter().find(|s| s.id == source_id);
