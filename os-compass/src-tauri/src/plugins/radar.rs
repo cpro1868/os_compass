@@ -4,12 +4,11 @@ use crate::feature_plugin::{
 };
 use crate::plugin_config_db::PLUGIN_CONFIG_DB;
 use crate::settings::get_settings;
-use crate::source_engine::{get_adapter, llm_parser::parse_content_with_llm, SourceType};
+use crate::source_engine::{get_adapter, SourceType};
 use async_trait::async_trait;
 use rusqlite::params;
 use sha2::{Digest, Sha256};
 use std::sync::Mutex;
-use tauri::Emitter;
 
 pub struct RadarPlugin {
     _scan_flag: Mutex<bool>,
@@ -80,19 +79,37 @@ pub async fn radar_scan_source(
     let mut new_items = 0i64;
     let mut errors = 0i64;
 
+    println!("[radar] Scanning source_id={}, type={}, url={}", source_id, source_type, url);
+
     let st = SourceType::from_str(source_type).unwrap_or(SourceType::Rss);
     let adapter = get_adapter(st);
 
-    let settings = get_settings();
-    let proxy = if settings.proxy_host.is_empty() {
-        None
-    } else {
-        Some(settings.proxy_host.as_str())
-    };
+    let sources = PLUGIN_CONFIG_DB.list_radar_sources();
+    let source_config = sources.iter().find(|s| s.id == source_id);
 
-    let contents = match adapter.fetch(url, proxy).await {
-        Ok(c) => c,
+    let mut proxy_url: Option<String> = None;
+
+    if let Some(src) = source_config {
+        if src.proxy_enabled && !src.proxy_host.is_empty() {
+            proxy_url = Some(format!("http://{}:{}", src.proxy_host, src.proxy_port));
+            println!("[radar] Using source proxy: {}", proxy_url.as_ref().unwrap());
+        } else {
+            let settings = get_settings();
+            if !settings.proxy_host.is_empty() {
+                proxy_url = Some(settings.proxy_host.clone());
+                println!("[radar] Using global proxy: {}", proxy_url.as_ref().unwrap());
+            }
+        }
+    }
+
+    println!("[radar] Fetching from url: {}", url);
+    let contents = match adapter.fetch(url, proxy_url.as_deref()).await {
+        Ok(c) => {
+            println!("[radar] Fetched {} items", c.len());
+            c
+        }
         Err(e) => {
+            println!("[radar] Fetch error: {}", e);
             PLUGIN_CONFIG_DB.update_radar_source_status(source_id, "error", Some(&e.to_string())).ok();
             errors += 1;
             return Ok((scanned, new_items, errors));
@@ -101,6 +118,8 @@ pub async fn radar_scan_source(
 
     for content in &contents {
         scanned += 1;
+        println!("[radar] Processing item {}: {}", scanned, content.title);
+
         let url_hash = compute_url_hash(&content.url);
 
         let exists: bool = conn
@@ -112,6 +131,7 @@ pub async fn radar_scan_source(
             .unwrap_or(false);
 
         if exists {
+            println!("[radar] Item already exists, skipping");
             continue;
         }
 
@@ -124,21 +144,16 @@ pub async fn radar_scan_source(
             .unwrap_or(false);
 
         if blacklisted {
+            println!("[radar] Item is blacklisted, skipping");
             continue;
         }
 
-        let parsed = parse_content_with_llm(content, &settings).unwrap_or_default();
+        let project_name = content.title.clone();
+        let project_url = content.url.clone();
+        let description = content.content.clone();
+        let language = None::<String>;
 
-        let project_name = parsed.first()
-            .and_then(|p| p.project_name.clone())
-            .unwrap_or_else(|| content.title.clone());
-
-        let project_url = parsed.first()
-            .and_then(|p| p.project_url.clone())
-            .unwrap_or_else(|| content.url.clone());
-
-        let description = parsed.first().and_then(|p| p.description.clone());
-        let language = parsed.first().and_then(|p| p.language.clone());
+        println!("[radar] Processing item: {}", project_name);
 
         let source_urls = contents.iter()
             .filter(|c| c.url.contains("github.com") || c.url.contains("gitee.com"))
@@ -146,17 +161,22 @@ pub async fn radar_scan_source(
             .collect::<Vec<_>>()
             .join(",");
 
+        println!("[radar] Inserting item: name={}, url={}", project_name, project_url);
         let result = conn.execute(
             "INSERT OR IGNORE INTO radar_items (source_id, url_hash, project_name, project_url, description, language, raw_content, source_urls, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             params![source_id, url_hash, project_name, project_url, description, language, content.content, source_urls, content.published_at],
         );
 
         if result.is_ok() && conn.changes() > 0 {
+            println!("[radar] Successfully inserted new item");
             new_items += 1;
+        } else {
+            println!("[radar] Insert failed or no changes: {:?}", result.err());
         }
     }
 
     PLUGIN_CONFIG_DB.update_radar_source_status(source_id, "success", None).ok();
+    println!("[radar] Scan completed: scanned={}, new={}, errors={}", scanned, new_items, errors);
 
     Ok((scanned, new_items, errors))
 }

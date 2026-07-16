@@ -787,10 +787,17 @@
       "scanFailed": "扫描失败",
       "actionFailed": "操作失败",
       "nameRequired": "名称和 URL 不能为空",
-      "addFailed": "添加信息源失败"
+      "addFailed": "添加信息源失败",
+      "deleteFailed": "删除信息源失败"
     },
     "scanComplete": "扫描完成：{{count}} 个新项目",
     "sourceAdded": "信息源添加成功",
+    "sourceUpdated": "信息源更新成功",
+    "sourceDeleted": "信息源删除成功",
+    "confirmDelete": "确定要删除这个信息源吗？",
+    "edit": "编辑",
+    "delete": "删除",
+    "editSource": "编辑信息源",
     "sourceName": "名称",
     "sourceNamePlaceholder": "例如：GitHub Trending",
     "sourceType": "信息源类型",

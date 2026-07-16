@@ -782,10 +782,17 @@
       "scanFailed": "Scan failed",
       "actionFailed": "Action failed",
       "nameRequired": "Name and URL are required",
-      "addFailed": "Failed to add source"
+      "addFailed": "Failed to add source",
+      "deleteFailed": "Failed to delete source"
     },
     "scanComplete": "Scan complete: {{count}} new items",
     "sourceAdded": "Source added successfully",
+    "sourceUpdated": "Source updated successfully",
+    "sourceDeleted": "Source deleted successfully",
+    "confirmDelete": "Are you sure you want to delete this source?",
+    "edit": "Edit",
+    "delete": "Delete",
+    "editSource": "Edit Source",
     "sourceName": "Name",
     "sourceNamePlaceholder": "e.g., GitHub Trending",
     "sourceType": "Source Type",

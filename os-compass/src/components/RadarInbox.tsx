@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { listRadarSources, addRadarSource, getRadarItems, triggerRadarScan, radarItemAction, RadarSource, RadarItem, RadarSourceInput } from '../api/radar';
+import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, RadarSource, RadarItem, RadarSourceInput } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
 
 export function RadarInbox() {
@@ -25,6 +25,7 @@ export function RadarInbox() {
     proxyPassword: '',
   });
   const [saving, setSaving] = useState(false);
+  const [editingSource, setEditingSource] = useState<RadarSource | null>(null);
 
   const loadSources = useCallback(async () => {
     try {
@@ -56,10 +57,40 @@ export function RadarInbox() {
       const result = await triggerRadarScan();
       showToast(t('radar.scanComplete', { count: result.newItems }), 'success');
       loadItems();
+      loadSources();
     } catch {
       showToast(t('radar.error.scanFailed'), 'error');
     } finally {
       setScanning(false);
+    }
+  };
+
+  const handleEditSource = (source: RadarSource) => {
+    setEditingSource(source);
+    setNewSource({
+      name: source.name,
+      url: source.url,
+      sourceType: source.source_type,
+      platform: source.platform || '',
+      checkInterval: source.check_interval,
+      proxyEnabled: source.proxy_enabled,
+      proxyProtocol: source.proxy_protocol,
+      proxyHost: source.proxy_host || '',
+      proxyPort: source.proxy_port,
+      proxyUsername: source.proxy_username || '',
+      proxyPassword: source.proxy_password || '',
+    });
+    setShowAddSource(true);
+  };
+
+  const handleDeleteSource = async (sourceId: number) => {
+    if (!window.confirm(t('radar.confirmDelete'))) return;
+    try {
+      await deleteRadarSource(sourceId);
+      showToast(t('radar.sourceDeleted'), 'success');
+      loadSources();
+    } catch {
+      showToast(t('radar.error.deleteFailed'), 'error');
     }
   };
 
@@ -80,9 +111,15 @@ export function RadarInbox() {
     }
     setSaving(true);
     try {
-      await addRadarSource(newSource);
-      showToast(t('radar.sourceAdded'), 'success');
+      if (editingSource) {
+        await updateRadarSource(editingSource.id, newSource);
+        showToast(t('radar.sourceUpdated'), 'success');
+      } else {
+        await addRadarSource(newSource);
+        showToast(t('radar.sourceAdded'), 'success');
+      }
       setShowAddSource(false);
+      setEditingSource(null);
       setNewSource({
         name: '',
         url: '',
@@ -102,6 +139,24 @@ export function RadarInbox() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCloseSourceModal = () => {
+    setShowAddSource(false);
+    setEditingSource(null);
+    setNewSource({
+      name: '',
+      url: '',
+      sourceType: 'rss',
+      platform: '',
+      checkInterval: 3600,
+      proxyEnabled: false,
+      proxyProtocol: 'http',
+      proxyHost: '',
+      proxyPort: 0,
+      proxyUsername: '',
+      proxyPassword: '',
+    });
   };
 
   const onProxyProtocolChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -267,17 +322,37 @@ export function RadarInbox() {
               sources.map(source => (
                 <div
                   key={source.id}
-                  className="px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-pointer"
+                  className="px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${
-                      source.last_status === 'success' ? 'bg-green-500' :
-                      source.last_status === 'error' ? 'bg-red-500' : 'bg-gray-400 dark:bg-gray-500'
-                    }`} />
-                    <span className="text-sm font-medium truncate">{source.name}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        source.last_status === 'success' ? 'bg-green-500' :
+                        source.last_status === 'error' ? 'bg-red-500' : 'bg-gray-400 dark:bg-gray-500'
+                      }`} />
+                      <span className="text-sm font-medium truncate">{source.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => handleEditSource(source)}
+                        className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
+                        title={t('radar.edit')}
+                      >
+                        <i className="fa-solid fa-pen-to-square text-xs" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSource(source.id)}
+                        className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                        title={t('radar.delete')}
+                      >
+                        <i className="fa-solid fa-trash text-xs" />
+                      </button>
+                    </div>
                   </div>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {source.last_checked_at ? source.last_checked_at : t('radar.neverScanned')}
+                    {source.last_status === 'error' && source.last_error ? (
+                      <span className="text-red-500" title={source.last_error}>Error: {source.last_error}</span>
+                    ) : source.last_checked_at ? source.last_checked_at : t('radar.neverScanned')}
                   </p>
                 </div>
               ))
@@ -290,9 +365,11 @@ export function RadarInbox() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
-              <h2 className="text-lg font-semibold dark:text-gray-100">{t('radar.addSource')}</h2>
+              <h2 className="text-lg font-semibold dark:text-gray-100">
+                {editingSource ? t('radar.editSource') : t('radar.addSource')}
+              </h2>
               <button
-                onClick={() => setShowAddSource(false)}
+                onClick={handleCloseSourceModal}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               >
                 <i className="fa-solid fa-xmark" />
