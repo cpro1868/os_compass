@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 pub struct PlatformPresetAdapter {
     presets: HashMap<String, String>,
+    rss_adapter: RssAdapter,
 }
 
 impl PlatformPresetAdapter {
@@ -13,7 +14,7 @@ impl PlatformPresetAdapter {
         presets.insert("github_trending_weekly".to_string(), "https://rsshub.app/github/trending/weekly".to_string());
         presets.insert("github_trending_monthly".to_string(), "https://rsshub.app/github/trending/monthly".to_string());
         presets.insert("gitee_trending".to_string(), "https://rsshub.app/gitee/trending".to_string());
-        PlatformPresetAdapter { presets }
+        PlatformPresetAdapter { presets, rss_adapter: RssAdapter::new() }
     }
 
     fn resolve_url(&self, url: &str) -> String {
@@ -32,9 +33,8 @@ impl SourceAdapter for PlatformPresetAdapter {
         SourceType::PlatformPreset
     }
 
-    async fn fetch(&self, url: &str, proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
+    async fn fetch(&mut self, url: &str, proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
         let resolved_url = self.resolve_url(url);
-        let rss_adapter = RssAdapter::new();
-        rss_adapter.fetch(&resolved_url, proxy).await
+        self.rss_adapter.fetch(&resolved_url, proxy).await
     }
 }

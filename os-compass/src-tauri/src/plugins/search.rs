@@ -161,7 +161,7 @@ pub async fn three_layer_search(
             Some(settings.proxy_host.as_str())
         };
 
-        let adapter = get_adapter(SourceType::WebCrawl);
+        let mut adapter = get_adapter(SourceType::WebCrawl);
         let search_url = format!("https://api.github.com/search/repositories?q={}", urlencoding::encode(query));
 
         if let Ok(contents) = adapter.fetch(&search_url, proxy).await {

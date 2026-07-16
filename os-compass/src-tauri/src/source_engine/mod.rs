@@ -70,7 +70,7 @@ impl SourceType {
 #[async_trait]
 pub trait SourceAdapter: Send + Sync {
     fn adapter_type(&self) -> SourceType;
-    async fn fetch(&self, url: &str, proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError>;
+    async fn fetch(&mut self, url: &str, proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError>;
 }
 
 pub fn build_client(proxy: Option<&str>) -> Result<reqwest::Client, SourceError> {
