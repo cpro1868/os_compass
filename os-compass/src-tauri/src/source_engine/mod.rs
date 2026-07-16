@@ -76,7 +76,7 @@ pub trait SourceAdapter: Send + Sync {
 pub fn build_client(proxy: Option<&str>) -> Result<reqwest::Client, SourceError> {
     let mut builder = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
-        .user_agent("OS-Compass/1.0");
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
     if let Some(proxy_url) = proxy {
         if !proxy_url.is_empty() {
