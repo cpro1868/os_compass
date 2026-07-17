@@ -820,7 +820,8 @@
       "nameRequired": "Name and URL are required",
       "addFailed": "Failed to add source",
       "deleteFailed": "Failed to delete source",
-      "clearFailed": "Failed to clear data"
+      "clearFailed": "Failed to clear data",
+      "typeMismatch": "Type mismatch: URL should be {{expected}}, but you selected {{actual}}"
     }
   },
   "search": {

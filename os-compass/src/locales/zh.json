@@ -825,7 +825,8 @@
       "nameRequired": "名称和 URL 不能为空",
       "addFailed": "添加信息源失败",
       "deleteFailed": "删除信息源失败",
-      "clearFailed": "清空数据失败"
+      "clearFailed": "清空数据失败",
+      "typeMismatch": "类型不匹配：URL 应该是 {{expected}}，但您选择了 {{actual}}"
     }
   },
   "search": {

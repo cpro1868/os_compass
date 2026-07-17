@@ -141,11 +141,38 @@ export function RadarInbox() {
     );
   };
 
+  const detectSourceType = (url: string): string => {
+    const lower = url.toLowerCase();
+    if (lower.includes('t.me/')) return 'telegram';
+    if (lower.includes('.rss') || lower.includes('feed') || lower.includes('atom')) return 'rss';
+    if (lower.includes('sitemap')) return 'rss';
+    return 'web_crawl';
+  };
+
+  const validateSourceType = (url: string, sourceType: string): boolean => {
+    const detected = detectSourceType(url);
+    if (detected === sourceType) return true;
+    if (detected === 'rss' && sourceType === 'web_crawl') return true;
+    return false;
+  };
+
   const handleAddSource = async () => {
     if (!newSource.name.trim() || !newSource.url.trim()) {
       showToast(t('radar.error.nameRequired'), 'error');
       return;
     }
+
+    if (!validateSourceType(newSource.url, newSource.sourceType)) {
+      const detected = detectSourceType(newSource.url);
+      const typeNames: Record<string, string> = {
+        rss: 'RSS',
+        telegram: 'Telegram',
+        web_crawl: 'Web Crawl'
+      };
+      showToast(t('radar.error.typeMismatch', { expected: typeNames[detected], actual: typeNames[newSource.sourceType] }), 'error');
+      return;
+    }
+
     setSaving(true);
     try {
       if (editingSource) {
@@ -220,7 +247,6 @@ export function RadarInbox() {
     { key: 'all', label: t('radar.tabs.all'), count: items.length },
     { key: 'unread', label: t('radar.tabs.unread'), count: items.filter(i => i.status === 'unread').length },
     { key: 'imported', label: t('radar.tabs.imported'), count: items.filter(i => i.status === 'imported').length },
-    { key: 'ignored', label: t('radar.tabs.ignored'), count: items.filter(i => i.status === 'ignored').length },
   ];
 
   return (
@@ -311,38 +337,21 @@ export function RadarInbox() {
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        {item.status === 'unread' && (
-                          <>
-                            {hasSupportedLink(item) && (
-                              <button
-                                onClick={() => handleAction(item.id, 'import')}
-                                className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition cursor-pointer"
-                              >
-                                <i className="fa-solid fa-download text-xs mr-1" />
-                                {t('radar.import')}
-                              </button>
-                            )}
+                        {item.status === 'unread' && hasSupportedLink(item) && (
                           <button
-                            onClick={() => handleAction(item.id, 'ignore')}
-                            className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer"
+                            onClick={() => handleAction(item.id, 'import')}
+                            className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition cursor-pointer"
                           >
-                            <i className="fa-regular fa-thumbs-down text-xs mr-1" />
-                            {t('radar.ignore')}
+                            <i className="fa-solid fa-download text-xs mr-1" />
+                            {t('radar.import')}
                           </button>
-                        </>
-                      )}
-                      {item.status !== 'unread' && (
-                        <span className={`px-3 py-1.5 text-sm rounded-lg ${
-                          item.status === 'imported' ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'
-                        }`}>
-                          {item.status === 'imported' ? (
-                            <><i className="fa-solid fa-check mr-1" />{t('radar.imported')}</>
-                          ) : (
-                            <><i className="fa-solid fa-ban mr-1" />{t('radar.ignored')}</>
-                          )}
-                        </span>
-                      )}
-                    </div>
+                        )}
+                        {item.status === 'imported' && (
+                          <span className="px-3 py-1.5 text-sm rounded-lg text-green-600 dark:text-green-400">
+                            <i className="fa-solid fa-check mr-1" />{t('radar.imported')}
+                          </span>
+                        )}
+                      </div>
                   </div>
                 </div>
               ))
@@ -456,17 +465,6 @@ export function RadarInbox() {
                   value={newSource.url}
                   onChange={e => setNewSource(prev => ({ ...prev, url: e.target.value }))}
                   placeholder="https://..."
-                  className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('radar.platform')}</label>
-                <input
-                  type="text"
-                  value={newSource.platform || ''}
-                  onChange={e => setNewSource(prev => ({ ...prev, platform: e.target.value }))}
-                  placeholder={t('radar.platformPlaceholder')}
                   className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500"
                 />
               </div>
