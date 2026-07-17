@@ -2,6 +2,21 @@
 
 # Session Log
 
+## 2026-07-17 02:50
+
+### 会话主题：Telegram 适配器 HTML 解析修复
+
+**问题**：代理可访问，但解析逻辑不正确
+
+**修复**：
+- 分析 Telegram HTML 结构
+- 正确提取 `tgme_widget_message_wrap` 中的消息
+- 添加 fallback 解析方式
+
+**提交**：712704f
+
+---
+
 ## 2026-07-17 02:30
 
 ### 会话主题：修复 Telegram 采集理解错误
