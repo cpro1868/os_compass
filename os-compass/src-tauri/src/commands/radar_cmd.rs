@@ -70,7 +70,13 @@ fn get_radar_conn() -> Result<rusqlite::Connection, String> {
     let config_guard = CURRENT_VAULT_CONFIG.lock().unwrap();
 
     let path_value = match config_guard.as_ref() {
-        Some(cfg) if !cfg.path.is_empty() => cfg.path.clone(),
+        Some(cfg) if !cfg.path.is_empty() => {
+            // path 是数据库文件路径，需要取父目录
+            let db_path = std::path::Path::new(&cfg.path);
+            db_path.parent()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|| cfg.path.clone())
+        }
         other => {
             println!("[radar] CURRENT_VAULT_CONFIG = {:?}", other);
             let last_vault = std::fs::read_to_string(
@@ -82,7 +88,6 @@ fn get_radar_conn() -> Result<rusqlite::Connection, String> {
     };
 
     println!("[radar] get_radar_conn: vault path = {:?}", path_value);
-    // path_value is now the vault directory, we need its parent to get radar_db
     let vault_dir = std::path::Path::new(&path_value);
     println!("[radar] get_radar_conn: vault_dir = {:?}", vault_dir);
     drop(config_guard);
@@ -360,9 +365,14 @@ pub fn trigger_radar_scan() -> Result<serde_json::Value, String> {
     let vault_dir = {
         let config = CURRENT_VAULT_CONFIG.lock().unwrap();
         let path = config.as_ref().ok_or("No vault opened")?;
-        std::path::PathBuf::from(&path.path)
+        // path 是数据库文件路径，需要取父目录
+        let db_path = std::path::Path::new(&path.path);
+        db_path.parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| std::path::PathBuf::from(&path.path))
     };
 
+    println!("[radar] trigger_radar_scan: vault_dir = {:?}", vault_dir);
     let (scanned, new_items, errors) = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(&vault_dir))?;
 
     Ok(serde_json::json!({

@@ -24,6 +24,8 @@ impl RadarPlugin {
 
 pub fn init_radar_db(vault_dir: &std::path::Path) -> Result<rusqlite::Connection, String> {
     let db_path = vault_dir.join("plugin_radar.db");
+    println!("[radar] init_radar_db: vault_dir={:?}, db_path={:?}", vault_dir, db_path);
+
     let conn = open_db_at_path(&db_path)?;
 
     // vault 数据库只存储采集的数据（radar_items），信息源在系统库
