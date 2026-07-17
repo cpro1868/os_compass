@@ -742,6 +742,7 @@
     "cancel": "取消",
     "close": "关闭",
     "saving": "保存中...",
+    "clearing": "清空中...",
     "confirm": "确认",
     "delete": "删除",
     "edit": "编辑",
@@ -811,7 +812,21 @@
     "proxyUsername": "用户名",
     "proxyUsernamePlaceholder": "选填",
     "proxyPassword": "密码",
-    "proxyPasswordPlaceholder": "选填"
+    "proxyPasswordPlaceholder": "选填",
+    "clearAll": "清空",
+    "clearConfirmTitle": "确认清空数据",
+    "clearConfirmMessage": "此操作将删除所有雷达采集的数据，且无法恢复。确定要继续吗？",
+    "clearConfirm": "确认清空",
+    "clearedSuccess": "数据已清空",
+    "error": {
+      "loadFailed": "加载数据失败",
+      "scanFailed": "扫描失败",
+      "actionFailed": "操作失败",
+      "nameRequired": "名称和 URL 不能为空",
+      "addFailed": "添加信息源失败",
+      "deleteFailed": "删除信息源失败",
+      "clearFailed": "清空数据失败"
+    }
   },
   "search": {
     "title": "意图搜索",

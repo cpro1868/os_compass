@@ -356,6 +356,7 @@ pub fn run() {
             commands::trigger_radar_scan,
             commands::get_radar_unread_count,
             commands::clear_radar_cache,
+            commands::clear_radar_all,
             commands::intent_search,
             commands::get_search_history,
             commands::clear_search_history,
