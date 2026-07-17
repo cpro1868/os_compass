@@ -2,6 +2,30 @@
 
 # Session Log
 
+## 2026-07-17 02:15
+
+### 会话主题：情报雷达并发扫描 + Telegram 采集完善
+
+**修复**：
+
+1. **并发扫描问题**
+   - 原设计：`tokio::spawn` 并发执行，因 `rusqlite::Connection` 不是 `Send` 导致编译失败
+   - 修复方案：顺序执行，每个信息源之间延迟 1 秒
+
+2. **Telegram 采集完善**
+   - 从页面 HTML 中提取消息内容
+   - 过滤包含 GitHub/Gitee 链接的消息
+   - 从消息块中提取标题、链接、发布时间
+   - 两种提取模式：结构化提取 + 直接 HTML 提取
+
+3. **数据存储**
+   - 信息源（radar_sources）→ 系统库 plugin_config.db
+   - 采集数据（radar_items）→ 仓库 plugin_radar.db（父目录）
+
+**提交**：6f54c55
+
+---
+
 ## 2026-07-17 01:42
 
 ### 会话主题：情报雷达 Telegram 适配器修复
