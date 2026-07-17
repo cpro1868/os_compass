@@ -94,18 +94,27 @@ pub async fn radar_scan_source(
 
     if let Some(src) = source_config {
         if src.proxy_enabled && !src.proxy_host.is_empty() {
-            proxy_url = if !src.proxy_username.is_empty() {
-                Some(format!("http://{}:{}@{}:{}", src.proxy_username, src.proxy_password, src.proxy_host, src.proxy_port))
+            let full_proxy = if !src.proxy_username.is_empty() {
+                format!("http://{}:{}@{}:{}", src.proxy_username, src.proxy_password, src.proxy_host, src.proxy_port)
             } else {
-                Some(format!("http://{}:{}", src.proxy_host, src.proxy_port))
+                format!("http://{}:{}", src.proxy_host, src.proxy_port)
             };
-            println!("[radar] Using source proxy");
+            proxy_url = Some(full_proxy.clone());
+            println!("[radar] Using source proxy: {}", full_proxy);
         } else {
+            println!("[radar] Source proxy not enabled or empty, checking global proxy");
             let settings = get_settings();
             if !settings.proxy_host.is_empty() {
                 proxy_url = Some(settings.proxy_host.clone());
                 println!("[radar] Using global proxy: {}", proxy_url.as_ref().unwrap());
             }
+        }
+    } else {
+        println!("[radar] Source config not found, trying global proxy");
+        let settings = get_settings();
+        if !settings.proxy_host.is_empty() {
+            proxy_url = Some(settings.proxy_host.clone());
+            println!("[radar] Using global proxy: {}", proxy_url.as_ref().unwrap());
         }
     }
 
