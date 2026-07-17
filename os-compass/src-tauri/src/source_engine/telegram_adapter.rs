@@ -1,5 +1,4 @@
 use crate::source_engine::{RawContent, SourceAdapter, SourceError, SourceType};
-use crate::system_db;
 use async_trait::async_trait;
 use regex::Regex;
 use std::time::Duration;
@@ -44,80 +43,45 @@ impl TelegramAdapter {
             .replace("</p>", "\n")
             .replace("</div>", "\n");
 
-        let re = Regex::new(r"<[^>]+>").unwrap();
+        let re = Regex::new("<[^>]+>").unwrap();
         text = re.replace_all(&text, " ").to_string();
 
-        let re2 = Regex::new(r"[ \t]+").unwrap();
+        let re2 = Regex::new("[ \\t]+").unwrap();
         text = re2.replace_all(&text, " ").to_string();
 
-        let re3 = Regex::new(r"\n{3,}").unwrap();
+        let re3 = Regex::new("\\n{3,}").unwrap();
         text = re3.replace_all(&text, "\n\n").to_string();
 
         text.trim().to_string()
     }
 
-    fn extract_platform_links(&self, text: &str) -> Vec<String> {
-        let patterns = Self::get_url_patterns();
-        let mut links = Vec::new();
-
-        for domain in &patterns {
-            let escaped_domain = domain.replace(".", r"\.");
-            let pattern = format!(r"https?://(?:www\.)?{}/[\w\-]+/[\w\.\-]+", escaped_domain);
-            if let Ok(re) = Regex::new(&pattern) {
-                for cap in re.find_iter(text) {
-                    links.push(cap.as_str().to_string());
-                }
-            }
-        }
-        links.dedup();
-        links
+    fn extract_all_urls(&self, text: &str) -> String {
+        let re = Regex::new("https?://[^\\s<>]+").unwrap();
+        let urls: Vec<String> = re.find_iter(text)
+            .map(|m| m.as_str().to_string())
+            .collect();
+        urls.join(", ")
     }
 
-    fn get_url_patterns() -> Vec<String> {
-        if let Ok(plugins) = system_db::list_source_plugins() {
-            let mut patterns = Vec::new();
-            for plugin in plugins {
-                if let Some(urls) = plugin.url_patterns {
-                    for url in urls {
-                        patterns.push(url);
-                    }
-                }
-            }
-            if patterns.is_empty() {
-                patterns.push("github.com".to_string());
-                patterns.push("gitee.com".to_string());
-            }
-            return patterns;
-        }
-        vec!["github.com".to_string(), "gitee.com".to_string()]
+    fn extract_datetime_from_block(&self, block: &str) -> Option<String> {
+        let re = Regex::new("\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}:\\d{2}").ok()?;
+        re.find(block).map(|m| m.as_str().to_string())
     }
 
     fn extract_messages(&self, html: &str) -> Vec<RawContent> {
         let mut results = Vec::new();
         let text = self.html_to_text(html);
 
-        // 模式1：提取 Telegram widget 格式的消息
-        // 每条消息包含：datetime、链接、内容
-        let datetime_link_re = Regex::new(
-            r#"<time[^>]*datetime="([^"]*)"[^>]*>.*?</time>.*?<a[^>]*href="([^"]*)""#
-        ).unwrap();
-
         let message_blocks: Vec<&str> = text.split("\n\n")
             .filter(|block| block.len() > 20)
             .collect();
 
-        for (idx, block) in message_blocks.iter().enumerate() {
+        for block in message_blocks {
             let content = block.trim();
-
-            // 提取链接
-            let links = self.extract_platform_links(content);
-
-            // 跳过不包含目标平台链接的消息
-            if links.is_empty() {
+            if content.len() < 20 {
                 continue;
             }
 
-            // 提取标题（取第一行或前100字符）
             let title = content.lines()
                 .next()
                 .unwrap_or(content)
@@ -125,23 +89,21 @@ impl TelegramAdapter {
                 .take(100)
                 .collect::<String>();
 
-            // 生成时间戳（如果能从 block 中提取）
-            let published_at = self.extract_datetime_from_block(block);
+            let published_at = self.extract_datetime_from_block(content);
+            let links = self.extract_all_urls(content);
 
             results.push(RawContent {
                 title,
-                url: links.join(", "),
+                url: links,
                 content: Some(content.to_string()),
                 published_at,
             });
 
-            // 限制每页提取数量
-            if results.len() >= 50 {
+            if results.len() >= 100 {
                 break;
             }
         }
 
-        // 模式2：如果模式1没有结果，尝试从 HTML 中直接提取
         if results.is_empty() {
             results = self.extract_from_html_direct(html);
         }
@@ -150,57 +112,51 @@ impl TelegramAdapter {
         results
     }
 
-    fn extract_datetime_from_block(&self, block: &str) -> Option<String> {
-        let re = Regex::new(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}").ok()?;
-        re.find(block).map(|m| m.as_str().to_string())
-    }
-
     fn extract_from_html_direct(&self, html: &str) -> Vec<RawContent> {
         let mut results = Vec::new();
+        let text = self.html_to_text(html);
 
-        // 提取所有包含目标平台链接的段落
-        let patterns = Self::get_url_patterns();
-        let mut link_patterns = Vec::new();
-        for domain in &patterns {
-            let escaped = domain.replace(".", r"\.");
-            link_patterns.push(format!(r"https?://(?:www\.)?{}/[\w\-]+/[\w\.\-]+", escaped));
-        }
+        let re = match Regex::new("https?://[^\\s<>]+") {
+            Ok(r) => r,
+            Err(_) => return results,
+        };
+        let matches: Vec<_> = re.find_iter(&text).collect();
 
-        for pattern in &link_patterns {
-            if let Ok(re) = Regex::new(pattern) {
-                let mut last_pos = 0;
-                for cap in re.find_iter(html) {
-                    let start = cap.start().saturating_sub(500);
-                    let end = (cap.end() + 500).min(html.len());
-                    let snippet = &html[start..end];
-                    let text = self.html_to_text(snippet);
+        let chunk_size = 500;
+        let mut i = 0;
 
-                    if text.len() > 30 {
-                        let title = text.lines()
-                            .next()
-                            .unwrap_or(&text)
-                            .chars()
-                            .take(80)
-                            .collect::<String>();
+        while i < matches.len() {
+            let start = matches[i].start().saturating_sub(200);
+            let end = if i + chunk_size < matches.len() {
+                matches[i + chunk_size].end() + 200
+            } else {
+                text.len()
+            };
 
-                        let links = self.extract_platform_links(&text);
+            let snippet = &text[start..end.min(text.len())];
 
-                        results.push(RawContent {
-                            title,
-                            url: links.join(", "),
-                            content: Some(text),
-                            published_at: None,
-                        });
-                    }
+            if snippet.len() > 30 {
+                let title = snippet.lines()
+                    .next()
+                    .unwrap_or(snippet)
+                    .chars()
+                    .take(80)
+                    .collect::<String>();
 
-                    last_pos = cap.end();
-                }
+                let urls = self.extract_all_urls(snippet);
+
+                results.push(RawContent {
+                    title,
+                    url: urls,
+                    content: Some(snippet.to_string()),
+                    published_at: None,
+                });
             }
+
+            i += chunk_size;
         }
 
-        results.dedup_by(|a, b| a.url == b.url);
-        results.truncate(50);
-
+        results.truncate(100);
         println!("[telegram] Direct HTML extraction: {} messages", results.len());
         results
     }
@@ -249,10 +205,9 @@ impl TelegramAdapter {
             return Err(SourceError::NetworkError(format!("HTTP {}", status)));
         }
 
-        // 保存 cookies
         if let Some(set_cookie) = response.headers().get("set-cookie") {
             if let Ok(cookie_str) = set_cookie.to_str() {
-                let re = Regex::new(r"(stel_ssid|hash)=([^;]+)").ok();
+                let re = Regex::new("(stel_ssid|hash)=([^;]+)").ok();
                 if let Some(re) = re {
                     if let Some(cap) = re.captures(cookie_str) {
                         let mut guard = self.cookie_store.lock().unwrap();
@@ -282,7 +237,6 @@ impl SourceAdapter for TelegramAdapter {
             println!("[telegram] Proxy: {}", p);
         }
 
-        // 请求延迟，避免被限流
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         let html = self.http_get(&channel_url, proxy).await?;
