@@ -350,22 +350,7 @@ pub fn radar_item_action(
 
 #[command]
 pub fn trigger_radar_scan() -> Result<serde_json::Value, String> {
-    let vault_dir = {
-        let config = CURRENT_VAULT_CONFIG.lock().unwrap();
-        if let Some(path) = config.as_ref() {
-            let db_path = std::path::Path::new(&path.path);
-            if let Some(parent) = db_path.parent() {
-                println!("[radar] Using vault from CURRENT_VAULT_CONFIG: {:?}", parent);
-                parent.to_path_buf()
-            } else {
-                println!("[radar] No vault, using app_data_dir");
-                get_default_radar_dir()
-            }
-        } else {
-            println!("[radar] No vault config, using app_data_dir");
-            get_default_radar_dir()
-        }
-    };
+    let vault_dir = get_radar_vault_dir();
 
     println!("[radar] trigger_radar_scan: vault_dir = {:?}", vault_dir);
     let (scanned, new_items, errors) = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(&vault_dir))?;
@@ -375,6 +360,19 @@ pub fn trigger_radar_scan() -> Result<serde_json::Value, String> {
         "newItems": new_items,
         "errors": errors
     }))
+}
+
+fn get_radar_vault_dir() -> std::path::PathBuf {
+    let config = CURRENT_VAULT_CONFIG.lock().unwrap();
+    if let Some(path) = config.as_ref() {
+        let db_path = std::path::Path::new(&path.path);
+        if let Some(parent) = db_path.parent() {
+            println!("[radar] Using vault from CURRENT_VAULT_CONFIG: {:?}", parent);
+            return parent.to_path_buf();
+        }
+    }
+    println!("[radar] No vault config, using app_data_dir");
+    get_default_radar_dir()
 }
 
 fn get_default_radar_dir() -> std::path::PathBuf {
