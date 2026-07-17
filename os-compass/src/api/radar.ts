@@ -127,3 +127,7 @@ export async function getRadarUnreadCount(): Promise<number> {
 export async function clearRadarCache(beforeDays?: number): Promise<number> {
   return invoke<number>('clear_radar_cache', { beforeDays });
 }
+
+export async function clearRadarAll(): Promise<number> {
+  return invoke<number>('clear_radar_all');
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, RadarSource, RadarItem, RadarSourceInput } from '../api/radar';
+import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, RadarSource, RadarItem, RadarSourceInput } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
 
 export function RadarInbox() {
@@ -26,6 +26,10 @@ export function RadarInbox() {
   });
   const [saving, setSaving] = useState(false);
   const [editingSource, setEditingSource] = useState<RadarSource | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  const SUPPORTED_PLATFORMS = ['github', 'gitee', 'gitlab', 'npm', 'pypi', 'docker', 'chrome'];
 
   const loadSources = useCallback(async () => {
     try {
@@ -102,6 +106,39 @@ export function RadarInbox() {
     } catch {
       showToast(t('radar.error.actionFailed'), 'error');
     }
+  };
+
+  const handleClearAll = async () => {
+    setClearing(true);
+    try {
+      await clearRadarAll();
+      showToast(t('radar.clearedSuccess'), 'success');
+      loadItems();
+    } catch {
+      showToast(t('radar.error.clearFailed'), 'error');
+    } finally {
+      setClearing(false);
+      setShowClearConfirm(false);
+    }
+  };
+
+  const hasSupportedLink = (item: RadarItem) => {
+    const content = item.description || item.content || '';
+    const lower = content.toLowerCase();
+    return SUPPORTED_PLATFORMS.some(p => lower.includes(p));
+  };
+
+  const highlightLinks = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s<]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, i) =>
+      urlRegex.test(part) ? (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+          className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">
+          {part}
+        </a>
+      ) : part
+    );
   };
 
   const handleAddSource = async () => {
@@ -200,6 +237,15 @@ export function RadarInbox() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowClearConfirm(true)}
+            disabled={items.length === 0}
+            className="px-3 py-2 text-sm border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            title={t('radar.clearAll')}
+          >
+            <i className="fa-solid fa-trash-alt" />
+            <span className="hidden sm:inline">{t('radar.clearAll')}</span>
+          </button>
+          <button
             onClick={handleScan}
             disabled={scanning}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm rounded-lg flex items-center gap-2 transition cursor-pointer disabled:cursor-not-allowed"
@@ -249,31 +295,33 @@ export function RadarInbox() {
                     <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0">
                       <i className="fa-solid fa-cube" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-sm">{item.project_name || t('radar.unknownProject')}</h3>
-                        {item.language && (
-                          <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">{item.language}</span>
-                        )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-sm">{item.project_name || t('radar.unknownProject')}</h3>
+                          {item.language && (
+                            <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">{item.language}</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+                          {highlightLinks(item.description || item.content || t('radar.noDescription'))}
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                          <i className="fa-regular fa-clock mr-1" />
+                          {item.published_at || item.fetched_at}
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
-                        {item.description || t('radar.noDescription')}
-                      </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        <i className="fa-regular fa-clock mr-1" />
-                        {item.fetched_at}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                      {item.status === 'unread' && (
-                        <>
-                          <button
-                            onClick={() => handleAction(item.id, 'import')}
-                            className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition cursor-pointer"
-                          >
-                            <i className="fa-solid fa-download text-xs mr-1" />
-                            {t('radar.import')}
-                          </button>
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                        {item.status === 'unread' && (
+                          <>
+                            {hasSupportedLink(item) && (
+                              <button
+                                onClick={() => handleAction(item.id, 'import')}
+                                className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition cursor-pointer"
+                              >
+                                <i className="fa-solid fa-download text-xs mr-1" />
+                                {t('radar.import')}
+                              </button>
+                            )}
                           <button
                             onClick={() => handleAction(item.id, 'ignore')}
                             className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer"
@@ -511,6 +559,37 @@ export function RadarInbox() {
                   {saving ? t('common.saving') : t('common.save')}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <i className="fa-solid fa-exclamation-triangle text-2xl text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{t('radar.clearConfirmTitle')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('radar.clearConfirmMessage')}</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleClearAll}
+                disabled={clearing}
+                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition disabled:opacity-50"
+              >
+                {clearing ? t('common.clearing') : t('radar.clearConfirm')}
+              </button>
             </div>
           </div>
         </div>

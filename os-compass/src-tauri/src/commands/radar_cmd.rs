@@ -407,3 +407,12 @@ pub fn clear_radar_cache(before_days: Option<i64>) -> Result<i64, String> {
 
     Ok(affected as i64)
 }
+
+#[command]
+pub fn clear_radar_all() -> Result<i64, String> {
+    let conn = get_radar_conn()?;
+    let affected = conn.execute("DELETE FROM radar_items", [])
+        .map_err(|e| e.to_string())?;
+    println!("[radar] Cleared {} items", affected);
+    Ok(affected as i64)
+}
