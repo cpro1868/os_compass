@@ -2,6 +2,22 @@
 
 # Session Log
 
+## 2026-07-17 03:00
+
+### 会话主题：修复 radar 去重逻辑错误
+
+**问题**：
+1. 错误过滤 GitHub/Gitee
+2. 使用 url_hash 去重，但 url 可能为空
+
+**修复**：
+1. 移除 GitHub/Gitee 过滤
+2. 使用 content hash 作为唯一标识
+
+**提交**：5d27f8b
+
+---
+
 ## 2026-07-17 02:50
 
 ### 会话主题：Telegram 适配器 HTML 解析修复
