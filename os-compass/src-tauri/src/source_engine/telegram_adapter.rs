@@ -1,17 +1,12 @@
 use crate::source_engine::{RawContent, SourceAdapter, SourceError, SourceType};
 use async_trait::async_trait;
-use regex::Regex;
 use std::time::Duration;
 
-pub struct TelegramAdapter {
-    cookie_store: std::sync::Mutex<Option<String>>,
-}
+pub struct TelegramAdapter;
 
 impl TelegramAdapter {
     pub fn new() -> Self {
-        TelegramAdapter {
-            cookie_store: std::sync::Mutex::new(None),
-        }
+        TelegramAdapter
     }
 
     fn normalize_url(url: &str) -> Option<String> {
@@ -29,146 +24,112 @@ impl TelegramAdapter {
         None
     }
 
+    fn html_to_text(&self, html: &str) -> String {
+        let mut text = html.to_string();
+        text = text.replace("&nbsp;", " ");
+        text = text.replace("&amp;", "&");
+        text = text.replace("&lt;", "<");
+        text = text.replace("&gt;", ">");
+        text = text.replace("&quot;", "\"");
+        text = text.replace("&#39;", "'");
+        text = text.replace("<br>", "\n");
+        text = text.replace("<br/>", "\n");
+        text = text.replace("<br />", "\n");
+        text = text.replace("</p>", "\n");
+        text = text.replace("</div>", "\n");
+        text = text.replace("</li>", "\n");
+        
+        // 移除所有 HTML 标签
+        let mut result = String::new();
+        let mut in_tag = false;
+        for c in text.chars() {
+            if c == '<' {
+                in_tag = true;
+            } else if c == '>' {
+                in_tag = false;
+            } else if !in_tag {
+                result.push(c);
+            }
+        }
+        
+        // 清理多余空白
+        let mut cleaned = String::new();
+        let mut last_was_space = false;
+        for c in result.chars() {
+            if c.is_whitespace() {
+                if !last_was_space {
+                    cleaned.push(' ');
+                    last_was_space = true;
+                }
+            } else {
+                cleaned.push(c);
+                last_was_space = false;
+            }
+        }
+        
+        cleaned.trim().to_string()
+    }
+
     fn extract_messages(&self, html: &str) -> Vec<RawContent> {
         let mut results = Vec::new();
+        let text = self.html_to_text(html);
 
-        // 匹配整个 message_wrap 块
-        let message_wrap_re = Regex::new(r#"<div class="tgme_widget_message_wrap[^>]*>([\s\S]*?)(?=<div class="tgme_widget_message_wrap[^>]*>|</section>|<div class="tgme_channel_history"#).unwrap();
-
-        for cap in message_wrap_re.captures_iter(html) {
-            let message_html = &cap[1];
-
-            let text_re = Regex::new(r#"<div class="tgme_widget_message_text[^>]*>([\s\S]*?)</div>"#).unwrap();
-            let text = text_re.captures(message_html)
-                .and_then(|c| Some(self.html_to_text(&c[1])))
-                .unwrap_or_default();
-
-            if text.len() < 5 {
+        // 按消息分隔符分割文本
+        let parts: Vec<&str> = text.split("\n\n\n").collect();
+        let total_parts = parts.len();
+        
+        for part in parts {
+            let part = part.trim();
+            if part.len() < 30 {
                 continue;
             }
-
-            let datetime_re = Regex::new(r#"datetime="([^"]+)""#).unwrap();
-            let published_at = datetime_re.captures(&cap[0])
-                .map(|c| c[1].to_string());
-
-            let link_re = Regex::new(r#"href="([^"]*)""#).unwrap();
-            let urls: Vec<String> = link_re.captures_iter(message_html)
-                .filter_map(|c| {
-                    let href = &c[1];
-                    if href.starts_with("http") && !href.contains("telegram.org") && !href.contains("t.me/iyouport") {
-                        Some(href.to_string())
-                    } else {
-                        None
+            
+            // 提取链接
+            let mut urls = Vec::new();
+            let url_parts: Vec<&str> = part.split_whitespace().collect();
+            for wp in url_parts {
+                if wp.starts_with("http://") || wp.starts_with("https://") {
+                    let clean_url = wp.trim_matches(|c| c == ',' || c == '.' || c == '"' || c == '\'' || c == ')' || c == '(' || c == '<' || c == '>' || c == ';');
+                    if !clean_url.contains("telegram.org") && !clean_url.contains("t.me/iyouport") && clean_url.len() > 10 {
+                        urls.push(clean_url.to_string());
                     }
-                })
+                }
+            }
+            
+            // 提取第一行作为标题
+            let first_line = part.lines().next().unwrap_or(part);
+            let title = if first_line.len() > 100 {
+                first_line.chars().take(100).collect::<String>()
+            } else {
+                first_line.to_string()
+            };
+            
+            // 提取时间（如果有）
+            let time_parts: Vec<&str> = part.lines()
+                .filter(|l| l.len() >= 8 && l.len() <= 25)
                 .collect();
-
-            let title = text.lines()
-                .next()
-                .unwrap_or(&text)
-                .chars()
-                .take(100)
-                .collect::<String>();
-
+            let published_at = time_parts.first().map(|s| s.to_string());
+            
             results.push(RawContent {
                 title,
                 url: urls.join(", "),
-                content: Some(text),
+                content: Some(part.to_string()),
                 published_at,
             });
-
-            if results.len() >= 100 {
+            
+            if results.len() >= 50 {
                 break;
             }
         }
-
-        if results.is_empty() {
-            println!("[telegram] Primary extraction failed, trying fallback");
-            results = self.extract_messages_fallback(html);
-        }
-
-        println!("[telegram] Extracted {} messages", results.len());
+        
+        println!("[telegram] Extracted {} messages from {} parts", results.len(), total_parts);
         results
-    }
-
-    fn extract_messages_fallback(&self, html: &str) -> Vec<RawContent> {
-        let mut results = Vec::new();
-
-        // 直接从 HTML 中提取所有文本块
-        let text_blocks_re = Regex::new(r#"tgme_widget_message_text[^>]*>([\s\S]*?)</div>"#).unwrap();
-
-        for cap in text_blocks_re.captures_iter(html) {
-            let text = self.html_to_text(&cap[1]);
-            if text.len() < 20 {
-                continue;
-            }
-
-            // 提取链接
-            let url_re = Regex::new(r#"https?://[^\s<>"']+""#).unwrap();
-            let urls: Vec<String> = url_re.find_iter(&text)
-                .filter(|m| !m.as_str().contains("telegram.org"))
-                .map(|m| m.as_str().to_string())
-                .collect();
-
-            let title = text.lines()
-                .next()
-                .unwrap_or(&text)
-                .chars()
-                .take(100)
-                .collect::<String>();
-
-            results.push(RawContent {
-                title,
-                url: urls.join(", "),
-                content: Some(text),
-                published_at: None,
-            });
-
-            if results.len() >= 100 {
-                break;
-            }
-        }
-
-        println!("[telegram] Fallback extracted {} messages", results.len());
-        results
-    }
-
-    fn html_to_text(&self, html: &str) -> String {
-        let mut text = html
-            .replace("&nbsp;", " ")
-            .replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", "\"")
-            .replace("&#39;", "'")
-            .replace("<br>", "\n")
-            .replace("<br/>", "\n")
-            .replace("<br />", "\n")
-            .replace("</p>", "\n")
-            .replace("</div>", "\n");
-
-        let re = Regex::new("<[^>]+>").unwrap();
-        text = re.replace_all(&text, " ").to_string();
-
-        let re2 = Regex::new("[ \\t]+").unwrap();
-        text = re2.replace_all(&text, " ").to_string();
-
-        let re3 = Regex::new("\\n{3,}").unwrap();
-        text = re3.replace_all(&text, "\n\n").to_string();
-
-        text.trim().to_string()
     }
 
     async fn http_get(&self, url: &str, proxy: Option<&str>) -> Result<String, SourceError> {
-        let cookie_value = {
-            let guard = self.cookie_store.lock().unwrap();
-            guard.clone()
-        };
-
         let mut builder = reqwest::Client::builder()
             .timeout(Duration::from_secs(60))
-            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            .tcp_keepalive(Duration::from_secs(30));
+            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
         if let Some(proxy_url) = proxy {
             if !proxy_url.is_empty() {
@@ -181,17 +142,12 @@ impl TelegramAdapter {
         let client = builder.build()
             .map_err(|e| SourceError::ConfigError(e.to_string()))?;
 
-        let mut request = client.get(url)
+        let response = client.get(url)
             .header("Accept", "text/html,application/xhtml+xml")
             .header("Accept-Language", "en-US,en;q=0.9")
             .header("DNT", "1")
-            .header("Connection", "keep-alive");
-
-        if let Some(cookie) = cookie_value {
-            request = request.header("Cookie", cookie);
-        }
-
-        let response = request.send().await
+            .send()
+            .await
             .map_err(|e| SourceError::NetworkError(e.to_string()))?;
 
         let status = response.status();
@@ -200,18 +156,6 @@ impl TelegramAdapter {
         }
         if !status.is_success() {
             return Err(SourceError::NetworkError(format!("HTTP {}", status)));
-        }
-
-        if let Some(set_cookie) = response.headers().get("set-cookie") {
-            if let Ok(cookie_str) = set_cookie.to_str() {
-                let re = Regex::new("(stel_ssid|hash)=([^;]+)").ok();
-                if let Some(re) = re {
-                    if let Some(cap) = re.captures(cookie_str) {
-                        let mut guard = self.cookie_store.lock().unwrap();
-                        *guard = Some(format!("{}={};", &cap[1], &cap[2]));
-                    }
-                }
-            }
         }
 
         response.text().await
@@ -225,18 +169,15 @@ impl SourceAdapter for TelegramAdapter {
         SourceType::Telegram
     }
 
-    async fn fetch(&mut self, url: &str, proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
+    async fn fetch(&mut self, url: &str, _proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
         let channel_url = Self::normalize_url(url)
             .ok_or_else(|| SourceError::ParseError("Invalid Telegram URL".to_string()))?;
 
         println!("[telegram] Fetching: {}", channel_url);
-        if let Some(p) = proxy {
-            println!("[telegram] Proxy: {}", p);
-        }
 
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let html = self.http_get(&channel_url, proxy).await?;
+        let html = self.http_get(&channel_url, _proxy).await?;
         println!("[telegram] Received {} bytes", html.len());
 
         if html.len() < 1000 {
@@ -245,7 +186,6 @@ impl SourceAdapter for TelegramAdapter {
         }
 
         let results = self.extract_messages(&html);
-
         Ok(results)
     }
 }
