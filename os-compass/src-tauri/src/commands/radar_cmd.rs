@@ -67,8 +67,18 @@ pub fn debug_vault_status() -> String {
 
 fn get_radar_conn() -> Result<rusqlite::Connection, String> {
     check_plugin_enabled("radar")?;
-    let vault_dir = get_default_radar_dir();
-    println!("[radar] get_radar_conn: vault_dir = {:?}", vault_dir);
+    let vault_dir = {
+        let config = CURRENT_VAULT_CONFIG.lock().unwrap();
+        if let Some(path) = config.as_ref() {
+            if let Some(parent) = std::path::Path::new(&path.path).parent() {
+                parent.to_path_buf()
+            } else {
+                get_default_radar_dir()
+            }
+        } else {
+            get_default_radar_dir()
+        }
+    };
     init_radar_db(&vault_dir)
 }
 
