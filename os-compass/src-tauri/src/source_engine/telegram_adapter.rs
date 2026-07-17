@@ -62,8 +62,8 @@ impl TelegramAdapter {
         
         let decoded = self.decode_html_entities(html);
         
-        // 直接找所有 tgme_widget_message_text 块
-        let text_re = Regex::new(r#"class="tgme_widget_message_text"[^>]*>([\s\S]*?)</div>"#).unwrap();
+        // 匹配 tgme_widget_message_text 块（包括 js-message_text 等额外属性）
+        let text_re = Regex::new(r#"class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)</div>"#).unwrap();
         
         for cap in text_re.captures_iter(&decoded) {
             let raw_text = &cap[1];
