@@ -67,31 +67,9 @@ pub fn debug_vault_status() -> String {
 
 fn get_radar_conn() -> Result<rusqlite::Connection, String> {
     check_plugin_enabled("radar")?;
-    let config_guard = CURRENT_VAULT_CONFIG.lock().unwrap();
-
-    let path_value = match config_guard.as_ref() {
-        Some(cfg) if !cfg.path.is_empty() => {
-            // path 是数据库文件路径，需要取父目录
-            let db_path = std::path::Path::new(&cfg.path);
-            db_path.parent()
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_else(|| cfg.path.clone())
-        }
-        other => {
-            println!("[radar] CURRENT_VAULT_CONFIG = {:?}", other);
-            let last_vault = std::fs::read_to_string(
-                std::env::var("APPDATA").unwrap_or_default().to_string() + "\\com.administrator.os-compass\\last-vault.txt"
-            ).ok();
-            println!("[radar] last-vault.txt = {:?}", last_vault);
-            return Err(format!("No vault opened. Config: {:?}, last_vault.txt: {:?}", other, last_vault));
-        }
-    };
-
-    println!("[radar] get_radar_conn: vault path = {:?}", path_value);
-    let vault_dir = std::path::Path::new(&path_value);
+    let vault_dir = get_default_radar_dir();
     println!("[radar] get_radar_conn: vault_dir = {:?}", vault_dir);
-    drop(config_guard);
-    init_radar_db(vault_dir)
+    init_radar_db(&vault_dir)
 }
 
 #[command]
@@ -364,12 +342,19 @@ pub fn radar_item_action(
 pub fn trigger_radar_scan() -> Result<serde_json::Value, String> {
     let vault_dir = {
         let config = CURRENT_VAULT_CONFIG.lock().unwrap();
-        let path = config.as_ref().ok_or("No vault opened")?;
-        // path 是数据库文件路径，需要取父目录
-        let db_path = std::path::Path::new(&path.path);
-        db_path.parent()
-            .map(|p| p.to_path_buf())
-            .unwrap_or_else(|| std::path::PathBuf::from(&path.path))
+        if let Some(path) = config.as_ref() {
+            let db_path = std::path::Path::new(&path.path);
+            if let Some(parent) = db_path.parent() {
+                println!("[radar] Using vault from CURRENT_VAULT_CONFIG: {:?}", parent);
+                parent.to_path_buf()
+            } else {
+                println!("[radar] No vault, using app_data_dir");
+                get_default_radar_dir()
+            }
+        } else {
+            println!("[radar] No vault config, using app_data_dir");
+            get_default_radar_dir()
+        }
     };
 
     println!("[radar] trigger_radar_scan: vault_dir = {:?}", vault_dir);
@@ -380,6 +365,15 @@ pub fn trigger_radar_scan() -> Result<serde_json::Value, String> {
         "newItems": new_items,
         "errors": errors
     }))
+}
+
+fn get_default_radar_dir() -> std::path::PathBuf {
+    if let Some(app_data) = directories::BaseDirs::new() {
+        let os_compass_dir = app_data.data_dir().join(".os-compass");
+        std::fs::create_dir_all(&os_compass_dir).ok();
+        return os_compass_dir;
+    }
+    std::path::PathBuf::from(".")
 }
 
 #[command]
