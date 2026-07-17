@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use rusqlite::params;
 use sha2::{Digest, Sha256};
 use std::sync::Mutex;
+use std::time::Duration;
 
 pub struct RadarPlugin {
     _scan_flag: Mutex<bool>,
@@ -190,14 +191,25 @@ pub async fn radar_scan_all(vault_dir: &std::path::Path) -> Result<(i64, i64, i6
     let system_sources = PLUGIN_CONFIG_DB.list_radar_sources();
     println!("[radar] Found {} sources in system DB", system_sources.len());
 
+    if system_sources.is_empty() {
+        return Ok((0, 0, 0));
+    }
+
     let mut total_scanned = 0i64;
     let mut total_new = 0i64;
     let mut total_errors = 0i64;
 
-    for source in system_sources {
+    // 顺序扫描，每个信息源之间延迟 1 秒
+    for (idx, source) in system_sources.iter().enumerate() {
+        if idx > 0 {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+
         let source_id = source.id;
         let source_type = source.source_type.clone();
         let url = source.url.clone();
+
+        println!("[radar] Scanning source {}/{}: {}", idx + 1, system_sources.len(), source.name);
 
         match radar_scan_source(&conn, source_id, &source_type, &url).await {
             Ok((s, n, e)) => {
@@ -211,6 +223,7 @@ pub async fn radar_scan_all(vault_dir: &std::path::Path) -> Result<(i64, i64, i6
         }
     }
 
+    println!("[radar] Scan completed: total scanned={}, new={}, errors={}", total_scanned, total_new, total_errors);
     Ok((total_scanned, total_new, total_errors))
 }
 
