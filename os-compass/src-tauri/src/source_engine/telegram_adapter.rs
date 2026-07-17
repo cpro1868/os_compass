@@ -66,28 +66,23 @@ impl TelegramAdapter {
         let mut results = Vec::new();
         let decoded = self.decode_html_entities(html);
         
-        // 提取消息块
-        let block_re = Regex::new(r#"<div class="tgme_widget_message_wrap[^>]*>(.*?)</div>\s*</div>"#).unwrap();
+        // 简化：直接搜索 tgme_widget_message_text 块
+        let text_re = Regex::new(r#"class="tgme_widget_message_text"[^>]*>([\s\S]*?)</div>"#).unwrap();
+        let time_re = Regex::new(r#"<time datetime="([^"]+)""#).unwrap();
         
-        for cap in block_re.captures_iter(&decoded) {
-            let block = &cap[1];
+        for cap in text_re.captures_iter(&decoded) {
+            let raw_text = &cap[1];
+            let text = self.strip_html_tags(raw_text);
             
-            // 提取时间
-            let time_re = Regex::new(r#"datetime="([^"]+)""#).unwrap();
-            let published_at = time_re.captures(block).map(|c| c[1].to_string());
-            
-            // 提取文本
-            let text_re = Regex::new(r#"class="tgme_widget_message_text[^>]*>(.*?)</div>"#).unwrap();
-            let text = text_re.captures(block)
-                .map(|c| self.strip_html_tags(&c[1]))
-                .unwrap_or_default();
-            
-            if text.len() < 20 {
+            if text.len() < 10 {
                 continue;
             }
             
+            // 提取时间
+            let published_at = time_re.captures(&decoded).map(|c| c[1].to_string());
+            
             // 提取链接
-            let url_re = Regex::new(r#"https?://[^\s<>"']+""#).unwrap();
+            let url_re = Regex::new(r#"https?://[^\s<>"']+[^<>\s.,;:!?]""#).unwrap();
             let urls: Vec<String> = url_re.find_iter(&text)
                 .filter_map(|m| {
                     let url = m.as_str();
