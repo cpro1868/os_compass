@@ -123,7 +123,7 @@ export function RadarInbox() {
   };
 
   const hasSupportedLink = (item: RadarItem) => {
-    const content = item.description || item.content || '';
+    const content = item.description || '';
     const lower = content.toLowerCase();
     return SUPPORTED_PLATFORMS.some(p => lower.includes(p));
   };
@@ -303,7 +303,7 @@ export function RadarInbox() {
                           )}
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
-                          {highlightLinks(item.description || item.content || t('radar.noDescription'))}
+                          {highlightLinks(item.description || t('radar.noDescription'))}
                         </p>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                           <i className="fa-regular fa-clock mr-1" />
