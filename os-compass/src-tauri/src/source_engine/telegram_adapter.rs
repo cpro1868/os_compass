@@ -29,6 +29,107 @@ impl TelegramAdapter {
         None
     }
 
+    fn extract_messages(&self, html: &str) -> Vec<RawContent> {
+        let mut results = Vec::new();
+
+        let message_wrap_re = Regex::new(r#"<div class="tgme_widget_message_wrap[^>]*>(.*?)</div>\s*<div class="tgme_widget_message_footer"#).unwrap();
+
+        for cap in message_wrap_re.captures_iter(html) {
+            let message_html = &cap[1];
+
+            let text_re = Regex::new(r#"<div class="tgme_widget_message_text[^>]*>(.*?)</div>"#).unwrap();
+            let text = text_re.captures(message_html)
+                .and_then(|c| Some(self.html_to_text(&c[1])))
+                .unwrap_or_default();
+
+            if text.len() < 5 {
+                continue;
+            }
+
+            let datetime_re = Regex::new(r#"datetime="([^"]+)""#).unwrap();
+            let published_at = datetime_re.captures(&cap[0])
+                .map(|c| c[1].to_string());
+
+            let link_re = Regex::new(r#"href="([^"]*)""#).unwrap();
+            let urls: Vec<String> = link_re.captures_iter(message_html)
+                .filter_map(|c| {
+                    let href = &c[1];
+                    if href.starts_with("http") {
+                        Some(href.to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            let title = text.lines()
+                .next()
+                .unwrap_or(&text)
+                .chars()
+                .take(100)
+                .collect::<String>();
+
+            results.push(RawContent {
+                title,
+                url: urls.join(", "),
+                content: Some(text),
+                published_at,
+            });
+
+            if results.len() >= 100 {
+                break;
+            }
+        }
+
+        if results.is_empty() {
+            results = self.extract_messages_fallback(html);
+        }
+
+        println!("[telegram] Extracted {} messages", results.len());
+        results
+    }
+
+    fn extract_messages_fallback(&self, html: &str) -> Vec<RawContent> {
+        let mut results = Vec::new();
+
+        let msg_re = Regex::new(r#"tgme_widget_message[^>]*>(.*?)</div>\s*<div class="tgme_widget_message"#).unwrap();
+
+        for cap in msg_re.captures_iter(html) {
+            let content = &cap[1];
+
+            let text = self.html_to_text(content);
+            if text.len() < 10 {
+                continue;
+            }
+
+            let title = text.lines()
+                .next()
+                .unwrap_or(&text)
+                .chars()
+                .take(100)
+                .collect::<String>();
+
+            let url_re = Regex::new(r#"https?://[^\s<>"']+""#).unwrap();
+            let urls: Vec<String> = url_re.find_iter(content)
+                .map(|m| m.as_str().to_string())
+                .collect();
+
+            results.push(RawContent {
+                title,
+                url: urls.join(", "),
+                content: Some(text),
+                published_at: None,
+            });
+
+            if results.len() >= 100 {
+                break;
+            }
+        }
+
+        println!("[telegram] Fallback extraction: {} messages", results.len());
+        results
+    }
+
     fn html_to_text(&self, html: &str) -> String {
         let mut text = html
             .replace("&nbsp;", " ")
@@ -55,112 +156,6 @@ impl TelegramAdapter {
         text.trim().to_string()
     }
 
-    fn extract_all_urls(&self, text: &str) -> String {
-        let re = Regex::new("https?://[^\\s<>]+").unwrap();
-        let urls: Vec<String> = re.find_iter(text)
-            .map(|m| m.as_str().to_string())
-            .collect();
-        urls.join(", ")
-    }
-
-    fn extract_datetime_from_block(&self, block: &str) -> Option<String> {
-        let re = Regex::new("\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}:\\d{2}").ok()?;
-        re.find(block).map(|m| m.as_str().to_string())
-    }
-
-    fn extract_messages(&self, html: &str) -> Vec<RawContent> {
-        let mut results = Vec::new();
-        let text = self.html_to_text(html);
-
-        let message_blocks: Vec<&str> = text.split("\n\n")
-            .filter(|block| block.len() > 20)
-            .collect();
-
-        for block in message_blocks {
-            let content = block.trim();
-            if content.len() < 20 {
-                continue;
-            }
-
-            let title = content.lines()
-                .next()
-                .unwrap_or(content)
-                .chars()
-                .take(100)
-                .collect::<String>();
-
-            let published_at = self.extract_datetime_from_block(content);
-            let links = self.extract_all_urls(content);
-
-            results.push(RawContent {
-                title,
-                url: links,
-                content: Some(content.to_string()),
-                published_at,
-            });
-
-            if results.len() >= 100 {
-                break;
-            }
-        }
-
-        if results.is_empty() {
-            results = self.extract_from_html_direct(html);
-        }
-
-        println!("[telegram] Extracted {} messages", results.len());
-        results
-    }
-
-    fn extract_from_html_direct(&self, html: &str) -> Vec<RawContent> {
-        let mut results = Vec::new();
-        let text = self.html_to_text(html);
-
-        let re = match Regex::new("https?://[^\\s<>]+") {
-            Ok(r) => r,
-            Err(_) => return results,
-        };
-        let matches: Vec<_> = re.find_iter(&text).collect();
-
-        let chunk_size = 500;
-        let mut i = 0;
-
-        while i < matches.len() {
-            let start = matches[i].start().saturating_sub(200);
-            let end = if i + chunk_size < matches.len() {
-                matches[i + chunk_size].end() + 200
-            } else {
-                text.len()
-            };
-
-            let snippet = &text[start..end.min(text.len())];
-
-            if snippet.len() > 30 {
-                let title = snippet.lines()
-                    .next()
-                    .unwrap_or(snippet)
-                    .chars()
-                    .take(80)
-                    .collect::<String>();
-
-                let urls = self.extract_all_urls(snippet);
-
-                results.push(RawContent {
-                    title,
-                    url: urls,
-                    content: Some(snippet.to_string()),
-                    published_at: None,
-                });
-            }
-
-            i += chunk_size;
-        }
-
-        results.truncate(100);
-        println!("[telegram] Direct HTML extraction: {} messages", results.len());
-        results
-    }
-
     async fn http_get(&self, url: &str, proxy: Option<&str>) -> Result<String, SourceError> {
         let cookie_value = {
             let guard = self.cookie_store.lock().unwrap();
@@ -184,9 +179,8 @@ impl TelegramAdapter {
             .map_err(|e| SourceError::ConfigError(e.to_string()))?;
 
         let mut request = client.get(url)
-            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9")
+            .header("Accept", "text/html,application/xhtml+xml")
             .header("Accept-Language", "en-US,en;q=0.9")
-            .header("Accept-Encoding", "gzip, deflate, br")
             .header("DNT", "1")
             .header("Connection", "keep-alive");
 
@@ -248,7 +242,6 @@ impl SourceAdapter for TelegramAdapter {
         }
 
         let results = self.extract_messages(&html);
-        println!("[telegram] Extracted {} messages", results.len());
 
         Ok(results)
     }
