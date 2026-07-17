@@ -32,12 +32,13 @@ impl TelegramAdapter {
     fn extract_messages(&self, html: &str) -> Vec<RawContent> {
         let mut results = Vec::new();
 
-        let message_wrap_re = Regex::new(r#"<div class="tgme_widget_message_wrap[^>]*>(.*?)</div>\s*<div class="tgme_widget_message_footer"#).unwrap();
+        // 匹配整个 message_wrap 块
+        let message_wrap_re = Regex::new(r#"<div class="tgme_widget_message_wrap[^>]*>([\s\S]*?)(?=<div class="tgme_widget_message_wrap[^>]*>|</section>|<div class="tgme_channel_history"#).unwrap();
 
         for cap in message_wrap_re.captures_iter(html) {
             let message_html = &cap[1];
 
-            let text_re = Regex::new(r#"<div class="tgme_widget_message_text[^>]*>(.*?)</div>"#).unwrap();
+            let text_re = Regex::new(r#"<div class="tgme_widget_message_text[^>]*>([\s\S]*?)</div>"#).unwrap();
             let text = text_re.captures(message_html)
                 .and_then(|c| Some(self.html_to_text(&c[1])))
                 .unwrap_or_default();
@@ -54,7 +55,7 @@ impl TelegramAdapter {
             let urls: Vec<String> = link_re.captures_iter(message_html)
                 .filter_map(|c| {
                     let href = &c[1];
-                    if href.starts_with("http") {
+                    if href.starts_with("http") && !href.contains("telegram.org") && !href.contains("t.me/iyouport") {
                         Some(href.to_string())
                     } else {
                         None
@@ -82,6 +83,7 @@ impl TelegramAdapter {
         }
 
         if results.is_empty() {
+            println!("[telegram] Primary extraction failed, trying fallback");
             results = self.extract_messages_fallback(html);
         }
 
@@ -92,15 +94,21 @@ impl TelegramAdapter {
     fn extract_messages_fallback(&self, html: &str) -> Vec<RawContent> {
         let mut results = Vec::new();
 
-        let msg_re = Regex::new(r#"tgme_widget_message[^>]*>(.*?)</div>\s*<div class="tgme_widget_message"#).unwrap();
+        // 直接从 HTML 中提取所有文本块
+        let text_blocks_re = Regex::new(r#"tgme_widget_message_text[^>]*>([\s\S]*?)</div>"#).unwrap();
 
-        for cap in msg_re.captures_iter(html) {
-            let content = &cap[1];
-
-            let text = self.html_to_text(content);
-            if text.len() < 10 {
+        for cap in text_blocks_re.captures_iter(html) {
+            let text = self.html_to_text(&cap[1]);
+            if text.len() < 20 {
                 continue;
             }
+
+            // 提取链接
+            let url_re = Regex::new(r#"https?://[^\s<>"']+""#).unwrap();
+            let urls: Vec<String> = url_re.find_iter(&text)
+                .filter(|m| !m.as_str().contains("telegram.org"))
+                .map(|m| m.as_str().to_string())
+                .collect();
 
             let title = text.lines()
                 .next()
@@ -108,11 +116,6 @@ impl TelegramAdapter {
                 .chars()
                 .take(100)
                 .collect::<String>();
-
-            let url_re = Regex::new(r#"https?://[^\s<>"']+""#).unwrap();
-            let urls: Vec<String> = url_re.find_iter(content)
-                .map(|m| m.as_str().to_string())
-                .collect();
 
             results.push(RawContent {
                 title,
@@ -126,7 +129,7 @@ impl TelegramAdapter {
             }
         }
 
-        println!("[telegram] Fallback extraction: {} messages", results.len());
+        println!("[telegram] Fallback extracted {} messages", results.len());
         results
     }
 
