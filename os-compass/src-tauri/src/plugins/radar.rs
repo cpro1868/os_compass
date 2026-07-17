@@ -123,12 +123,13 @@ pub async fn radar_scan_source(
         scanned += 1;
         println!("[radar] Processing item {}: {}", scanned, content.title);
 
-        let url_hash = compute_url_hash(&content.url);
+        // 使用 content 的 hash 作为唯一标识，而不是 url（因为 url 可能为空或重复）
+        let content_hash = compute_url_hash(&format!("{}|{}", content.title, content.content.as_ref().unwrap_or(&String::new())));
 
         let exists: bool = conn
             .query_row(
                 "SELECT EXISTS(SELECT 1 FROM radar_items WHERE url_hash = ?)",
-                params![url_hash],
+                params![content_hash],
                 |row| row.get(0),
             )
             .unwrap_or(false);
@@ -141,7 +142,7 @@ pub async fn radar_scan_source(
         let blacklisted: bool = conn
             .query_row(
                 "SELECT EXISTS(SELECT 1 FROM radar_blacklist WHERE url_hash = ?)",
-                params![url_hash],
+                params![content_hash],
                 |row| row.get(0),
             )
             .unwrap_or(false);
@@ -152,22 +153,14 @@ pub async fn radar_scan_source(
         }
 
         let project_name = content.title.clone();
-        let project_url = content.url.clone();
+        let project_url = if content.url.is_empty() { content.title.clone() } else { content.url.clone() };
         let description = content.content.clone();
         let language = None::<String>;
-
-        println!("[radar] Processing item: {}", project_name);
-
-        let source_urls = contents.iter()
-            .filter(|c| c.url.contains("github.com") || c.url.contains("gitee.com"))
-            .map(|c| c.url.clone())
-            .collect::<Vec<_>>()
-            .join(",");
 
         println!("[radar] Inserting item: name={}, url={}", project_name, project_url);
         let result = conn.execute(
             "INSERT OR IGNORE INTO radar_items (source_id, url_hash, project_name, project_url, description, language, raw_content, source_urls, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            params![source_id, url_hash, project_name, project_url, description, language, content.content, source_urls, content.published_at],
+            params![source_id, content_hash, project_name, project_url, description, language, content.content, content.url.clone(), content.published_at],
         );
 
         if result.is_ok() && conn.changes() > 0 {
