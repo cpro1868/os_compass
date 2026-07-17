@@ -37,38 +37,33 @@ impl TelegramAdapter {
     fn strip_html_tags(&self, html: &str) -> String {
         let mut result = String::new();
         let mut in_tag = false;
-        let mut in_quote = false;
-        let mut space = false;
         
         for c in html.chars() {
             match c {
                 '<' => { in_tag = true; }
                 '>' => { in_tag = false; }
-                '"' | '\'' => { in_quote = !in_quote; }
                 ' ' | '\t' | '\n' | '\r' => {
-                    if !space && !result.is_empty() {
+                    if !result.is_empty() && !result.ends_with(' ') {
                         result.push(' ');
-                        space = true;
                     }
                 }
-                _ if !in_tag && !in_quote => {
+                _ if !in_tag => {
                     result.push(c);
-                    space = false;
                 }
                 _ => {}
             }
         }
         
-        result.trim().to_string()
+        result.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 
     fn extract_messages(&self, html: &str) -> Vec<RawContent> {
         let mut results = Vec::new();
+        
         let decoded = self.decode_html_entities(html);
         
-        // 简化：直接搜索 tgme_widget_message_text 块
+        // 直接找所有 tgme_widget_message_text 块
         let text_re = Regex::new(r#"class="tgme_widget_message_text"[^>]*>([\s\S]*?)</div>"#).unwrap();
-        let time_re = Regex::new(r#"<time datetime="([^"]+)""#).unwrap();
         
         for cap in text_re.captures_iter(&decoded) {
             let raw_text = &cap[1];
@@ -78,7 +73,8 @@ impl TelegramAdapter {
                 continue;
             }
             
-            // 提取时间
+            // 提取时间（从整个 HTML 中找第一个）
+            let time_re = Regex::new(r#"<time datetime="([^"]+)""#).unwrap();
             let published_at = time_re.captures(&decoded).map(|c| c[1].to_string());
             
             // 提取链接
