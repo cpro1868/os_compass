@@ -113,12 +113,16 @@ impl TelegramAdapter {
     }
 
     async fn http_get(&self, url: &str, proxy: Option<&str>) -> Result<String, SourceError> {
+        let proxy_info = proxy.unwrap_or("none");
+        println!("[telegram] http_get: url={}, proxy={}", url, proxy_info);
+        
         let mut builder = reqwest::Client::builder()
             .timeout(Duration::from_secs(60))
             .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
         if let Some(proxy_url) = proxy {
             if !proxy_url.is_empty() {
+                println!("[telegram] Setting proxy: {}", proxy_url);
                 let proxy = reqwest::Proxy::all(proxy_url)
                     .map_err(|e| SourceError::ConfigError(e.to_string()))?;
                 builder = builder.proxy(proxy);
@@ -128,14 +132,20 @@ impl TelegramAdapter {
         let client = builder.build()
             .map_err(|e| SourceError::ConfigError(e.to_string()))?;
 
+        println!("[telegram] Sending request...");
         let response = client.get(url)
             .header("Accept", "text/html; charset=utf-8")
             .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
             .send()
             .await
-            .map_err(|e| SourceError::NetworkError(e.to_string()))?;
+            .map_err(|e| {
+                println!("[telegram] Request failed: {}", e);
+                SourceError::NetworkError(e.to_string())
+            })?;
 
         let status = response.status();
+        println!("[telegram] Response status: {}", status);
+        
         if status.as_u16() == 429 {
             return Err(SourceError::NetworkError("Rate limited".to_string()));
         }
@@ -143,7 +153,13 @@ impl TelegramAdapter {
             return Err(SourceError::NetworkError(format!("HTTP {}", status)));
         }
 
-        response.text().await.map_err(|e| SourceError::NetworkError(e.to_string()))
+        let text = response.text().await.map_err(|e| {
+            println!("[telegram] Read body failed: {}", e);
+            SourceError::NetworkError(e.to_string())
+        })?;
+        
+        println!("[telegram] Received {} bytes", text.len());
+        Ok(text)
     }
 }
 
