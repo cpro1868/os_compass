@@ -94,8 +94,12 @@ pub async fn radar_scan_source(
 
     if let Some(src) = source_config {
         if src.proxy_enabled && !src.proxy_host.is_empty() {
-            proxy_url = Some(format!("http://{}:{}", src.proxy_host, src.proxy_port));
-            println!("[radar] Using source proxy: {}", proxy_url.as_ref().unwrap());
+            proxy_url = if !src.proxy_username.is_empty() {
+                Some(format!("http://{}:{}@{}:{}", src.proxy_username, src.proxy_password, src.proxy_host, src.proxy_port))
+            } else {
+                Some(format!("http://{}:{}", src.proxy_host, src.proxy_port))
+            };
+            println!("[radar] Using source proxy");
         } else {
             let settings = get_settings();
             if !settings.proxy_host.is_empty() {
