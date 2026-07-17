@@ -94,10 +94,11 @@ pub async fn radar_scan_source(
 
     if let Some(src) = source_config {
         if src.proxy_enabled && !src.proxy_host.is_empty() {
+            let protocol = if src.proxy_protocol.is_empty() { "socks5" } else { &src.proxy_protocol };
             let full_proxy = if !src.proxy_username.is_empty() {
-                format!("http://{}:{}@{}:{}", src.proxy_username, src.proxy_password, src.proxy_host, src.proxy_port)
+                format!("{}://{}:{}@{}:{}", protocol, src.proxy_username, src.proxy_password, src.proxy_host, src.proxy_port)
             } else {
-                format!("http://{}:{}", src.proxy_host, src.proxy_port)
+                format!("{}://{}:{}", protocol, src.proxy_host, src.proxy_port)
             };
             proxy_url = Some(full_proxy.clone());
             println!("[radar] Using source proxy: {}", full_proxy);
