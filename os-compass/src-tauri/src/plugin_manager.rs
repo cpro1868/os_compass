@@ -59,8 +59,8 @@ impl PluginManager {
                     name: plugin.name().to_string(),
                     plugin_type: plugin.plugin_type().as_str().to_string(),
                     version: plugin.version().to_string(),
-                    enabled: false,
-                    config: None,
+                    enabled: PLUGIN_CONFIG_DB.get_enabled(plugin.id()),
+                    config: PLUGIN_CONFIG_DB.get_config(plugin.id()),
                     db_mode: plugin.db_mode().as_str().to_string(),
                     db_path_template: plugin.db_path_template().map(|s| s.to_string()),
                 };
