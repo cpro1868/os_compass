@@ -44,12 +44,12 @@ export function RadarInbox() {
   const loadItems = useCallback(async () => {
     try {
       const status = activeTab === 'all' ? undefined : activeTab;
-      const data = await getRadarItems(status, undefined, timeRange);
+      const data = await getRadarItems(status);
       setItems(data);
     } catch (e) {
       console.error('Failed to load items:', e);
     }
-  }, [activeTab, timeRange]);
+  }, [activeTab]);
 
   useEffect(() => {
     loadSources();
@@ -59,15 +59,15 @@ export function RadarInbox() {
   const handleScan = async () => {
     setScanning(true);
     try {
-      triggerRadarScan(undefined, timeRange).then(result => {
-        showToast(t('radar.scanComplete', { count: result.newItems }), 'success');
-        loadItems();
-        loadSources();
-      }).catch(() => {
-        showToast(t('radar.error.scanFailed'), 'error');
-      });
-    } catch {
+      const result = await triggerRadarScan(undefined, timeRange);
+      showToast(t('radar.scanComplete', { count: result.newItems }), 'success');
+      loadItems();
+      loadSources();
+    } catch (e) {
+      console.error('Scan failed:', e);
       showToast(t('radar.error.scanFailed'), 'error');
+    } finally {
+      setScanning(false);
     }
   };
 

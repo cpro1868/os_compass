@@ -97,10 +97,9 @@ export async function deleteRadarSource(id: number): Promise<void> {
 
 export async function getRadarItems(
   status?: string,
-  limit?: number,
-  timeRange?: string
+  limit?: number
 ): Promise<RadarItem[]> {
-  return invoke<RadarItem[]>('get_radar_items', { status, limit, timeRange });
+  return invoke<RadarItem[]>('get_radar_items', { status, limit });
 }
 
 export async function radarItemAction(
@@ -117,10 +116,9 @@ export async function radarItemAction(
 
 export async function triggerRadarScan(
   sourceId?: number,
-  timeRange?: string,
-  clearCache?: boolean
+  timeRange?: string
 ): Promise<ScanResult> {
-  return invoke<ScanResult>('trigger_radar_scan', { sourceId, timeRange, clearCache });
+  return invoke<ScanResult>('trigger_radar_scan', { sourceId, timeRange });
 }
 
 export async function getRadarUnreadCount(): Promise<number> {
