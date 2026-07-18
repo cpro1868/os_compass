@@ -22,6 +22,7 @@ export interface RadarSource {
 export interface RadarItem {
   id: number;
   source_id: number;
+  source_name: string | null;
   project_name: string | null;
   project_url: string | null;
   description: string | null;
