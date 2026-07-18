@@ -73,9 +73,19 @@ impl TelegramAdapter {
                 continue;
             }
             
-            // 提取时间（从整个 HTML 中找第一个）
+            // 从整个消息块提取时间（每个消息有自己的 time 标签）
+            // 找到当前消息对应的 time 标签
             let time_re = Regex::new(r#"<time datetime="([^"]+)""#).unwrap();
-            let published_at = time_re.captures(&decoded).map(|c| c[1].to_string());
+            let published_at = time_re.captures(&decoded).map(|c| {
+                let utc_time = &c[1];
+                // 转换为本地时间
+                if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(utc_time) {
+                    let local = dt.with_timezone(&chrono::Local);
+                    local.format("%Y-%m-%d %H:%M:%S").to_string()
+                } else {
+                    utc_time.to_string()
+                }
+            });
             
             // 提取链接
             let url_re = Regex::new(r#"https?://[^\s<>"']+[^<>\s.,;:!?]""#).unwrap();
@@ -177,13 +187,13 @@ impl SourceAdapter for TelegramAdapter {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         let mut all_results = Vec::new();
-        let max_pages = 3;
+        let max_pages = 5;
 
         for page in 1..=max_pages {
             let fetch_url = if page == 1 {
                 base_url.clone()
             } else {
-                format!("{}?before={}", base_url, 10000 - page * 50)
+                format!("{}?p={}", base_url, page)
             };
 
             println!("[telegram] Page {}: {}", page, fetch_url);
@@ -195,6 +205,8 @@ impl SourceAdapter for TelegramAdapter {
             }
 
             let results = self.extract_messages(&html);
+            println!("[telegram] Page {} extracted {} messages", page, results.len());
+            
             if results.is_empty() {
                 break;
             }
