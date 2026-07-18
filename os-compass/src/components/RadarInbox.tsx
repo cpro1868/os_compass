@@ -29,6 +29,27 @@ export function RadarInbox() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [timeRange, setTimeRange] = useState<string>('1d');
+  const [importUrl, setImportUrl] = useState<string | null>(null);
+
+  const SUPPORTED_PLATFORMS = ['github', 'gitee', 'gitlab', 'npm', 'pypi', 'docker'];
+
+  const findSupportedUrls = (description: string | null): string[] => {
+    if (!description) return [];
+    const urlRegex = /https?:\/\/[^\s<>"']+/g;
+    const matches = description.match(urlRegex) || [];
+    return matches.filter(url => 
+      SUPPORTED_PLATFORMS.some(p => url.toLowerCase().includes(p))
+    );
+  };
+
+  const handleImport = (urls: string[]) => {
+    if (urls.length === 1) {
+      setImportUrl(urls[0]);
+    } else {
+      const urlsText = urls.join('\n');
+      setImportUrl(urlsText);
+    }
+  };
 
   const loadSources = useCallback(async () => {
     try {
@@ -337,23 +358,43 @@ export function RadarInbox() {
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                           <i className="fa-regular fa-clock mr-1" />
                           {item.published_at || item.fetched_at}
+                          {item.source_name && (
+                            <span className="ml-2 text-blue-500">来自 {item.source_name}</span>
+                          )}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        {item.status === 'unread' && (
-                          <button
-                            onClick={() => handleAction(item.id, 'collect')}
-                            className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition cursor-pointer"
-                          >
-                            <i className="fa-regular fa-bookmark text-xs mr-1" />
-                            {t('radar.collect')}
-                          </button>
-                        )}
-                        {item.status === 'collected' && (
-                          <span className="px-3 py-1.5 text-sm rounded-lg text-green-600 dark:text-green-400">
-                            <i className="fa-solid fa-bookmark mr-1" />{t('radar.collected')}
-                          </span>
-                        )}
+                        {(() => {
+                          const supportedUrls = findSupportedUrls(item.description);
+                          const hasImport = supportedUrls.length > 0;
+                          return (
+                            <>
+                              {item.status === 'unread' && (
+                                <button
+                                  onClick={() => handleAction(item.id, 'collect')}
+                                  className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition cursor-pointer"
+                                >
+                                  <i className="fa-regular fa-bookmark text-xs mr-1" />
+                                  {t('radar.collect')}
+                                </button>
+                              )}
+                              {hasImport && (
+                                <button
+                                  onClick={() => handleImport(supportedUrls)}
+                                  className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition cursor-pointer"
+                                >
+                                  <i className="fa-solid fa-download text-xs mr-1" />
+                                  导入
+                                </button>
+                              )}
+                              {item.status === 'collected' && !hasImport && (
+                                <span className="px-3 py-1.5 text-sm rounded-lg text-green-600 dark:text-green-400">
+                                  <i className="fa-solid fa-bookmark mr-1" />{t('radar.collected')}
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                   </div>
                 </div>
@@ -590,6 +631,37 @@ export function RadarInbox() {
                 className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition disabled:opacity-50"
               >
                 {clearing ? t('common.clearing') : t('radar.clearConfirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {importUrl && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4">导入项目</h3>
+            {importUrl.includes('\n') ? (
+              <p className="text-sm text-gray-500 mb-4">检测到 {importUrl.split('\n').length} 个支持的链接</p>
+            ) : (
+              <p className="text-sm text-gray-500 mb-4">导入链接：{importUrl}</p>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setImportUrl(null)}
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={() => {
+                  // TODO: 跳转到项目看板并传递URL
+                  setImportUrl(null);
+                  showToast('功能开发中：导入到项目看板', 'info');
+                }}
+                className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
+              >
+                确认导入
               </button>
             </div>
           </div>
