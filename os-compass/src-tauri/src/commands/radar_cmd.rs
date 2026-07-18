@@ -192,28 +192,15 @@ pub fn delete_radar_source(id: i64) -> Result<(), String> {
 }
 
 #[command]
-pub fn get_radar_items(status: Option<String>, limit: Option<i64>, time_range: Option<String>) -> Result<Vec<RadarItem>, String> {
+pub fn get_radar_items(status: Option<String>, limit: Option<i64>) -> Result<Vec<RadarItem>, String> {
     let conn = get_radar_conn()?;
     let lim = limit.unwrap_or(500);
 
-    // 时间范围过滤
-    let time_filter = match time_range.as_deref() {
-        Some("1d") => "AND (published_at >= datetime('now', '-1 day') OR fetched_at >= datetime('now', '-1 day'))",
-        Some("7d") => "AND (published_at >= datetime('now', '-7 days') OR fetched_at >= datetime('now', '-7 days'))",
-        Some("30d") => "AND (published_at >= datetime('now', '-30 days') OR fetched_at >= datetime('now', '-30 days'))",
-        _ => "", // "all" 或其他
-    };
-
     let mut items = Vec::new();
-    let base_query = format!(
-        "SELECT id, source_id, project_name, project_url, description, language, status, published_at, fetched_at FROM radar_items WHERE 1=1 {}",
-        time_filter
-    );
-
     let query = if let Some(s) = status {
-        format!("{} AND status = '{}' ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT {}", base_query, s, lim)
+        format!("SELECT id, source_id, project_name, project_url, description, language, status, published_at, fetched_at FROM radar_items WHERE status = '{}' ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT {}", s, lim)
     } else {
-        format!("{} ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT {}", base_query, lim)
+        format!("SELECT id, source_id, project_name, project_url, description, language, status, published_at, fetched_at FROM radar_items ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT {}", lim)
     };
 
     let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
@@ -343,20 +330,11 @@ pub fn radar_item_action(
 }
 
 #[command]
-pub fn trigger_radar_scan(time_range: Option<String>, clear_cache: Option<bool>) -> Result<serde_json::Value, String> {
+pub fn trigger_radar_scan(time_range: Option<String>) -> Result<serde_json::Value, String> {
     let vault_dir = get_radar_vault_dir();
     let time_range_str = time_range.as_deref();
-    let clear = clear_cache.unwrap_or(true);
 
-    println!("[radar] trigger_radar_scan: vault_dir = {:?}, time_range = {:?}, clear_cache = {}", vault_dir, time_range_str, clear);
-    
-    // 扫描前清空缓存
-    if clear {
-        if let Ok(conn) = crate::plugins::radar::init_radar_db(&vault_dir) {
-            let deleted = conn.execute("DELETE FROM radar_items", []).unwrap_or(0);
-            println!("[radar] Cleared {} cached items", deleted);
-        }
-    }
+    println!("[radar] trigger_radar_scan: vault_dir = {:?}, time_range = {:?}", vault_dir, time_range_str);
     
     let (scanned, new_items, errors) = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(&vault_dir, time_range_str))?;
 
