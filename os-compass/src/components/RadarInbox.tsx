@@ -59,7 +59,7 @@ export function RadarInbox() {
   const handleScan = async () => {
     setScanning(true);
     try {
-      triggerRadarScan().then(result => {
+      triggerRadarScan(undefined, timeRange).then(result => {
         showToast(t('radar.scanComplete', { count: result.newItems }), 'success');
         loadItems();
         loadSources();

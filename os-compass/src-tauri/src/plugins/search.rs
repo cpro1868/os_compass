@@ -164,7 +164,7 @@ pub async fn three_layer_search(
         let mut adapter = get_adapter(SourceType::WebCrawl);
         let search_url = format!("https://api.github.com/search/repositories?q={}", urlencoding::encode(query));
 
-        if let Ok(contents) = adapter.fetch(&search_url, proxy).await {
+        if let Ok(contents) = adapter.fetch(&search_url, proxy, None).await {
             for content in contents.iter().take(10 - results.len()) {
                 let url_hash = compute_url_hash(&content.url);
                 let parsed = parse_content_with_llm(content, &settings).unwrap_or_default();

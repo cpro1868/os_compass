@@ -116,9 +116,10 @@ export async function radarItemAction(
 }
 
 export async function triggerRadarScan(
-  sourceId?: number
+  sourceId?: number,
+  timeRange?: string
 ): Promise<ScanResult> {
-  return invoke<ScanResult>('trigger_radar_scan', { sourceId });
+  return invoke<ScanResult>('trigger_radar_scan', { sourceId, timeRange });
 }
 
 export async function getRadarUnreadCount(): Promise<number> {
