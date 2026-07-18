@@ -41,13 +41,12 @@ export function RadarInbox() {
 
   const loadItems = useCallback(async () => {
     try {
-      const status = activeTab === 'all' ? undefined : activeTab;
-      const data = await getRadarItems(status);
+      const data = await getRadarItems();
       setItems(data);
     } catch (e) {
       console.error('Failed to load items:', e);
     }
-  }, [activeTab]);
+  }, []);
 
   useEffect(() => {
     loadSources();
@@ -316,7 +315,7 @@ export function RadarInbox() {
                 <p>{t('radar.empty')}</p>
               </div>
             ) : (
-              items.map(item => (
+              items.filter(item => activeTab === 'all' || item.status === activeTab).map(item => (
                 <div
                   key={item.id}
                   className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-gray-300 dark:hover:border-gray-600 transition"
