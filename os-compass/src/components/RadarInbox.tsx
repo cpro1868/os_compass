@@ -58,14 +58,15 @@ export function RadarInbox() {
   const handleScan = async () => {
     setScanning(true);
     try {
-      const result = await triggerRadarScan();
-      showToast(t('radar.scanComplete', { count: result.newItems }), 'success');
-      loadItems();
-      loadSources();
+      triggerRadarScan().then(result => {
+        showToast(t('radar.scanComplete', { count: result.newItems }), 'success');
+        loadItems();
+        loadSources();
+      }).catch(() => {
+        showToast(t('radar.error.scanFailed'), 'error');
+      });
     } catch {
       showToast(t('radar.error.scanFailed'), 'error');
-    } finally {
-      setScanning(false);
     }
   };
 
