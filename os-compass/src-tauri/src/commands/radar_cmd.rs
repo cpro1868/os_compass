@@ -67,18 +67,8 @@ pub fn debug_vault_status() -> String {
 
 fn get_radar_conn() -> Result<rusqlite::Connection, String> {
     check_plugin_enabled("radar")?;
-    let vault_dir = {
-        let config = CURRENT_VAULT_CONFIG.lock().unwrap();
-        if let Some(path) = config.as_ref() {
-            if let Some(parent) = std::path::Path::new(&path.path).parent() {
-                parent.to_path_buf()
-            } else {
-                get_default_radar_dir()
-            }
-        } else {
-            get_default_radar_dir()
-        }
-    };
+    // 雷达数据库始终存储在系统目录
+    let vault_dir = get_default_radar_dir();
     init_radar_db(&vault_dir)
 }
 
@@ -298,15 +288,7 @@ pub fn trigger_radar_scan(time_range: Option<String>) -> Result<serde_json::Valu
 }
 
 fn get_radar_vault_dir() -> std::path::PathBuf {
-    let config = CURRENT_VAULT_CONFIG.lock().unwrap();
-    if let Some(path) = config.as_ref() {
-        let db_path = std::path::Path::new(&path.path);
-        if let Some(parent) = db_path.parent() {
-            println!("[radar] Using vault from CURRENT_VAULT_CONFIG: {:?}", parent);
-            return parent.to_path_buf();
-        }
-    }
-    println!("[radar] No vault config, using app_data_dir");
+    // 雷达数据库始终存储在系统目录，不依赖 CURRENT_VAULT_CONFIG
     get_default_radar_dir()
 }
 
