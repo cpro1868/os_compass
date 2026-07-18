@@ -28,6 +28,7 @@ export function RadarInbox() {
   const [editingSource, setEditingSource] = useState<RadarSource | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [timeRange, setTimeRange] = useState<string>('1d');
 
   const SUPPORTED_PLATFORMS = ['github', 'gitee', 'gitlab', 'npm', 'pypi', 'docker', 'chrome'];
 
@@ -43,12 +44,12 @@ export function RadarInbox() {
   const loadItems = useCallback(async () => {
     try {
       const status = activeTab === 'all' ? undefined : activeTab;
-      const data = await getRadarItems(status);
+      const data = await getRadarItems(status, undefined, timeRange);
       setItems(data);
     } catch (e) {
       console.error('Failed to load items:', e);
     }
-  }, [activeTab]);
+  }, [activeTab, timeRange]);
 
   useEffect(() => {
     loadSources();
@@ -263,6 +264,16 @@ export function RadarInbox() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <select
+            value={timeRange}
+            onChange={e => setTimeRange(e.target.value)}
+            className="px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:border-blue-500"
+          >
+            <option value="1d">{t('radar.timeRange.1d')}</option>
+            <option value="7d">{t('radar.timeRange.7d')}</option>
+            <option value="30d">{t('radar.timeRange.30d')}</option>
+            <option value="all">{t('radar.timeRange.all')}</option>
+          </select>
           <button
             onClick={() => setShowClearConfirm(true)}
             disabled={items.length === 0}

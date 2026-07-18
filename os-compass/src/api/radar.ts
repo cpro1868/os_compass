@@ -97,9 +97,10 @@ export async function deleteRadarSource(id: number): Promise<void> {
 
 export async function getRadarItems(
   status?: string,
-  limit?: number
+  limit?: number,
+  timeRange?: string
 ): Promise<RadarItem[]> {
-  return invoke<RadarItem[]>('get_radar_items', { status, limit });
+  return invoke<RadarItem[]>('get_radar_items', { status, limit, timeRange });
 }
 
 export async function radarItemAction(
