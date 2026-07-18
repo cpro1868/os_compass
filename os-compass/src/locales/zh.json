@@ -764,9 +764,10 @@
     "tabs": {
       "all": "全部",
       "unread": "未读",
-      "imported": "已导入",
-      "ignored": "不感兴趣"
+      "collected": "收藏"
     },
+    "collect": "收藏",
+    "collected": "已收藏",
     "timeRange": {
       "1d": "最近一天",
       "7d": "最近七天",

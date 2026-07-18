@@ -104,10 +104,10 @@ export async function getRadarItems(
 
 export async function radarItemAction(
   itemId: number,
-  action: 'import' | 'blacklist' | 'ignore',
+  action: 'collect' | 'blacklist',
   categoryId?: number
-): Promise<{ projectId?: number }> {
-  return invoke<{ projectId?: number }>('radar_item_action', {
+): Promise<null> {
+  return invoke('radar_item_action', {
     itemId,
     action,
     categoryId,
