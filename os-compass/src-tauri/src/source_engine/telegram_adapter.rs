@@ -54,25 +54,44 @@ impl TelegramAdapter {
         }
     }
 
-    fn extract_messages(&self, html: &str, time_range: Option<&str>) -> (Vec<RawContent>, Option<i64>, bool) {
+    fn parse_rfc3339(datetime_str: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+        chrono::DateTime::parse_from_rfc3339(datetime_str)
+            .ok()
+            .map(|dt| dt.with_timezone(&chrono::Utc))
+    }
+
+    fn extract_messages(&self, html: &str, time_range: Option<&str>, first_page: bool) -> (Vec<RawContent>, Option<i64>, bool) {
         let decoded = self.decode_html_entities(html);
         
+        // 提取所有消息ID
         let msg_id_re = Regex::new(r#"data-post="[^/]+/(\d+)""#).unwrap();
-        let mut msg_ids: Vec<i64> = Vec::new();
-        for cap in msg_id_re.captures_iter(&decoded) {
-            if let Ok(id) = cap[1].parse::<i64>() {
-                msg_ids.push(id);
-            }
-        }
+        let msg_ids: Vec<i64> = msg_id_re.captures_iter(&decoded)
+            .filter_map(|cap| cap[1].parse().ok())
+            .collect();
         
+        // 提取所有时间（按 HTML 顺序）
+        let time_re = Regex::new(r#"<time datetime="([^"]+)""#).unwrap();
+        let all_times: Vec<String> = time_re.captures_iter(&decoded)
+            .map(|cap| cap[1].to_string())
+            .collect();
+        
+        // 确定翻页用的 ID（最小ID = 最旧的消息）
         let next_last_id = msg_ids.iter().min().copied();
         
-        let text_re = Regex::new(r#"class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)</div>"#).unwrap();
-        let time_re = Regex::new(r#"<time datetime="([^"]+)""#).unwrap();
-        
-        let mut results = Vec::new();
+        // 确定时间范围
         let max_seconds = Self::get_time_range_seconds(time_range);
+        
+        // HTML 中顺序是：旧的在前，新的在后
+        // first_page = true 时，all_times[0] 是最旧的，all_times[last] 是最新的
+        
+        // 提取消息内容
+        let text_re = Regex::new(r#"class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)</div>"#).unwrap();
+        let mut results = Vec::new();
+        let mut earliest_time_in_page: Option<chrono::DateTime<chrono::Utc>> = None;
         let mut exceeds_range = false;
+        
+        // 时间数组的索引
+        let mut time_idx = 0;
         
         for cap in text_re.captures_iter(&decoded) {
             let raw_text = &cap[1];
@@ -82,28 +101,33 @@ impl TelegramAdapter {
                 continue;
             }
             
-            let time_capture = time_re.captures(&decoded);
-            let utc_time = time_capture.as_ref().map(|c| c[1].as_ref());
+            // 获取对应的时间
+            let published_at = if time_idx < all_times.len() {
+                let utc_time = &all_times[time_idx];
+                if let Some(dt) = Self::parse_rfc3339(utc_time) {
+                    earliest_time_in_page = Some(dt);
+                    Some(dt.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S").to_string())
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            time_idx += 1;
             
-            if let Some(utc) = utc_time {
-                if let Some(max_sec) = max_seconds {
-                    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(utc) {
-                        let now = chrono::Utc::now();
-                        let diff = now.signed_duration_since(dt.with_timezone(&chrono::Utc));
-                        if diff.num_seconds() > max_sec {
-                            exceeds_range = true;
-                            continue;
-                        }
+            // 时间范围检查
+            if let Some(max_sec) = max_seconds {
+                if let Some(ref dt) = earliest_time_in_page {
+                    let now = chrono::Utc::now();
+                    let diff = now.signed_duration_since(*dt);
+                    if diff.num_seconds() > max_sec {
+                        exceeds_range = true;
+                        continue;
                     }
                 }
             }
             
-            let published_at = time_capture.and_then(|c| {
-                chrono::DateTime::parse_from_rfc3339(&c[1])
-                    .ok()
-                    .map(|dt| dt.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S").to_string())
-            });
-            
+            // 提取链接
             let url_re = Regex::new(r#"https?://[^\s<>"']+[^<>\s.,;:!?]""#).unwrap();
             let urls: Vec<String> = url_re.find_iter(&text)
                 .filter_map(|m| {
@@ -116,6 +140,7 @@ impl TelegramAdapter {
                 })
                 .collect();
             
+            // 标题取第一行
             let title = text.lines()
                 .next()
                 .map(|l| l.chars().take(80).collect::<String>())
@@ -156,7 +181,6 @@ impl TelegramAdapter {
         let client = builder.build()
             .map_err(|e| SourceError::ConfigError(e.to_string()))?;
 
-        println!("[telegram] Sending request...");
         let response = client.get(url)
             .header("Accept", "text/html; charset=utf-8")
             .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
@@ -201,42 +225,57 @@ impl SourceAdapter for TelegramAdapter {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         let mut all_results = Vec::new();
-        let max_pages = if time_range.is_some() { 5 } else { 10 };
+        let max_pages = 5;
         let mut last_msg_id: Option<i64> = None;
+        let mut page_num = 0;
 
-        for page in 1..=max_pages {
+        loop {
+            page_num += 1;
+            if page_num > max_pages {
+                println!("[telegram] Max pages reached, stopping");
+                break;
+            }
+            
             let fetch_url = match last_msg_id {
                 Some(id) => format!("{}?before={}", base_url, id),
                 None => base_url.clone(),
             };
 
-            println!("[telegram] Page {}: {}", page, fetch_url);
+            println!("[telegram] Page {}: {}", page_num, fetch_url);
             
             let html = self.http_get(&fetch_url, proxy).await?;
             if html.len() < 1000 {
-                println!("[telegram] Page {} too short, stopping", page);
+                println!("[telegram] Page {} too short, stopping", page_num);
                 break;
             }
 
-            let (results, new_last_id, exceeds_range) = self.extract_messages(&html, time_range);
-            println!("[telegram] Page {} extracted {} messages, exceeds_range={}", page, results.len(), exceeds_range);
+            let first_page = page_num == 1;
+            let (results, new_last_id, exceeds_range) = self.extract_messages(&html, time_range, first_page);
+            println!("[telegram] Page {} extracted {} messages, exceeds_range={}", page_num, results.len(), exceeds_range);
             
             if results.is_empty() {
-                println!("[telegram] No more messages, stopping");
+                println!("[telegram] No messages in range, stopping");
                 break;
             }
 
             all_results.extend(results);
             last_msg_id = new_last_id;
             
-            if last_msg_id.is_none() || exceeds_range {
-                println!("[telegram] No more pages or reached time range limit, stopping");
+            // 如果设置了时间范围，且已达到范围边界，停止
+            if time_range.is_some() && exceeds_range {
+                println!("[telegram] Reached time range limit, stopping");
+                break;
+            }
+            
+            if last_msg_id.is_none() {
+                println!("[telegram] No more pages, stopping");
                 break;
             }
 
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
 
+        // 去重
         let mut seen = std::collections::HashSet::new();
         all_results.retain(|r| seen.insert(r.title.clone()));
 

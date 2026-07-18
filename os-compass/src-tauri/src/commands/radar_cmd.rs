@@ -343,11 +343,21 @@ pub fn radar_item_action(
 }
 
 #[command]
-pub fn trigger_radar_scan(time_range: Option<String>) -> Result<serde_json::Value, String> {
+pub fn trigger_radar_scan(time_range: Option<String>, clear_cache: Option<bool>) -> Result<serde_json::Value, String> {
     let vault_dir = get_radar_vault_dir();
     let time_range_str = time_range.as_deref();
+    let clear = clear_cache.unwrap_or(true);
 
-    println!("[radar] trigger_radar_scan: vault_dir = {:?}, time_range = {:?}", vault_dir, time_range_str);
+    println!("[radar] trigger_radar_scan: vault_dir = {:?}, time_range = {:?}, clear_cache = {}", vault_dir, time_range_str, clear);
+    
+    // 扫描前清空缓存
+    if clear {
+        if let Ok(conn) = crate::plugins::radar::init_radar_db(&vault_dir) {
+            let deleted = conn.execute("DELETE FROM radar_items", []).unwrap_or(0);
+            println!("[radar] Cleared {} cached items", deleted);
+        }
+    }
+    
     let (scanned, new_items, errors) = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(&vault_dir, time_range_str))?;
 
     Ok(serde_json::json!({
