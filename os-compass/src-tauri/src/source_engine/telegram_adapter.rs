@@ -37,33 +37,31 @@ impl TelegramAdapter {
     fn strip_html_tags(&self, html: &str) -> String {
         let mut result = String::new();
         let mut in_tag = false;
-        
         for c in html.chars() {
-            match c {
-                '<' => { in_tag = true; }
-                '>' => { in_tag = false; }
-                ' ' | '\t' | '\n' | '\r' => {
-                    if !result.is_empty() && !result.ends_with(' ') {
-                        result.push(' ');
-                    }
-                }
-                _ if !in_tag => {
-                    result.push(c);
-                }
-                _ => {}
-            }
+            if c == '<' { in_tag = true; }
+            else if c == '>' { in_tag = false; }
+            else if !in_tag { result.push(c); }
         }
-        
         result.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 
-    fn extract_messages(&self, html: &str) -> Vec<RawContent> {
-        let mut results = Vec::new();
-        
+    fn extract_messages_with_next(&self, html: &str) -> (Vec<RawContent>, Option<i64>) {
         let decoded = self.decode_html_entities(html);
         
-        // 匹配 tgme_widget_message_text 块（包括 js-message_text 等额外属性）
+        let msg_id_re = Regex::new(r#"data-post="[^/]+/(\d+)""#).unwrap();
+        let mut msg_ids: Vec<i64> = Vec::new();
+        for cap in msg_id_re.captures_iter(&decoded) {
+            if let Ok(id) = cap[1].parse::<i64>() {
+                msg_ids.push(id);
+            }
+        }
+        
+        let next_last_id = msg_ids.iter().min().copied();
+        
         let text_re = Regex::new(r#"class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)</div>"#).unwrap();
+        let time_re = Regex::new(r#"<time datetime="([^"]+)""#).unwrap();
+        
+        let mut results = Vec::new();
         
         for cap in text_re.captures_iter(&decoded) {
             let raw_text = &cap[1];
@@ -73,21 +71,13 @@ impl TelegramAdapter {
                 continue;
             }
             
-            // 从整个消息块提取时间（每个消息有自己的 time 标签）
-            // 找到当前消息对应的 time 标签
-            let time_re = Regex::new(r#"<time datetime="([^"]+)""#).unwrap();
-            let published_at = time_re.captures(&decoded).map(|c| {
+            let published_at = time_re.captures(&decoded).and_then(|c| {
                 let utc_time = &c[1];
-                // 转换为本地时间
-                if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(utc_time) {
-                    let local = dt.with_timezone(&chrono::Local);
-                    local.format("%Y-%m-%d %H:%M:%S").to_string()
-                } else {
-                    utc_time.to_string()
-                }
+                chrono::DateTime::parse_from_rfc3339(utc_time)
+                    .ok()
+                    .map(|dt| dt.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S").to_string())
             });
             
-            // 提取链接
             let url_re = Regex::new(r#"https?://[^\s<>"']+[^<>\s.,;:!?]""#).unwrap();
             let urls: Vec<String> = url_re.find_iter(&text)
                 .filter_map(|m| {
@@ -100,7 +90,6 @@ impl TelegramAdapter {
                 })
                 .collect();
             
-            // 标题
             let title = text.lines()
                 .next()
                 .map(|l| l.chars().take(80).collect::<String>())
@@ -118,8 +107,7 @@ impl TelegramAdapter {
             }
         }
         
-        println!("[telegram] Extracted {} messages", results.len());
-        results
+        (results, next_last_id)
     }
 
     async fn http_get(&self, url: &str, proxy: Option<&str>) -> Result<String, SourceError> {
@@ -187,13 +175,13 @@ impl SourceAdapter for TelegramAdapter {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         let mut all_results = Vec::new();
-        let max_pages = 5;
+        let max_pages = 10;
+        let mut last_msg_id: Option<i64> = None;
 
         for page in 1..=max_pages {
-            let fetch_url = if page == 1 {
-                base_url.clone()
-            } else {
-                format!("{}?p={}", base_url, page)
+            let fetch_url = match last_msg_id {
+                Some(id) => format!("{}?before={}", base_url, id),
+                None => base_url.clone(),
             };
 
             println!("[telegram] Page {}: {}", page, fetch_url);
@@ -204,18 +192,25 @@ impl SourceAdapter for TelegramAdapter {
                 break;
             }
 
-            let results = self.extract_messages(&html);
+            let (results, new_last_id) = self.extract_messages_with_next(&html);
             println!("[telegram] Page {} extracted {} messages", page, results.len());
             
             if results.is_empty() {
+                println!("[telegram] No more messages, stopping");
                 break;
             }
 
             all_results.extend(results);
+            last_msg_id = new_last_id;
+            
+            if last_msg_id.is_none() {
+                println!("[telegram] No more pages, stopping");
+                break;
+            }
+
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
 
-        // 去重
         let mut seen = std::collections::HashSet::new();
         all_results.retain(|r| seen.insert(r.title.clone()));
 
