@@ -98,7 +98,7 @@ impl SourceAdapter for RssAdapter {
         SourceType::Rss
     }
 
-    async fn fetch(&mut self, url: &str, proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
+    async fn fetch(&mut self, url: &str, proxy: Option<&str>, _time_range: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
         println!("[rss] Fetching: {}", url);
         let client = build_client(proxy)?;
         let response = client.get(url).send().await?;

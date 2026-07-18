@@ -343,11 +343,12 @@ pub fn radar_item_action(
 }
 
 #[command]
-pub fn trigger_radar_scan() -> Result<serde_json::Value, String> {
+pub fn trigger_radar_scan(time_range: Option<String>) -> Result<serde_json::Value, String> {
     let vault_dir = get_radar_vault_dir();
+    let time_range_str = time_range.as_deref();
 
-    println!("[radar] trigger_radar_scan: vault_dir = {:?}", vault_dir);
-    let (scanned, new_items, errors) = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(&vault_dir))?;
+    println!("[radar] trigger_radar_scan: vault_dir = {:?}, time_range = {:?}", vault_dir, time_range_str);
+    let (scanned, new_items, errors) = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(&vault_dir, time_range_str))?;
 
     Ok(serde_json::json!({
         "scanned": scanned,

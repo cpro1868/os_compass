@@ -33,8 +33,8 @@ impl SourceAdapter for PlatformPresetAdapter {
         SourceType::PlatformPreset
     }
 
-    async fn fetch(&mut self, url: &str, proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
+    async fn fetch(&mut self, url: &str, proxy: Option<&str>, time_range: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
         let resolved_url = self.resolve_url(url);
-        self.rss_adapter.fetch(&resolved_url, proxy).await
+        self.rss_adapter.fetch(&resolved_url, proxy, time_range).await
     }
 }

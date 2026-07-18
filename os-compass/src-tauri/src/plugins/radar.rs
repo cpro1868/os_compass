@@ -77,12 +77,13 @@ pub async fn radar_scan_source(
     source_id: i64,
     source_type: &str,
     url: &str,
+    time_range: Option<&str>,
 ) -> Result<(i64, i64, i64), String> {
     let mut scanned = 0i64;
     let mut new_items = 0i64;
     let mut errors = 0i64;
 
-    println!("[radar] Scanning source_id={}, type={}, url={}", source_id, source_type, url);
+    println!("[radar] Scanning source_id={}, type={}, url={}, time_range={:?}", source_id, source_type, url, time_range);
 
     let st = SourceType::from_str(source_type).unwrap_or(SourceType::Rss);
     let mut adapter = get_adapter(st);
@@ -120,7 +121,7 @@ pub async fn radar_scan_source(
     }
 
     println!("[radar] Fetching from url: {}", url);
-    let contents = match adapter.fetch(url, proxy_url.as_deref()).await {
+    let contents = match adapter.fetch(url, proxy_url.as_deref(), time_range).await {
         Ok(c) => {
             println!("[radar] Fetched {} items", c.len());
             c
@@ -191,7 +192,7 @@ pub async fn radar_scan_source(
     Ok((scanned, new_items, errors))
 }
 
-pub async fn radar_scan_all(vault_dir: &std::path::Path) -> Result<(i64, i64, i64), String> {
+pub async fn radar_scan_all(vault_dir: &std::path::Path, time_range: Option<&str>) -> Result<(i64, i64, i64), String> {
     let conn = init_radar_db(vault_dir)?;
 
     // 从系统库读取信息源
@@ -218,7 +219,7 @@ pub async fn radar_scan_all(vault_dir: &std::path::Path) -> Result<(i64, i64, i6
 
         println!("[radar] Scanning source {}/{}: {}", idx + 1, system_sources.len(), source.name);
 
-        match radar_scan_source(&conn, source_id, &source_type, &url).await {
+        match radar_scan_source(&conn, source_id, &source_type, &url, time_range).await {
             Ok((s, n, e)) => {
                 total_scanned += s;
                 total_new += n;
@@ -276,7 +277,7 @@ impl FeaturePlugin for RadarPlugin {
 
     async fn execute(&self, context: &PluginContext) -> Result<FeatureResult, PluginError> {
         let vault_dir = context.vault_dir.clone();
-        let result = tauri::async_runtime::block_on(radar_scan_all(&vault_dir));
+        let result = tauri::async_runtime::block_on(radar_scan_all(&vault_dir, None));
         match result {
             Ok((scanned, new_items, errors)) => {
                 Ok(FeatureResult::success_with_data(serde_json::json!({

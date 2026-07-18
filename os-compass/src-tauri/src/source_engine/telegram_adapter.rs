@@ -45,7 +45,16 @@ impl TelegramAdapter {
         result.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 
-    fn extract_messages_with_next(&self, html: &str) -> (Vec<RawContent>, Option<i64>) {
+    fn get_time_range_seconds(time_range: Option<&str>) -> Option<i64> {
+        match time_range {
+            Some("1d") => Some(86400),
+            Some("7d") => Some(604800),
+            Some("30d") => Some(2592000),
+            _ => None,
+        }
+    }
+
+    fn extract_messages(&self, html: &str, time_range: Option<&str>) -> (Vec<RawContent>, Option<i64>, bool) {
         let decoded = self.decode_html_entities(html);
         
         let msg_id_re = Regex::new(r#"data-post="[^/]+/(\d+)""#).unwrap();
@@ -62,6 +71,8 @@ impl TelegramAdapter {
         let time_re = Regex::new(r#"<time datetime="([^"]+)""#).unwrap();
         
         let mut results = Vec::new();
+        let max_seconds = Self::get_time_range_seconds(time_range);
+        let mut exceeds_range = false;
         
         for cap in text_re.captures_iter(&decoded) {
             let raw_text = &cap[1];
@@ -71,9 +82,24 @@ impl TelegramAdapter {
                 continue;
             }
             
-            let published_at = time_re.captures(&decoded).and_then(|c| {
-                let utc_time = &c[1];
-                chrono::DateTime::parse_from_rfc3339(utc_time)
+            let time_capture = time_re.captures(&decoded);
+            let utc_time = time_capture.as_ref().map(|c| c[1].as_ref());
+            
+            if let Some(utc) = utc_time {
+                if let Some(max_sec) = max_seconds {
+                    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(utc) {
+                        let now = chrono::Utc::now();
+                        let diff = now.signed_duration_since(dt.with_timezone(&chrono::Utc));
+                        if diff.num_seconds() > max_sec {
+                            exceeds_range = true;
+                            continue;
+                        }
+                    }
+                }
+            }
+            
+            let published_at = time_capture.and_then(|c| {
+                chrono::DateTime::parse_from_rfc3339(&c[1])
                     .ok()
                     .map(|dt| dt.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S").to_string())
             });
@@ -107,7 +133,7 @@ impl TelegramAdapter {
             }
         }
         
-        (results, next_last_id)
+        (results, next_last_id, exceeds_range)
     }
 
     async fn http_get(&self, url: &str, proxy: Option<&str>) -> Result<String, SourceError> {
@@ -167,15 +193,15 @@ impl SourceAdapter for TelegramAdapter {
         SourceType::Telegram
     }
 
-    async fn fetch(&mut self, url: &str, proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
+    async fn fetch(&mut self, url: &str, proxy: Option<&str>, time_range: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
         let base_url = Self::normalize_url(url)
             .ok_or_else(|| SourceError::ParseError("Invalid Telegram URL".to_string()))?;
 
-        println!("[telegram] Fetching: {}", base_url);
+        println!("[telegram] Fetching: {}, time_range={:?}", base_url, time_range);
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         let mut all_results = Vec::new();
-        let max_pages = 10;
+        let max_pages = if time_range.is_some() { 5 } else { 10 };
         let mut last_msg_id: Option<i64> = None;
 
         for page in 1..=max_pages {
@@ -192,8 +218,8 @@ impl SourceAdapter for TelegramAdapter {
                 break;
             }
 
-            let (results, new_last_id) = self.extract_messages_with_next(&html);
-            println!("[telegram] Page {} extracted {} messages", page, results.len());
+            let (results, new_last_id, exceeds_range) = self.extract_messages(&html, time_range);
+            println!("[telegram] Page {} extracted {} messages, exceeds_range={}", page, results.len(), exceeds_range);
             
             if results.is_empty() {
                 println!("[telegram] No more messages, stopping");
@@ -203,8 +229,8 @@ impl SourceAdapter for TelegramAdapter {
             all_results.extend(results);
             last_msg_id = new_last_id;
             
-            if last_msg_id.is_none() {
-                println!("[telegram] No more pages, stopping");
+            if last_msg_id.is_none() || exceeds_range {
+                println!("[telegram] No more pages or reached time range limit, stopping");
                 break;
             }
 
