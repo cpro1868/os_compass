@@ -759,9 +759,10 @@
     "tabs": {
       "all": "All",
       "unread": "Unread",
-      "imported": "Imported",
-      "ignored": "Ignored"
+      "collected": "Collected"
     },
+    "collect": "Collect",
+    "collected": "Collected",
     "timeRange": {
       "1d": "Last 24h",
       "7d": "Last 7 days",

@@ -30,8 +30,6 @@ export function RadarInbox() {
   const [clearing, setClearing] = useState(false);
   const [timeRange, setTimeRange] = useState<string>('1d');
 
-  const SUPPORTED_PLATFORMS = ['github', 'gitee', 'gitlab', 'npm', 'pypi', 'docker', 'chrome'];
-
   const loadSources = useCallback(async () => {
     try {
       const data = await listRadarSources();
@@ -100,7 +98,7 @@ export function RadarInbox() {
     }
   };
 
-  const handleAction = async (itemId: number, action: 'import' | 'ignore' | 'blacklist') => {
+  const handleAction = async (itemId: number, action: 'collect' | 'blacklist') => {
     try {
       await radarItemAction(itemId, action);
       showToast(t(`radar.action.${action}Success`), 'success');
@@ -122,12 +120,6 @@ export function RadarInbox() {
       setClearing(false);
       setShowClearConfirm(false);
     }
-  };
-
-  const hasSupportedLink = (item: RadarItem) => {
-    const content = item.description || '';
-    const lower = content.toLowerCase();
-    return SUPPORTED_PLATFORMS.some(p => lower.includes(p));
   };
 
   const highlightLinks = (text: string) => {
@@ -248,7 +240,7 @@ export function RadarInbox() {
   const tabs = [
     { key: 'all', label: t('radar.tabs.all'), count: items.length },
     { key: 'unread', label: t('radar.tabs.unread'), count: items.filter(i => i.status === 'unread').length },
-    { key: 'imported', label: t('radar.tabs.imported'), count: items.filter(i => i.status === 'imported').length },
+    { key: 'collected', label: t('radar.tabs.collected'), count: items.filter(i => i.status === 'collected').length },
   ];
 
   return (
@@ -349,18 +341,18 @@ export function RadarInbox() {
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        {item.status === 'unread' && hasSupportedLink(item) && (
+                        {item.status === 'unread' && (
                           <button
-                            onClick={() => handleAction(item.id, 'import')}
+                            onClick={() => handleAction(item.id, 'collect')}
                             className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition cursor-pointer"
                           >
-                            <i className="fa-solid fa-download text-xs mr-1" />
-                            {t('radar.import')}
+                            <i className="fa-regular fa-bookmark text-xs mr-1" />
+                            {t('radar.collect')}
                           </button>
                         )}
-                        {item.status === 'imported' && (
+                        {item.status === 'collected' && (
                           <span className="px-3 py-1.5 text-sm rounded-lg text-green-600 dark:text-green-400">
-                            <i className="fa-solid fa-check mr-1" />{t('radar.imported')}
+                            <i className="fa-solid fa-bookmark mr-1" />{t('radar.collected')}
                           </span>
                         )}
                       </div>

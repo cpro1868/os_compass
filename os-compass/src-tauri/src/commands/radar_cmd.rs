@@ -234,60 +234,12 @@ pub fn radar_item_action(
     let conn = get_radar_conn()?;
 
     match action.as_str() {
-        "import" => {
-            let url: Option<String> = conn
-                .query_row(
-                    "SELECT project_url FROM radar_items WHERE id = ?",
-                    params![item_id],
-                    |row| row.get(0),
-                )
-                .map_err(|e| e.to_string())?;
-
-            let project_url = url.ok_or("No project URL")?;
-            let project_name: Option<String> = conn
-                .query_row(
-                    "SELECT project_name FROM radar_items WHERE id = ?",
-                    params![item_id],
-                    |row| row.get(0),
-                )
-                .map_err(|e| e.to_string())?;
-
-            let settings = get_settings();
-            let _provider = if project_url.contains("github.com") {
-                "github"
-            } else if project_url.contains("gitee.com") {
-                "gitee"
-            } else {
-                "crawler"
-            };
-
-            let cat_id = category_id.unwrap_or(1);
-
-            let db_guard = crate::db::DATABASE.lock().unwrap();
-            let db = db_guard.as_ref().ok_or("Database not initialized")?;
-            let main_conn = db.get_connection();
-
-            let description: Option<String> = conn
-                .query_row(
-                    "SELECT description FROM radar_items WHERE id = ?",
-                    params![item_id],
-                    |row| row.get(0),
-                )
-                .map_err(|e| e.to_string())?;
-
-            main_conn.execute(
-                "INSERT INTO projects (name, url, source, description, category_id, lifecycle_status) VALUES (?, ?, ?, ?, ?, 'TO_EXPLORE')",
-                params![project_name, project_url, _provider, description, cat_id],
-            ).map_err(|e| e.to_string())?;
-
-            let project_id = main_conn.last_insert_rowid();
-
+        "collect" => {
             conn.execute(
-                "UPDATE radar_items SET status = 'imported', imported_project_id = ? WHERE id = ?",
-                params![project_id, item_id],
+                "UPDATE radar_items SET status = 'collected' WHERE id = ?",
+                params![item_id],
             ).map_err(|e| e.to_string())?;
-
-            Ok(Some(project_id))
+            Ok(None)
         }
         "blacklist" => {
             let url_hash: String = conn
