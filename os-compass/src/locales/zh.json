@@ -767,6 +767,12 @@
       "imported": "已导入",
       "ignored": "不感兴趣"
     },
+    "timeRange": {
+      "1d": "最近一天",
+      "7d": "最近七天",
+      "30d": "最近30天",
+      "all": "全部"
+    },
     "sources": "信息源",
     "addSource": "添加信息源",
     "noSources": "暂无配置的信息源",
