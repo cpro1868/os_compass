@@ -394,6 +394,11 @@ pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
         }
     }
 
+    // 触发插件仓库切换（调用 on_disable/init/on_enable）
+    if let Err(e) = crate::plugin_manager::PLUGIN_MANAGER.switch_vault(&vault_dir) {
+        println!("[open_vault] plugin switch_vault error: {}", e);
+    }
+
     let last_vault_path = get_last_vault_path(&app);
     if let Some(parent) = last_vault_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
