@@ -132,11 +132,21 @@ impl PluginConfigDb {
     
     pub fn get_enabled(&self, plugin_id: &str) -> bool {
         let conn = self.conn.lock().unwrap();
-        conn.query_row(
+        let result = conn.query_row(
             "SELECT enabled FROM system_plugins WHERE id = ?",
             rusqlite::params![plugin_id],
             |row| row.get::<_, i32>(0),
-        ).unwrap_or(0) == 1
+        );
+        match result {
+            Ok(enabled) => {
+                println!("[plugin_config_db] get_enabled({}) = {}", plugin_id, enabled);
+                enabled == 1
+            },
+            Err(e) => {
+                println!("[plugin_config_db] get_enabled({}) error: {:?}", plugin_id, e);
+                false
+            }
+        }
     }
     
     pub fn get_config(&self, plugin_id: &str) -> Option<String> {
