@@ -77,9 +77,13 @@ fn get_radar_conn() -> Result<rusqlite::Connection, String> {
     let vault_dir = get_radar_vault_dir();
     println!("[radar] vault_dir: {:?}", vault_dir);
     
+    let radar_db_path = vault_dir.join("plugin_radar.db");
+    println!("[radar] radar_db_path: {:?}", radar_db_path);
+    println!("[radar] radar_db exists: {}", radar_db_path.exists());
+    
     match init_radar_db(&vault_dir) {
         Ok(conn) => {
-            println!("[radar] connection established");
+            println!("[radar] connection established successfully");
             Ok(conn)
         }
         Err(e) => {
@@ -327,8 +331,12 @@ pub fn trigger_radar_scan(time_range: Option<String>) -> Result<serde_json::Valu
 fn get_radar_vault_dir() -> std::path::PathBuf {
     // 采集数据放在当前仓库目录
     let config = CURRENT_VAULT_CONFIG.lock().unwrap();
+    println!("[radar] get_radar_vault_dir: config = {:?}", config);
     if let Some(cfg) = config.as_ref() {
-        if let Some(parent) = std::path::Path::new(&cfg.path).parent() {
+        println!("[radar] cfg.path = {}", cfg.path);
+        let db_path = std::path::Path::new(&cfg.path);
+        println!("[radar] db_path = {:?}", db_path);
+        if let Some(parent) = db_path.parent() {
             println!("[radar] Using vault dir for radar data: {:?}", parent);
             return parent.to_path_buf();
         }
