@@ -356,11 +356,33 @@ pub fn validate_vault(path: String) -> VaultValidation {
     }
 }
 
+fn write_log(msg: &str) {
+    use std::io::Write;
+    let log_dir = std::env::var("APPDATA").unwrap_or_default() + "\\com.administrator.os-compass\\logs";
+    std::fs::create_dir_all(&log_dir).ok();
+    let log_file = format!("{}\\vault_debug.log", log_dir);
+    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&log_file) {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default();
+        let secs = now.as_secs();
+        let days = secs / 86400;
+        let secs_in_day = secs % 86400;
+        let hours = secs_in_day / 3600;
+        let secs_in_hour = secs_in_day % 3600;
+        let mins = secs_in_hour / 60;
+        let secs = secs_in_hour % 60;
+        let ts = format!("{}+{:03}T{:02}:{:02}:{:02}", 1970 + days as i64, days, hours, mins, secs);
+        writeln!(file, "[{}] {}", ts, msg).ok();
+    }
+    println!("{}", msg);
+}
+
 pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
-    println!("[open_vault] Opening vault at path: {}", path);
+    write_log(&format!("=== open_vault called with path = '{}' ===", path));
 
     let validation = validate_vault(path.clone());
-    println!("[open_vault] Validation: valid={}, error={:?}", validation.valid, validation.error);
+    write_log(&format!("[vault] Validation: valid={}, error={:?}", validation.valid, validation.error));
 
     if !validation.valid {
         return Err(validation.error.unwrap_or_else(|| "仓库无效".to_string()));
@@ -368,30 +390,34 @@ pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
 
     let db_path = PathBuf::from(&path).join("os_compass.db");
     let db_path_str = db_path.to_string_lossy().to_string();
-    println!("[open_vault] Switching database to: {}", db_path_str);
+    write_log(&format!("[vault] Switching database to: {}", db_path_str));
 
     crate::db::switch_database(db_path).map_err(|e| {
-        println!("[open_vault] switch_database failed: {}", e);
+        write_log(&format!("[vault] switch_database failed: {}", e));
         e.to_string()
     })?;
-    println!("[open_vault] Database switched successfully");
+    write_log("[vault] Database switched successfully");
 
     let config = VaultConfig {
-        path: db_path_str,
+        path: db_path_str.clone(),
     };
+    write_log(&format!("[vault] Setting CURRENT_VAULT_CONFIG.path = '{}'", db_path_str));
     {
         let mut current_config = CURRENT_VAULT_CONFIG.lock().unwrap();
         *current_config = Some(config);
+        write_log(&format!("[vault] CURRENT_VAULT_CONFIG set to: path='{}'", db_path_str));
     }
 
-    // 确保雷达数据库在目标仓库存在
     let vault_dir = PathBuf::from(&path);
     let radar_db_path = vault_dir.join("plugin_radar.db");
+    write_log(&format!("[vault] vault_dir={:?}, radar_db_path={:?}", vault_dir, radar_db_path));
     if !radar_db_path.exists() {
         match init_radar_db(&vault_dir) {
-            Ok(_) => println!("[open_vault] Radar DB created for vault: {:?}", vault_dir),
-            Err(e) => println!("[open_vault] Failed to create radar DB: {}", e),
+            Ok(_) => write_log(&format!("[vault] Radar DB created at {:?}", radar_db_path)),
+            Err(e) => write_log(&format!("[vault] Failed to create radar DB: {}", e)),
         }
+    } else {
+        println!("[open_vault] Radar DB already exists");
     }
 
     // 触发插件仓库切换（调用 on_disable/init/on_enable）
