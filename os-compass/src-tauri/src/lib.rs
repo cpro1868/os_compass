@@ -295,6 +295,7 @@ pub fn run() {
             commands::get_extension,
             commands::set_extension_enabled,
             commands::get_enabled_extensions,
+            commands::get_supported_platform_domains,
             commands::translate,
             commands::translate_with_llm,
             commands::detect_text_language,
