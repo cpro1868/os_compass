@@ -70,11 +70,13 @@ export function RadarInbox() {
   }, []);
 
   const loadItems = useCallback(async () => {
+    console.log('[RadarInbox] loadItems called');
     try {
       const data = await getRadarItems();
+      console.log('[RadarInbox] getRadarItems returned:', data?.length, 'items');
       setItems(data);
     } catch (e) {
-      console.error('Failed to load items:', e);
+      console.error('[RadarInbox] Failed to load items:', e);
     }
   }, []);
 
