@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use std::sync::Mutex;
+use crate::plugins::radar::init_radar_db;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Vault {
@@ -192,6 +193,12 @@ pub fn create_vault(app: AppHandle, name: String, base_path: String) -> Result<V
     };
     save_vault_config(&vault_dir.to_string_lossy(), &config)?;
 
+    // 初始化新仓库的雷达数据库
+    match init_radar_db(&vault_dir) {
+        Ok(_) => println!("[vault] Initialized radar DB for new vault: {:?}", vault_dir),
+        Err(e) => println!("[vault] Failed to init radar DB: {}", e),
+    }
+
     let mut index = load_vault_index(&app);
     index.vaults.push(VaultInfo {
         name: name.clone(),
@@ -380,6 +387,17 @@ pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
     // 注意：不再在切换仓库时重新初始化加密密钥
     // 系统级配置（llm_api_key 等）使用系统级密钥，与 vault 无关
     // 加密密钥在应用启动时初始化一次，保持不变
+
+    // 检查并初始化雷达数据库（如果不存在）
+    let vault_dir = PathBuf::from(&path);
+    let radar_db_path = vault_dir.join("plugin_radar.db");
+    if !radar_db_path.exists() {
+        println!("[open_vault] Radar DB not found, initializing: {:?}", radar_db_path);
+        match init_radar_db(&vault_dir) {
+            Ok(_) => println!("[open_vault] Radar DB initialized successfully"),
+            Err(e) => println!("[open_vault] Failed to init radar DB: {}", e),
+        }
+    }
 
     let last_vault_path = get_last_vault_path(&app);
     if let Some(parent) = last_vault_path.parent() {
