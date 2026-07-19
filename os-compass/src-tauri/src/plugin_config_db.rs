@@ -261,6 +261,15 @@ impl PluginConfigDb {
         conn.execute("DELETE FROM radar_sources WHERE id = ?", rusqlite::params![id])?;
         Ok(())
     }
+
+    pub fn get_radar_source_name(&self, id: i64) -> Result<String, String> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row(
+            "SELECT name FROM radar_sources WHERE id = ?",
+            rusqlite::params![id],
+            |row| row.get::<_, String>(0),
+        ).map_err(|e| e.to_string())
+    }
 }
 
 #[derive(Debug, Clone)]
