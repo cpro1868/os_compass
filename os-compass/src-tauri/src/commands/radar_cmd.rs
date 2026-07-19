@@ -213,19 +213,17 @@ pub fn get_radar_items(status: Option<String>, limit: Option<i64>) -> Result<Vec
     let mut items = Vec::new();
     let query = if let Some(s) = status {
         format!(
-            "SELECT r.id, r.source_id, COALESCE(s.name, 'Unknown') as source_name, r.project_name, r.project_url, r.description, r.language, r.status, r.published_at, r.fetched_at \
-             FROM radar_items r \
-             LEFT JOIN radar_sources s ON r.source_id = s.id \
-             WHERE r.status = '{}' \
-             ORDER BY COALESCE(r.published_at, r.fetched_at) DESC LIMIT {}",
+            "SELECT id, source_id, project_name, project_url, description, language, status, published_at, fetched_at \
+             FROM radar_items \
+             WHERE status = '{}' \
+             ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT {}",
             s, lim
         )
     } else {
         format!(
-            "SELECT r.id, r.source_id, COALESCE(s.name, 'Unknown') as source_name, r.project_name, r.project_url, r.description, r.language, r.status, r.published_at, r.fetched_at \
-             FROM radar_items r \
-             LEFT JOIN radar_sources s ON r.source_id = s.id \
-             ORDER BY COALESCE(r.published_at, r.fetched_at) DESC LIMIT {}",
+            "SELECT id, source_id, project_name, project_url, description, language, status, published_at, fetched_at \
+             FROM radar_items \
+             ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT {}",
             lim
         )
     };
@@ -235,19 +233,24 @@ pub fn get_radar_items(status: Option<String>, limit: Option<i64>) -> Result<Vec
         Ok(RadarItem {
             id: row.get(0)?,
             source_id: row.get(1)?,
-            source_name: row.get(2)?,
-            project_name: row.get(3)?,
-            project_url: row.get(4)?,
-            description: row.get(5)?,
-            language: row.get(6)?,
-            status: row.get(7)?,
-            published_at: row.get(8)?,
-            fetched_at: row.get(9)?,
+            source_name: None,
+            project_name: row.get(2)?,
+            project_url: row.get(3)?,
+            description: row.get(4)?,
+            language: row.get(5)?,
+            status: row.get(6)?,
+            published_at: row.get(7)?,
+            fetched_at: row.get(8)?,
         })
     }).map_err(|e| e.to_string())?;
 
     for row in rows {
-        items.push(row.map_err(|e| e.to_string())?);
+        let mut item = row.map_err(|e| e.to_string())?;
+        // 从系统库获取信息源名称
+        if let Ok(sources) = PLUGIN_CONFIG_DB.get_radar_source_name(item.source_id) {
+            item.source_name = Some(sources);
+        }
+        items.push(item);
     }
 
     println!("[radar] get_radar_items returning {} items", items.len());
