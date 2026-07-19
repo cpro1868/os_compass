@@ -377,11 +377,13 @@ pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
     println!("[open_vault] Database switched successfully");
 
     let config = VaultConfig {
-        path: db_path_str,
+        path: db_path_str.clone(),
     };
+    println!("[open_vault] Setting CURRENT_VAULT_CONFIG with path: {}", db_path_str);
     {
         let mut current_config = CURRENT_VAULT_CONFIG.lock().unwrap();
         *current_config = Some(config);
+        println!("[open_vault] CURRENT_VAULT_CONFIG updated: {:?}", current_config);
     }
 
     // 注意：不再在切换仓库时重新初始化加密密钥
