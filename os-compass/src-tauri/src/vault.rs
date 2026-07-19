@@ -193,8 +193,11 @@ pub fn create_vault(app: AppHandle, name: String, base_path: String) -> Result<V
     };
     save_vault_config(&vault_dir.to_string_lossy(), &config)?;
 
-    // 注：雷达数据库在系统目录，不需要在新仓库创建时初始化
-    // 雷达数据库会在首次访问时在系统目录自动创建
+    // 为新仓库初始化雷达数据库
+    match init_radar_db(&vault_dir) {
+        Ok(_) => println!("[create_vault] Radar DB initialized for: {:?}", vault_dir),
+        Err(e) => println!("[create_vault] Failed to init radar DB: {}", e),
+    }
 
     let mut index = load_vault_index(&app);
     index.vaults.push(VaultInfo {
@@ -381,8 +384,15 @@ pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
         *current_config = Some(config);
     }
 
-    // 注：雷达数据存储在系统目录，不需要在切换仓库时初始化
-    // 信息源在系统库（radar_sources），采集数据在系统目录（radar_items）
+    // 确保雷达数据库在目标仓库存在
+    let vault_dir = PathBuf::from(&path);
+    let radar_db_path = vault_dir.join("plugin_radar.db");
+    if !radar_db_path.exists() {
+        match init_radar_db(&vault_dir) {
+            Ok(_) => println!("[open_vault] Radar DB created for vault: {:?}", vault_dir),
+            Err(e) => println!("[open_vault] Failed to create radar DB: {}", e),
+        }
+    }
 
     let last_vault_path = get_last_vault_path(&app);
     if let Some(parent) = last_vault_path.parent() {

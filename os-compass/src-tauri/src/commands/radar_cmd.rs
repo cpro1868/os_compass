@@ -312,8 +312,16 @@ pub fn trigger_radar_scan(time_range: Option<String>) -> Result<serde_json::Valu
 }
 
 fn get_radar_vault_dir() -> std::path::PathBuf {
-    // 采集数据放在系统目录（确保切换仓库后数据不丢失）
-    // 注：信息源在系统库，采集数据也在系统库，两者保持一致
+    // 采集数据放在当前仓库目录
+    let config = CURRENT_VAULT_CONFIG.lock().unwrap();
+    if let Some(cfg) = config.as_ref() {
+        // cfg.path 是 os_compass.db 的路径，需要获取其父目录
+        let db_path = std::path::Path::new(&cfg.path);
+        if let Some(parent) = db_path.parent() {
+            return parent.to_path_buf();
+        }
+    }
+    // 如果没有配置，返回系统目录作为后备
     get_default_radar_dir()
 }
 
