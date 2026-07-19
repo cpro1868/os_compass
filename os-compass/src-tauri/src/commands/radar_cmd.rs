@@ -71,10 +71,27 @@ pub fn debug_vault_status() -> String {
 }
 
 fn get_radar_conn() -> Result<rusqlite::Connection, String> {
-    check_plugin_enabled("radar")?;
-    // 雷达数据库始终存储在系统目录
+    println!("[radar] get_radar_conn called");
+    
+    // 临时：跳过插件检查，直接获取连接
+    // let enabled = PLUGIN_MANAGER.is_enabled("radar").unwrap_or(false);
+    // if !enabled {
+    //     return Err("Plugin 'radar' is disabled".to_string());
+    // }
+    
     let vault_dir = get_default_radar_dir();
-    init_radar_db(&vault_dir)
+    println!("[radar] vault_dir: {:?}", vault_dir);
+    
+    match init_radar_db(&vault_dir) {
+        Ok(conn) => {
+            println!("[radar] connection established");
+            Ok(conn)
+        }
+        Err(e) => {
+            println!("[radar] connection error: {}", e);
+            Err(e)
+        }
+    }
 }
 
 #[command]
