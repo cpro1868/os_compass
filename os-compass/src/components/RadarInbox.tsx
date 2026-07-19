@@ -70,13 +70,18 @@ export function RadarInbox() {
   }, []);
 
   const loadItems = useCallback(async () => {
-    console.log('[RadarInbox] loadItems called');
     try {
       const data = await getRadarItems();
-      console.log('[RadarInbox] getRadarItems returned:', data?.length, 'items');
+      if (data === undefined || data === null) {
+        console.error('[RadarInbox] getRadarItems returned null/undefined');
+        showToast('加载数据失败：返回数据为空', 'error');
+        return;
+      }
+      console.log('[RadarInbox] getRadarItems returned:', data.length, 'items');
       setItems(data);
     } catch (e) {
       console.error('[RadarInbox] Failed to load items:', e);
+      showToast('加载情报失败: ' + String(e), 'error');
     }
   }, []);
 
