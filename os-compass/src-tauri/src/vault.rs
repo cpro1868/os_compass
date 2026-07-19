@@ -193,11 +193,8 @@ pub fn create_vault(app: AppHandle, name: String, base_path: String) -> Result<V
     };
     save_vault_config(&vault_dir.to_string_lossy(), &config)?;
 
-    // 初始化新仓库的雷达数据库
-    match init_radar_db(&vault_dir) {
-        Ok(_) => println!("[vault] Initialized radar DB for new vault: {:?}", vault_dir),
-        Err(e) => println!("[vault] Failed to init radar DB: {}", e),
-    }
+    // 注：雷达数据库在系统目录，不需要在新仓库创建时初始化
+    // 雷达数据库会在首次访问时在系统目录自动创建
 
     let mut index = load_vault_index(&app);
     index.vaults.push(VaultInfo {
@@ -377,29 +374,15 @@ pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
     println!("[open_vault] Database switched successfully");
 
     let config = VaultConfig {
-        path: db_path_str.clone(),
+        path: db_path_str,
     };
-    println!("[open_vault] Setting CURRENT_VAULT_CONFIG with path: {}", db_path_str);
     {
         let mut current_config = CURRENT_VAULT_CONFIG.lock().unwrap();
         *current_config = Some(config);
-        println!("[open_vault] CURRENT_VAULT_CONFIG updated: {:?}", current_config);
     }
 
-    // 注意：不再在切换仓库时重新初始化加密密钥
-    // 系统级配置（llm_api_key 等）使用系统级密钥，与 vault 无关
-    // 加密密钥在应用启动时初始化一次，保持不变
-
-    // 检查并初始化雷达数据库（如果不存在）
-    let vault_dir = PathBuf::from(&path);
-    let radar_db_path = vault_dir.join("plugin_radar.db");
-    if !radar_db_path.exists() {
-        println!("[open_vault] Radar DB not found, initializing: {:?}", radar_db_path);
-        match init_radar_db(&vault_dir) {
-            Ok(_) => println!("[open_vault] Radar DB initialized successfully"),
-            Err(e) => println!("[open_vault] Failed to init radar DB: {}", e),
-        }
-    }
+    // 注：雷达数据存储在系统目录，不需要在切换仓库时初始化
+    // 信息源在系统库（radar_sources），采集数据在系统目录（radar_items）
 
     let last_vault_path = get_last_vault_path(&app);
     if let Some(parent) = last_vault_path.parent() {
