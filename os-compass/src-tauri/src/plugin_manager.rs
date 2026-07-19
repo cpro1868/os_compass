@@ -112,7 +112,9 @@ impl PluginManager {
     }
 
     pub fn is_enabled(&self, plugin_id: &str) -> Result<bool, String> {
-        Ok(PLUGIN_CONFIG_DB.get_enabled(plugin_id))
+        let enabled = PLUGIN_CONFIG_DB.get_enabled(plugin_id);
+        println!("[plugin_manager] is_enabled({}) = {}", plugin_id, enabled);
+        Ok(enabled)
     }
 
     pub fn build_context(&self, plugin: &dyn FeaturePlugin, vault_dir: &PathBuf, app_data_dir: &PathBuf) -> PluginContext {

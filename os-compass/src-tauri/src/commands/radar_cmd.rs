@@ -45,12 +45,16 @@ pub struct RadarItem {
 
 fn check_plugin_enabled(plugin_id: &str) -> Result<(), String> {
     println!("[radar] check_plugin_enabled: {}", plugin_id);
-    let enabled = PLUGIN_MANAGER.is_enabled(plugin_id).unwrap_or(false);
-    println!("[radar] is_enabled: {}", enabled);
-    if !enabled {
-        return Err(format!("Plugin '{}' is disabled", plugin_id));
+    let enabled = PLUGIN_MANAGER.is_enabled(plugin_id);
+    println!("[radar] is_enabled: {:?}", enabled);
+    match enabled {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(format!("Plugin '{}' is disabled", plugin_id)),
+        Err(e) => {
+            println!("[radar] is_enabled error: {}", e);
+            Err(format!("Plugin '{}' error: {}", plugin_id, e))
+        }
     }
-    Ok(())
 }
 
 #[command]
@@ -184,7 +188,9 @@ pub fn delete_radar_source(id: i64) -> Result<(), String> {
 
 #[command]
 pub fn get_radar_items(status: Option<String>, limit: Option<i64>) -> Result<Vec<RadarItem>, String> {
+    println!("[radar] get_radar_items called: status={:?}, limit={:?}", status, limit);
     let conn = get_radar_conn()?;
+    println!("[radar] got connection successfully");
     let lim = limit.unwrap_or(500);
 
     let mut items = Vec::new();
@@ -227,6 +233,7 @@ pub fn get_radar_items(status: Option<String>, limit: Option<i64>) -> Result<Vec
         items.push(row.map_err(|e| e.to_string())?);
     }
 
+    println!("[radar] get_radar_items returning {} items", items.len());
     Ok(items)
 }
 
