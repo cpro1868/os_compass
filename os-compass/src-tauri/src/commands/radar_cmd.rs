@@ -73,13 +73,8 @@ pub fn debug_vault_status() -> String {
 fn get_radar_conn() -> Result<rusqlite::Connection, String> {
     println!("[radar] get_radar_conn called");
     
-    // 临时：跳过插件检查，直接获取连接
-    // let enabled = PLUGIN_MANAGER.is_enabled("radar").unwrap_or(false);
-    // if !enabled {
-    //     return Err("Plugin 'radar' is disabled".to_string());
-    // }
-    
-    let vault_dir = get_default_radar_dir();
+    // 采集数据在仓库目录
+    let vault_dir = get_radar_vault_dir();
     println!("[radar] vault_dir: {:?}", vault_dir);
     
     match init_radar_db(&vault_dir) {
@@ -330,11 +325,20 @@ pub fn trigger_radar_scan(time_range: Option<String>) -> Result<serde_json::Valu
 }
 
 fn get_radar_vault_dir() -> std::path::PathBuf {
-    // 雷达数据库始终存储在系统目录，不依赖 CURRENT_VAULT_CONFIG
+    // 采集数据放在当前仓库目录
+    let config = CURRENT_VAULT_CONFIG.lock().unwrap();
+    if let Some(cfg) = config.as_ref() {
+        if let Some(parent) = std::path::Path::new(&cfg.path).parent() {
+            println!("[radar] Using vault dir for radar data: {:?}", parent);
+            return parent.to_path_buf();
+        }
+    }
+    println!("[radar] No vault config, using default dir");
     get_default_radar_dir()
 }
 
 fn get_default_radar_dir() -> std::path::PathBuf {
+    // 系统目录
     if let Some(app_data) = directories::BaseDirs::new() {
         let os_compass_dir = app_data.data_dir().join(".os-compass");
         std::fs::create_dir_all(&os_compass_dir).ok();
