@@ -67,3 +67,8 @@ pub fn get_enabled_extensions() -> Result<Vec<SourcePlugin>, String> {
         .map(SourcePlugin::from)
         .collect())
 }
+
+#[tauri::command]
+pub fn get_supported_platform_domains() -> Result<Vec<String>, String> {
+    system_db::get_enabled_source_domains()
+}

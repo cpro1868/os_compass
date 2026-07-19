@@ -526,3 +526,28 @@ pub fn toggle_source_plugin(id: &str, enabled: bool) -> Result<(), String> {
 
     Ok(())
 }
+
+pub fn get_enabled_source_domains() -> Result<Vec<String>, String> {
+    let db_lock = SYSTEM_DB.lock().map_err(|e| e.to_string())?;
+    let db = db_lock.as_ref().ok_or("System DB not initialized")?;
+    let conn = db.get_connection();
+
+    let mut stmt = conn
+        .prepare("SELECT url_patterns FROM source_plugins WHERE enabled = 1")
+        .map_err(|e| e.to_string())?;
+
+    let patterns: Vec<String> = stmt
+        .query_map([], |row| row.get::<_, Option<String>>(0))
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok().flatten())
+        .collect();
+
+    let mut domains = Vec::new();
+    for pattern_json in patterns {
+        if let Ok(arr) = serde_json::from_str::<Vec<String>>(&pattern_json) {
+            domains.extend(arr);
+        }
+    }
+
+    Ok(domains)
+}

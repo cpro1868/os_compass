@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, RadarSource, RadarItem, RadarSourceInput } from '../api/radar';
+import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, getSupportedPlatformDomains, RadarSource, RadarItem, RadarSourceInput } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
 
 export function RadarInbox() {
@@ -30,16 +30,25 @@ export function RadarInbox() {
   const [clearing, setClearing] = useState(false);
   const [timeRange, setTimeRange] = useState<string>('1d');
   const [importUrl, setImportUrl] = useState<string | null>(null);
+  const [supportedDomains, setSupportedDomains] = useState<string[]>([]);
 
-  const SUPPORTED_PLATFORMS = ['github', 'gitee', 'gitlab', 'npm', 'pypi', 'docker'];
+  const loadSupportedDomains = useCallback(async () => {
+    try {
+      const domains = await getSupportedPlatformDomains();
+      setSupportedDomains(domains);
+    } catch (e) {
+      console.error('Failed to load supported domains:', e);
+    }
+  }, []);
 
   const findSupportedUrls = (description: string | null): string[] => {
-    if (!description) return [];
+    if (!description || supportedDomains.length === 0) return [];
     const urlRegex = /https?:\/\/[^\s<>"']+/g;
     const matches = description.match(urlRegex) || [];
-    return matches.filter(url => 
-      SUPPORTED_PLATFORMS.some(p => url.toLowerCase().includes(p))
-    );
+    return matches.filter(url => {
+      const lower = url.toLowerCase();
+      return supportedDomains.some(domain => lower.includes(domain.toLowerCase()));
+    });
   };
 
   const handleImport = (urls: string[]) => {
@@ -72,7 +81,8 @@ export function RadarInbox() {
   useEffect(() => {
     loadSources();
     loadItems();
-  }, [loadSources, loadItems]);
+    loadSupportedDomains();
+  }, [loadSources, loadItems, loadSupportedDomains]);
 
   const handleScan = async () => {
     setScanning(true);
