@@ -142,6 +142,41 @@ impl PluginManager {
             plugin_db_path,
         )
     }
+
+    pub fn switch_vault(&self, new_vault_dir: &PathBuf) -> Result<(), String> {
+        use crate::feature_plugin::FeaturePlugin;
+        
+        println!("[plugin_manager] switch_vault to {:?}", new_vault_dir);
+        
+        let app_data_dir = directories::BaseDirs::new()
+            .map(|d| d.data_dir().to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."));
+        
+        let registry = self.registry.lock().unwrap();
+        let plugins = registry.list();
+        
+        for plugin in plugins {
+            let plugin_id = plugin.id();
+            let enabled = PLUGIN_CONFIG_DB.get_enabled(plugin_id);
+            println!("[plugin_manager] processing plugin: {}, enabled: {}", plugin_id, enabled);
+            
+            let context = self.build_context(plugin.as_ref(), new_vault_dir, &app_data_dir);
+            
+            let _ = plugin.on_disable(&context);
+            
+            if let Err(e) = tauri::async_runtime::block_on(plugin.init(&context)) {
+                println!("[plugin_manager] plugin {} init error: {}", plugin_id, e);
+            }
+            
+            if enabled {
+                if let Err(e) = tauri::async_runtime::block_on(plugin.on_enable(&context)) {
+                    println!("[plugin_manager] plugin {} on_enable error: {}", plugin_id, e);
+                }
+            }
+        }
+        
+        Ok(())
+    }
 }
 
 lazy_static::lazy_static! {
