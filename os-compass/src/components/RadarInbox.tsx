@@ -89,6 +89,16 @@ export function RadarInbox() {
     loadSources();
     loadItems();
     loadSupportedDomains();
+    
+    // 监听仓库切换事件，切换后重新加载数据
+    const handleVaultChanged = () => {
+      console.log('[RadarInbox] vault changed, reloading...');
+      loadSources();
+      loadItems();
+      loadSupportedDomains();
+    };
+    window.addEventListener('vault-changed', handleVaultChanged);
+    return () => window.removeEventListener('vault-changed', handleVaultChanged);
   }, [loadSources, loadItems, loadSupportedDomains]);
 
   const handleScan = async () => {
