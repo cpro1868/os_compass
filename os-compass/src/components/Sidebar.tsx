@@ -118,13 +118,13 @@ export function Sidebar({ onSettings, onOpenVault, onOpenCategory, currentView, 
         <i className="fa-solid fa-layer-group"></i>
       </button>
 
-      {/* 仓库信息（合并：显示+点击打开） */}
+      {/* 仓库信息（显示仓库名，点击打开仓库管理） */}
       <button
         onClick={onOpenVault}
         className="mt-2 px-1 py-2 bg-gray-800 rounded-lg text-center hover:bg-gray-700 transition w-12"
         title={`${vaultName || '仓库'} - 点击切换`}
       >
-        <i className="fa-solid fa-folder-open text-amber-500 text-sm"></i>
+        <i className="fa-solid fa-database text-amber-500 text-sm"></i>
         <p className="text-[10px] text-gray-400 mt-1 truncate w-10">{vaultName || '仓库'}</p>
       </button>
 
