@@ -133,3 +133,7 @@ export async function clearRadarCache(beforeDays?: number): Promise<number> {
 export async function clearRadarAll(): Promise<number> {
   return invoke<number>('clear_radar_all');
 }
+
+export async function getSupportedPlatformDomains(): Promise<string[]> {
+  return invoke<string[]>('get_supported_platform_domains');
+}
