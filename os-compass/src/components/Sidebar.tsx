@@ -118,23 +118,18 @@ export function Sidebar({ onSettings, onOpenVault, onOpenCategory, currentView, 
         <i className="fa-solid fa-layer-group"></i>
       </button>
 
-      {/* 当前仓库信息 */}
-      {vaultName && (
-        <div className="mt-2 px-1 py-2 bg-gray-800 rounded-lg text-center" title={vaultName}>
-          <i className="fa-solid fa-database text-amber-500 text-sm"></i>
-          <p className="text-[10px] text-gray-400 mt-1 truncate w-12">{vaultName}</p>
-        </div>
-      )}
+      {/* 仓库信息（合并：显示+点击打开） */}
+      <button
+        onClick={onOpenVault}
+        className="mt-2 px-1 py-2 bg-gray-800 rounded-lg text-center hover:bg-gray-700 transition w-12"
+        title={`${vaultName || '仓库'} - 点击切换`}
+      >
+        <i className="fa-solid fa-folder-open text-amber-500 text-sm"></i>
+        <p className="text-[10px] text-gray-400 mt-1 truncate w-10">{vaultName || '仓库'}</p>
+      </button>
 
       {/* 底部按钮 */}
       <div className="border-t border-gray-700 pt-4 mt-2 flex flex-col gap-1 w-full items-center">
-        <button
-          onClick={onOpenVault}
-          className="w-12 h-10 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-800 hover:text-white transition"
-          title={t("sidebar.vault")}
-        >
-          <i className="fa-solid fa-folder-open"></i>
-        </button>
         <button
           onClick={onSettings}
           className="w-12 h-10 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-800 hover:text-white transition"
