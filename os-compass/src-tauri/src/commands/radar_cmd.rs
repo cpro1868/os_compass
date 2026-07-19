@@ -187,9 +187,7 @@ pub fn delete_radar_source(id: i64) -> Result<(), String> {
 
 #[command]
 pub fn get_radar_items(status: Option<String>, limit: Option<i64>) -> Result<Vec<RadarItem>, String> {
-    println!("[radar] get_radar_items called: status={:?}, limit={:?}", status, limit);
     let conn = get_radar_conn()?;
-    println!("[radar] got connection successfully");
     let lim = limit.unwrap_or(500);
 
     let mut items = Vec::new();
@@ -299,9 +297,6 @@ pub fn radar_item_action(
 pub fn trigger_radar_scan(time_range: Option<String>) -> Result<serde_json::Value, String> {
     let vault_dir = get_radar_vault_dir();
     let time_range_str = time_range.as_deref();
-
-    println!("[radar] trigger_radar_scan: vault_dir = {:?}, time_range = {:?}", vault_dir, time_range_str);
-    
     let (scanned, new_items, errors) = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(&vault_dir, time_range_str))?;
 
     Ok(serde_json::json!({
@@ -312,16 +307,7 @@ pub fn trigger_radar_scan(time_range: Option<String>) -> Result<serde_json::Valu
 }
 
 fn get_radar_vault_dir() -> std::path::PathBuf {
-    // 采集数据放在当前仓库目录
-    let config = CURRENT_VAULT_CONFIG.lock().unwrap();
-    if let Some(cfg) = config.as_ref() {
-        // cfg.path 是 os_compass.db 的路径，需要获取其父目录
-        let db_path = std::path::Path::new(&cfg.path);
-        if let Some(parent) = db_path.parent() {
-            return parent.to_path_buf();
-        }
-    }
-    // 如果没有配置，返回系统目录作为后备
+    // 采集数据放在系统目录（简化设计，切换仓库不丢失）
     get_default_radar_dir()
 }
 
