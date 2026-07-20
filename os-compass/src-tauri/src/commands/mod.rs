@@ -1,10 +1,12 @@
 pub mod ai;
 pub mod ai_classify_cmd;
+pub mod backup_cmd;
 pub mod clone_cmd;
 pub mod crypto_cmd;
 pub mod download;
 pub mod extensions;
 pub mod import_cmd;
+pub mod local_plugin_cmd;
 pub mod plugin_cmd;
 pub mod radar_cmd;
 pub mod search_cmd;
@@ -19,11 +21,13 @@ pub mod vault_cmd;
 
 pub use ai::*;
 pub use ai_classify_cmd::*;
+pub use backup_cmd::*;
 pub use clone_cmd::*;
 pub use crypto_cmd::*;
 pub use download::*;
 pub use extensions::*;
 pub use import_cmd::*;
+pub use local_plugin_cmd::*;
 pub use plugin_cmd::*;
 pub use radar_cmd::*;
 pub use search_cmd::*;
