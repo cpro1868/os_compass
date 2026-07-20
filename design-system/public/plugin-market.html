@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>插件市场 - OS-Compass</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background: #0f172a; }
+  </style>
+</head>
+<body class="text-gray-100 min-h-screen">
+  
+  <!-- 主容器 -->
+  <div class="flex h-screen">
+    
+    <!-- 侧边栏 -->
+    <aside class="w-64 bg-slate-800 border-r border-slate-700 p-4">
+      <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-compass text-xl"></i>
+        </div>
+        <span class="font-bold text-lg">OS-Compass</span>
+      </div>
+      
+      <nav class="space-y-2">
+        <a href="#" class="flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-700 text-white">
+          <i class="fa-solid fa-puzzle-piece w-5"></i>
+          <span>插件市场</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition">
+          <i class="fa-solid fa-plug w-5"></i>
+          <span>已安装插件</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-4 py-2 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition">
+          <i class="fa-solid fa-download w-5"></i>
+          <span>备份与恢复</span>
+        </a>
+      </nav>
+    </aside>
+    
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col">
+      
+      <!-- 顶部栏 -->
+      <header class="h-16 bg-slate-800/50 border-b border-slate-700 flex items-center justify-between px-6">
+        <h1 class="text-xl font-semibold">插件市场</h1>
+        <div class="flex items-center gap-4">
+          <button class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition">
+            <i class="fa-solid fa-sync mr-2"></i>刷新市场
+          </button>
+        </div>
+      </header>
+      
+      <!-- 内容区 -->
+      <div class="flex-1 overflow-auto p-6">
+        
+        <!-- Tab 切换 -->
+        <div class="flex gap-4 mb-6 border-b border-slate-700 pb-4">
+          <button class="px-4 py-2 text-white border-b-2 border-blue-500 font-medium">
+            全部插件
+          </button>
+          <button class="px-4 py-2 text-slate-400 hover:text-white transition">
+            内置插件
+          </button>
+          <button class="px-4 py-2 text-slate-400 hover:text-white transition">
+            社区插件
+          </button>
+          <button class="px-4 py-2 text-slate-400 hover:text-white transition">
+            我的插件
+          </button>
+        </div>
+        
+        <!-- 搜索栏 -->
+        <div class="mb-6">
+          <div class="relative max-w-md">
+            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input 
+              type="text" 
+              placeholder="搜索插件..." 
+              class="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition"
+            >
+          </div>
+        </div>
+        
+        <!-- 插件列表 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
+          <!-- 内置插件: 情报雷达 -->
+          <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 bg-blue-600/20 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-radar text-blue-400 text-xl"></i>
+              </div>
+              <span class="px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded-full">内置</span>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">情报雷达</h3>
+            <p class="text-slate-400 text-sm mb-4">RSS 订阅监控与项目发现，支持 GitHub Trending、Telegram 频道、任意网站爬取。</p>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-slate-500">
+                <span>v1.0.0</span>
+                <span class="mx-2">·</span>
+                <span>by OS-Compass</span>
+              </div>
+              <span class="text-green-400 text-sm">
+                <i class="fa-solid fa-check mr-1"></i>已启用
+              </span>
+            </div>
+          </div>
+          
+          <!-- 内置插件: 意图搜索 -->
+          <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 bg-purple-600/20 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-magnifying-glass text-purple-400 text-xl"></i>
+              </div>
+              <span class="px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded-full">内置</span>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">意图搜索</h3>
+            <p class="text-slate-400 text-sm mb-4">ChatGPT 风格的联网搜索，支持本地库、缓存和联网三层搜索策略。</p>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-slate-500">
+                <span>v1.0.0</span>
+                <span class="mx-2">·</span>
+                <span>by OS-Compass</span>
+              </div>
+              <span class="text-yellow-400 text-sm">
+                <i class="fa-solid fa-pause mr-1"></i>已停用
+              </span>
+            </div>
+          </div>
+          
+          <!-- GitLab 插件 -->
+          <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 bg-orange-600/20 rounded-xl flex items-center justify-center">
+                <i class="fa-brands fa-gitlab text-orange-400 text-xl"></i>
+              </div>
+              <button class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-sm rounded-lg transition">
+                安装
+              </button>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">GitLab 集成</h3>
+            <p class="text-slate-400 text-sm mb-4">支持导入 GitLab 项目，获取 MR 合并率、CI/CD 配置等健康度指标。</p>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-slate-500">
+                <span>v1.0.0</span>
+                <span class="mx-2">·</span>
+                <span>by OS-Compass</span>
+              </div>
+              <span class="text-slate-400 text-sm">
+                <i class="fa-solid fa-download mr-1"></i>1.2k
+              </span>
+            </div>
+          </div>
+          
+          <!-- Docker Hub 插件 -->
+          <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 bg-blue-600/20 rounded-xl flex items-center justify-center">
+                <i class="fa-brands fa-docker text-blue-400 text-xl"></i>
+              </div>
+              <button class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-sm rounded-lg transition">
+                安装
+              </button>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">Docker Hub 集成</h3>
+            <p class="text-slate-400 text-sm mb-4">支持导入 Docker 镜像，获取下载量、标签列表、容器化程度等指标。</p>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-slate-500">
+                <span>v1.0.0</span>
+                <span class="mx-2">·</span>
+                <span>by OS-Compass</span>
+              </div>
+              <span class="text-slate-400 text-sm">
+                <i class="fa-solid fa-download mr-1"></i>890
+              </span>
+            </div>
+          </div>
+          
+          <!-- 社区插件示例 -->
+          <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 bg-green-600/20 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-robot text-green-400 text-xl"></i>
+              </div>
+              <button class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-sm rounded-lg transition">
+                安装
+              </button>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">AI Summary Pro</h3>
+            <p class="text-slate-400 text-sm mb-4">增强型 AI 摘要，支持自定义 Prompt 模板和批量分析。</p>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-slate-500">
+                <span>v2.1.0</span>
+                <span class="mx-2">·</span>
+                <span>by community-dev</span>
+              </div>
+              <span class="text-slate-400 text-sm">
+                <i class="fa-solid fa-download mr-1"></i>3.5k
+              </span>
+            </div>
+          </div>
+          
+          <!-- 快捷键帮助插件 -->
+          <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 bg-pink-600/20 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-keyboard text-pink-400 text-xl"></i>
+              </div>
+              <button class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-sm rounded-lg transition">
+                安装
+              </button>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">快捷键助手</h3>
+            <p class="text-slate-400 text-sm mb-4">全局快捷键支持，Ctrl+K 打开命令面板，快速访问常用功能。</p>
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-slate-500">
+                <span>v1.0.0</span>
+                <span class="mx-2">·</span>
+                <span>by OS-Compass</span>
+              </div>
+              <span class="text-slate-400 text-sm">
+                <i class="fa-solid fa-download mr-1"></i>2.1k
+              </span>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </main>
+  </div>
+
+</body>
+</html>
