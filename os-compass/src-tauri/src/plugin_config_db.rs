@@ -129,6 +129,15 @@ impl PluginConfigDb {
         )?;
         Ok(())
     }
+
+    pub fn unregister_plugin(&self, plugin_id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "DELETE FROM system_plugins WHERE id = ?",
+            rusqlite::params![plugin_id],
+        ).map_err(|e| e.to_string())?;
+        Ok(())
+    }
     
     pub fn get_enabled(&self, plugin_id: &str) -> bool {
         let conn = self.conn.lock().unwrap();
