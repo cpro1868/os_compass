@@ -3,6 +3,8 @@ pub mod rss_adapter;
 pub mod webcrawl_adapter;
 pub mod telegram_adapter;
 pub mod platform_preset;
+pub mod gitlab_adapter;
+pub mod dockerhub_adapter;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -53,6 +55,8 @@ pub enum SourceType {
     WebCrawl,
     Telegram,
     PlatformPreset,
+    GitLab,
+    DockerHub,
 }
 
 impl SourceType {
@@ -62,6 +66,8 @@ impl SourceType {
             "web_crawl" => Some(SourceType::WebCrawl),
             "telegram" => Some(SourceType::Telegram),
             "platform_preset" => Some(SourceType::PlatformPreset),
+            "gitlab" => Some(SourceType::GitLab),
+            "dockerhub" | "docker_hub" => Some(SourceType::DockerHub),
             _ => None,
         }
     }
@@ -95,5 +101,7 @@ pub fn get_adapter(source_type: SourceType) -> Box<dyn SourceAdapter> {
         SourceType::WebCrawl => Box::new(webcrawl_adapter::WebCrawlAdapter::new()),
         SourceType::Telegram => Box::new(telegram_adapter::TelegramAdapter::new()),
         SourceType::PlatformPreset => Box::new(platform_preset::PlatformPresetAdapter::new()),
+        SourceType::GitLab => Box::new(gitlab_adapter::GitLabAdapter::new()),
+        SourceType::DockerHub => Box::new(dockerhub_adapter::DockerHubAdapter::new()),
     }
 }
