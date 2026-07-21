@@ -33,6 +33,8 @@
     .toast-enter {
       animation: slideUp 0.3s ease-out;
     }
+    .dropdown-menu { display: none; }
+    .dropdown-menu.active { display: block; }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 h-screen overflow-hidden">
@@ -50,15 +52,28 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <!-- 采集时间筛选 -->
+        <select id="collectTimeRange"
+          class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-200 focus:outline-none focus:border-blue-500">
+          <option value="1d">采集：今天</option>
+          <option value="7d" selected>采集：近7天</option>
+          <option value="30d">采集：近30天</option>
+          <option value="all">采集：全部</option>
+        </select>
+        <button onclick="showClearConfirm()"
+          class="px-3 py-2 text-sm border border-red-600 text-red-500 hover:bg-red-900/20 rounded-lg flex items-center gap-2 transition">
+          <i class="fa-solid fa-trash-alt"></i>
+          <span class="hidden sm:inline">清空</span>
+        </button>
         <button id="scanBtn" onclick="triggerScan()"
           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center gap-2 transition">
           <i id="scanIcon" class="fa-solid fa-rotate"></i>
           <span>立即扫描</span>
         </button>
-        <button onclick="showToast('信息源管理面板待开发', 'info')"
-          class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm rounded-lg flex items-center gap-2 transition">
-          <i class="fa-solid fa-rss"></i>
-          <span>信息源管理</span>
+        <button onclick="toggleSourcePanel()" id="toggleSourcePanelBtn"
+          class="px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg flex items-center gap-2 transition">
+          <i id="toggleSourcePanelIcon" class="fa-solid fa-sidebar-flip"></i>
+          <span id="togglePanelLabel" class="hidden sm:inline">隐藏信息源</span>
         </button>
       </div>
     </header>
@@ -68,31 +83,93 @@
 
       <!-- 主内容区 - 雷达收件箱 -->
       <main class="flex-1 flex flex-col min-w-0">
-        <!-- 筛选标签 -->
-        <div class="px-6 pt-4 pb-3 border-b border-gray-700 flex items-center gap-1 flex-shrink-0">
-          <button onclick="switchTab(this, 'all')" data-tab="all"
-            class="tab-btn px-3 py-1.5 text-sm rounded-lg bg-gray-700 text-white font-medium transition">
-            全部 <span class="text-gray-400 ml-1">18</span>
-          </button>
-          <button onclick="switchTab(this, 'unread')" data-tab="unread"
-            class="tab-btn px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700/60 text-gray-400 transition">
-            未读 <span class="text-blue-400 ml-1">12</span>
-          </button>
-          <button onclick="switchTab(this, 'imported')" data-tab="imported"
-            class="tab-btn px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700/60 text-gray-400 transition">
-            已导入
-          </button>
-          <button onclick="switchTab(this, 'ignored')" data-tab="ignored"
-            class="tab-btn px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700/60 text-gray-400 transition">
-            不感兴趣
-          </button>
-          <div class="ml-auto flex items-center gap-2">
-            <button class="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition flex items-center gap-1.5">
-              <i class="fa-solid fa-sort"></i>按时间
+        <!-- 筛选标签 + 搜索增强 -->
+        <div class="px-6 pt-3 pb-0 border-b border-gray-700 flex-shrink-0">
+          <!-- tabs -->
+          <div class="flex items-center gap-1 mb-3">
+            <button onclick="switchTab(this, 'all')" data-tab="all"
+              class="tab-btn px-3 py-1.5 text-sm rounded-lg bg-gray-700 text-white font-medium transition">
+              全部 <span class="text-gray-400 ml-1">18</span>
             </button>
-            <button class="px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition flex items-center gap-1.5">
-              <i class="fa-solid fa-filter"></i>筛选
+            <button onclick="switchTab(this, 'unread')" data-tab="unread"
+              class="tab-btn px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700/60 text-gray-400 transition">
+              未读 <span class="text-blue-400 ml-1">12</span>
             </button>
+            <button onclick="switchTab(this, 'imported')" data-tab="imported"
+              class="tab-btn px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700/60 text-gray-400 transition">
+              已导入
+            </button>
+            <button onclick="switchTab(this, 'ignored')" data-tab="ignored"
+              class="tab-btn px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700/60 text-gray-400 transition">
+              不感兴趣
+            </button>
+          </div>
+
+          <!-- 搜索增强工具栏 -->
+          <div class="flex items-center gap-3 pb-3 flex-wrap">
+            <!-- 关键字搜索 -->
+            <div class="relative flex-1 min-w-[180px] max-w-xs">
+              <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+              <input type="text" id="keywordInput" placeholder="搜索项目名称或描述..."
+                class="w-full pl-8 pr-8 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500">
+              <button id="clearKeywordBtn" onclick="clearKeyword()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 hidden">
+                <i class="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+
+            <!-- 信息源筛选 -->
+            <div class="relative">
+              <button onclick="toggleSourceDropdown()" id="sourceDropdownBtn"
+                class="px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-xs text-gray-200 hover:bg-gray-600 flex items-center gap-2">
+                <i class="fa-solid fa-filter text-xs"></i>
+                <span id="sourceDropdownLabel">信息来源</span>
+                <span id="sourceCountBadge" class="hidden px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded-full">0</span>
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+              </button>
+              <div id="sourceDropdown" class="dropdown-menu absolute top-full left-0 mt-1 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50">
+                <div class="p-2 border-b border-gray-700">
+                  <label class="flex items-center gap-2 px-2 py-1 hover:bg-gray-700 rounded cursor-pointer">
+                    <input type="checkbox" id="selectAllSources" onchange="toggleAllSources(this)" class="rounded border-gray-500">
+                    <span class="text-xs text-gray-300">全选</span>
+                  </label>
+                </div>
+                <div id="sourceList" class="p-2 max-h-48 overflow-auto">
+                  <!-- 动态生成 -->
+                </div>
+                <div class="p-2 border-t border-gray-700 flex justify-end gap-2">
+                  <button onclick="clearSourceFilter()" class="px-2 py-1 text-xs text-gray-400 hover:text-white">清除</button>
+                  <button onclick="applySourceFilter()" class="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded">应用</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 时间范围筛选 -->
+            <div class="flex items-center gap-1.5 text-xs text-gray-400">
+              <span>时间:</span>
+              <input type="date" id="startDate" onchange="applyDateFilter()"
+                class="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-gray-200 focus:outline-none focus:border-blue-500">
+              <span>至</span>
+              <input type="date" id="endDate" onchange="applyDateFilter()"
+                class="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-gray-200 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <!-- 快捷日期 -->
+            <div class="flex items-center gap-0.5">
+              <button onclick="setDateRange('1d')" class="px-1.5 py-1 text-xs text-gray-500 hover:text-white hover:bg-gray-700 rounded">今天</button>
+              <button onclick="setDateRange('7d')" class="px-1.5 py-1 text-xs text-gray-500 hover:text-white hover:bg-gray-700 rounded">近7天</button>
+              <button onclick="setDateRange('30d')" class="px-1.5 py-1 text-xs text-gray-500 hover:text-white hover:bg-gray-700 rounded">近30天</button>
+              <button onclick="setDateRange('all')" class="px-1.5 py-1 text-xs text-gray-500 hover:text-white hover:bg-gray-700 rounded">全部</button>
+            </div>
+
+            <!-- 重置按钮 -->
+            <button onclick="resetFilters()" id="resetFiltersBtn"
+              class="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-gray-700 rounded flex items-center gap-1">
+              <i class="fa-solid fa-rotate-left text-xs"></i>重置
+            </button>
+          </div>
+
+          <!-- 筛选条件标签 -->
+          <div id="filterTags" class="flex items-center gap-2 pb-3 flex-wrap">
           </div>
         </div>
 
@@ -363,24 +440,31 @@
 
         </div>
 
-        <!-- 底部栏 -->
+        <!-- 底部栏 - 分页 -->
         <footer class="h-12 bg-gray-800 border-t border-gray-700 flex items-center justify-between px-6 flex-shrink-0">
-          <button onclick="showToast('已清理 30 天前的缓存条目', 'success')"
-            class="text-sm text-gray-400 hover:text-gray-200 flex items-center gap-1.5 transition">
-            <i class="fa-solid fa-broom"></i>清理缓存
-          </button>
+          <div class="flex items-center gap-4 text-sm text-gray-400">
+            <span>共 <span id="totalCount" class="text-blue-400 font-medium">18</span> 条</span>
+            <select id="pageSizeSelect" onchange="changePageSize()"
+              class="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-xs text-gray-200 focus:outline-none">
+              <option value="10">每页 10 条</option>
+              <option value="20" selected>每页 20 条</option>
+              <option value="50">每页 50 条</option>
+            </select>
+          </div>
           <div class="flex items-center gap-2">
-            <button class="px-2.5 py-1 text-xs text-gray-500 hover:text-white hover:bg-gray-700 rounded transition" disabled>
-              上一页
+            <button onclick="goToPage(1)" class="px-2 py-1 text-xs text-gray-500 hover:text-white hover:bg-gray-700 rounded transition">首页</button>
+            <button onclick="prevPage()" class="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-gray-700 rounded transition">
+              <i class="fa-solid fa-chevron-left mr-0.5"></i>上一页
             </button>
-            <span class="text-sm text-gray-400">1 / 3</span>
-            <button onclick="loadMore(this)"
-            class="px-2.5 py-1 text-xs text-gray-300 hover:text-white hover:bg-gray-700 rounded transition">
-              下一页
+            <span class="text-sm text-gray-400">
+              <span id="currentPage">1</span> / <span id="totalPages">1</span>
+            </span>
+            <button onclick="nextPage()" class="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-gray-700 rounded transition">
+              下一页<i class="fa-solid fa-chevron-right ml-0.5"></i>
             </button>
+            <button onclick="goToPage(lastPage)" class="px-2 py-1 text-xs text-gray-500 hover:text-white hover:bg-gray-700 rounded transition">末页</button>
             <span class="mx-2 text-gray-600">|</span>
-            <button onclick="loadMore(this)"
-            class="px-3 py-1.5 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg flex items-center gap-1.5 transition">
+            <button onclick="loadMore()" class="px-3 py-1.5 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition flex items-center gap-1">
               <i class="fa-solid fa-chevron-down text-xs"></i>加载更多
             </button>
           </div>
@@ -743,6 +827,300 @@
         setTimeout(() => toast.remove(), 300);
       }, 2500);
     }
+
+    // ========== 搜索增强功能 ==========
+
+    // 示例数据
+    const sources = [
+      { id: 1, name: 'GitHub Trending', type: 'rss' },
+      { id: 2, name: 'Hacker News', type: 'rss' },
+      { id: 3, name: 'TG: 开源推荐频道', type: 'telegram' },
+      { id: 4, name: '阮一峰周刊', type: 'rss' },
+    ];
+
+    let selectedSources = [];
+    let currentFilters = {
+      keyword: '',
+      sourceIds: [],
+      startDate: '',
+      endDate: ''
+    };
+    let lastPage = 1;
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSourceList();
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('endDate').value = today;
+      setDateRange('7d');
+      updateTotalPages();
+    });
+
+    // 渲染信息源下拉列表
+    function renderSourceList() {
+      const container = document.getElementById('sourceList');
+      container.innerHTML = sources.map(s => `
+        <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-700 rounded cursor-pointer">
+          <input type="checkbox" value="${s.id}" onchange="updateSourceSelection()"
+            class="source-checkbox rounded border-gray-500" ${selectedSources.includes(s.id) ? 'checked' : ''}>
+          <span class="text-xs text-gray-300">${s.name}</span>
+        </label>
+      `).join('');
+    }
+
+    // 切换信息源下拉
+    function toggleSourceDropdown() {
+      document.getElementById('sourceDropdown').classList.toggle('active');
+    }
+
+    // 更新信息源选择
+    function updateSourceSelection() {
+      selectedSources = Array.from(document.querySelectorAll('.source-checkbox:checked')).map(cb => parseInt(cb.value));
+      const badge = document.getElementById('sourceCountBadge');
+      const label = document.getElementById('sourceDropdownLabel');
+      if (selectedSources.length > 0) {
+        badge.textContent = selectedSources.length;
+        badge.classList.remove('hidden');
+        label.textContent = `已选 ${selectedSources.length}`;
+      } else {
+        badge.classList.add('hidden');
+        label.textContent = '信息来源';
+      }
+    }
+
+    // 全选/取消全选
+    function toggleAllSources(checkbox) {
+      document.querySelectorAll('.source-checkbox').forEach(cb => cb.checked = checkbox.checked);
+      updateSourceSelection();
+    }
+
+    // 清除信息源筛选
+    function clearSourceFilter() {
+      selectedSources = [];
+      document.querySelectorAll('.source-checkbox').forEach(cb => cb.checked = false);
+      updateSourceSelection();
+      document.getElementById('sourceDropdown').classList.remove('active');
+      updateFilterTags();
+      showToast('已清除信息来源筛选', 'info');
+    }
+
+    // 应用信息源筛选
+    function applySourceFilter() {
+      currentFilters.sourceIds = [...selectedSources];
+      document.getElementById('sourceDropdown').classList.remove('active');
+      updateFilterTags();
+      showToast(`已筛选 ${selectedSources.length} 个信息源`, 'success');
+    }
+
+    // 设置日期范围
+    function setDateRange(range) {
+      const endDate = new Date();
+      const startDate = new Date();
+      switch (range) {
+        case '1d':
+          break;
+        case '7d':
+          startDate.setDate(startDate.getDate() - 7);
+          break;
+        case '30d':
+          startDate.setDate(startDate.getDate() - 30);
+          break;
+        case 'all':
+          document.getElementById('startDate').value = '';
+          document.getElementById('endDate').value = '';
+          currentFilters.startDate = '';
+          currentFilters.endDate = '';
+          updateFilterTags();
+          return;
+      }
+      document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+      document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+      applyDateFilter();
+    }
+
+    // 应用日期筛选
+    function applyDateFilter() {
+      currentFilters.startDate = document.getElementById('startDate').value;
+      currentFilters.endDate = document.getElementById('endDate').value;
+      updateFilterTags();
+    }
+
+    // 更新筛选标签
+    function updateFilterTags() {
+      const container = document.getElementById('filterTags');
+      const resetBtn = document.getElementById('resetFiltersBtn');
+      const hasFilter = currentFilters.keyword || currentFilters.sourceIds.length || currentFilters.startDate || currentFilters.endDate;
+
+      if (!hasFilter) {
+        resetBtn.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+      }
+
+      resetBtn.classList.remove('hidden');
+      let tags = [];
+
+      if (currentFilters.keyword) {
+        tags.push(`
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-900/40 text-blue-400 text-xs rounded-full">
+            关键字: ${currentFilters.keyword}
+            <button onclick="clearKeyword()" class="hover:text-blue-200"><i class="fa-solid fa-xmark"></i></button>
+          </span>
+        `);
+      }
+
+      if (currentFilters.sourceIds.length) {
+        const names = currentFilters.sourceIds.map(id => sources.find(s => s.id === id)?.name).join(', ');
+        tags.push(`
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-900/40 text-purple-400 text-xs rounded-full">
+            信息源: ${names}
+            <button onclick="clearSourceFilter()" class="hover:text-purple-200"><i class="fa-solid fa-xmark"></i></button>
+          </span>
+        `);
+      }
+
+      if (currentFilters.startDate || currentFilters.endDate) {
+        const start = currentFilters.startDate || '开始';
+        const end = currentFilters.endDate || '结束';
+        tags.push(`
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-900/40 text-green-400 text-xs rounded-full">
+            时间: ${start} 至 ${end}
+            <button onclick="clearDateFilter()" class="hover:text-green-200"><i class="fa-solid fa-xmark"></i></button>
+          </span>
+        `);
+      }
+
+      container.innerHTML = tags.join('');
+    }
+
+    // 清除关键字
+    function clearKeyword() {
+      document.getElementById('keywordInput').value = '';
+      document.getElementById('clearKeywordBtn').classList.add('hidden');
+      currentFilters.keyword = '';
+      updateFilterTags();
+    }
+
+    // 清除日期筛选
+    function clearDateFilter() {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      currentFilters.startDate = '';
+      currentFilters.endDate = '';
+      updateFilterTags();
+    }
+
+    // 重置所有筛选
+    function resetFilters() {
+      currentFilters = { keyword: '', sourceIds: [], startDate: '', endDate: '' };
+      document.getElementById('keywordInput').value = '';
+      document.getElementById('clearKeywordBtn').classList.add('hidden');
+      clearSourceFilter();
+      clearDateFilter();
+      setDateRange('7d');
+      updateFilterTags();
+      showToast('已重置所有筛选条件', 'info');
+    }
+
+    // 关键字搜索（回车触发）
+    document.getElementById('keywordInput').addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') {
+        currentFilters.keyword = e.target.value.trim();
+        updateFilterTags();
+        showToast('开始搜索...', 'info');
+      }
+      document.getElementById('clearKeywordBtn').classList.toggle('hidden', !e.target.value);
+    });
+
+    // 分页功能
+    let currentPage = 1;
+    let pageSize = 20;
+    let totalItems = 18;
+
+    function updateTotalPages() {
+      lastPage = Math.ceil(totalItems / pageSize);
+      document.getElementById('totalPages').textContent = lastPage;
+      document.getElementById('currentPage').textContent = currentPage;
+      updatePaginationButtons();
+    }
+
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        document.getElementById('currentPage').textContent = currentPage;
+        updatePaginationButtons();
+        showToast(`跳转到第 ${currentPage} 页`, 'info');
+      }
+    }
+
+    function nextPage() {
+      if (currentPage < lastPage) {
+        currentPage++;
+        document.getElementById('currentPage').textContent = currentPage;
+        updatePaginationButtons();
+        showToast(`跳转到第 ${currentPage} 页`, 'info');
+      }
+    }
+
+    function goToPage(page) {
+      if (page >= 1 && page <= lastPage) {
+        currentPage = page;
+        document.getElementById('currentPage').textContent = currentPage;
+        updatePaginationButtons();
+        showToast(`跳转到第 ${currentPage} 页`, 'info');
+      }
+    }
+
+    function changePageSize() {
+      pageSize = parseInt(document.getElementById('pageSizeSelect').value);
+      currentPage = 1;
+      updateTotalPages();
+    }
+
+    function updatePaginationButtons() {
+      const prevBtn = document.querySelector('[onclick="prevPage()"]');
+      const nextBtn = document.querySelector('[onclick="nextPage()"]');
+      if (prevBtn) prevBtn.disabled = currentPage === 1;
+      if (nextBtn) nextBtn.disabled = currentPage === lastPage;
+    }
+
+    // 加载更多（原有功能）
+    function loadMore() {
+      showToast('加载更多功能待实现', 'info');
+    }
+
+    let sourcePanelVisible = true;
+
+    // 切换信息源面板显示/隐藏
+    function toggleSourcePanel() {
+      const panel = document.getElementById('sourcePanel');
+      const label = document.getElementById('togglePanelLabel');
+      const icon = document.getElementById('toggleSourcePanelIcon');
+      sourcePanelVisible = !sourcePanelVisible;
+      if (sourcePanelVisible) {
+        panel.classList.remove('hidden');
+        label.textContent = '隐藏信息源';
+        icon.className = 'fa-solid fa-sidebar-flip';
+      } else {
+        panel.classList.add('hidden');
+        label.textContent = '显示信息源';
+        icon.className = 'fa-solid fa-sidebar';
+      }
+    }
+
+    // 显示清空确认
+    function showClearConfirm() {
+      showToast('清空功能待实现', 'info');
+    }
+
+    // 点击外部关闭下拉
+    document.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('sourceDropdown');
+      const btn = document.getElementById('sourceDropdownBtn');
+      if (dropdown && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+        dropdown.classList.remove('active');
+      }
+    });
   </script>
 </body>
 </html>
