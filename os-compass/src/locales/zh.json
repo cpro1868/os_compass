@@ -614,7 +614,7 @@
       "pluginConfig": "系统级配置",
       "pluginConfigDesc": "插件启用状态、配置信息",
       "pluginData": "插件业务数据",
-      "pluginDataDesc": "订阅源、扫描结果等（跟随仓库）"
+      "pluginDataDesc": "雷达订阅源、扫描结果等（跟随系统目录）"
     },
     "pluginLevel": {
       "system": "系统级",

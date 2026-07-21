@@ -689,7 +689,7 @@
       "pluginConfig": "System Config",
       "pluginConfigDesc": "Plugin enabled status and configuration",
       "pluginData": "Plugin Data",
-      "pluginDataDesc": "Sources, scan results (follows vault)"
+      "pluginDataDesc": "Radar sources, scan results (follows system directory)"
     },
     "pluginLevel": {
       "system": "System",
