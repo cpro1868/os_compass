@@ -23,9 +23,16 @@ impl RadarPlugin {
     }
 }
 
-pub fn init_radar_db(vault_dir: &std::path::Path) -> Result<rusqlite::Connection, String> {
-    let db_path = vault_dir.join("plugin_radar.db");
-    println!("[radar] init_radar_db: vault_dir={:?}, db_path={:?}", vault_dir, db_path);
+pub fn init_radar_db() -> Result<rusqlite::Connection, String> {
+    // 雷达数据放在系统目录（使用 BaseDirs 确保和前端显示一致）
+    let os_compass_dir = if let Some(base_dirs) = directories::BaseDirs::new() {
+        base_dirs.data_dir().join(".os-compass")
+    } else {
+        std::path::PathBuf::from(".")
+    };
+    std::fs::create_dir_all(&os_compass_dir).ok();
+    let db_path = os_compass_dir.join("plugin_radar.db");
+    println!("[radar] init_radar_db: db_path={:?}", db_path);
 
     let conn = open_db_at_path(&db_path)?;
 
@@ -192,8 +199,8 @@ pub async fn radar_scan_source(
     Ok((scanned, new_items, errors))
 }
 
-pub async fn radar_scan_all(vault_dir: &std::path::Path, time_range: Option<&str>) -> Result<(i64, i64, i64), String> {
-    let conn = init_radar_db(vault_dir)?;
+pub async fn radar_scan_all(time_range: Option<&str>) -> Result<(i64, i64, i64), String> {
+    let conn = init_radar_db()?;
 
     // 从系统库读取信息源
     let system_sources = PLUGIN_CONFIG_DB.list_radar_sources();
@@ -261,8 +268,8 @@ impl FeaturePlugin for RadarPlugin {
         Some("${vault_dir}/plugin_${plugin_id}.db")
     }
 
-    async fn init(&self, context: &PluginContext) -> Result<(), PluginError> {
-        init_radar_db(&context.vault_dir)
+    async fn init(&self, _context: &PluginContext) -> Result<(), PluginError> {
+        init_radar_db()
             .map_err(|e| PluginError::InitFailed(e))?;
         Ok(())
     }
@@ -275,9 +282,8 @@ impl FeaturePlugin for RadarPlugin {
         Ok(())
     }
 
-    async fn execute(&self, context: &PluginContext) -> Result<FeatureResult, PluginError> {
-        let vault_dir = context.vault_dir.clone();
-        let result = tauri::async_runtime::block_on(radar_scan_all(&vault_dir, None));
+    async fn execute(&self, _context: &PluginContext) -> Result<FeatureResult, PluginError> {
+        let result = tauri::async_runtime::block_on(radar_scan_all(None));
         match result {
             Ok((scanned, new_items, errors)) => {
                 Ok(FeatureResult::success_with_data(serde_json::json!({

@@ -193,9 +193,9 @@ pub fn create_vault(app: AppHandle, name: String, base_path: String) -> Result<V
     };
     save_vault_config(&vault_dir.to_string_lossy(), &config)?;
 
-    // 为新仓库初始化雷达数据库
-    match init_radar_db(&vault_dir) {
-        Ok(_) => println!("[create_vault] Radar DB initialized for: {:?}", vault_dir),
+    // 初始化雷达数据库（在系统目录）
+    match crate::plugins::radar::init_radar_db() {
+        Ok(_) => println!("[create_vault] Radar DB initialized at system dir"),
         Err(e) => println!("[create_vault] Failed to init radar DB: {}", e),
     }
 
@@ -409,16 +409,8 @@ pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
     }
 
     let vault_dir = PathBuf::from(&path);
-    let radar_db_path = vault_dir.join("plugin_radar.db");
-    write_log(&format!("[vault] vault_dir={:?}, radar_db_path={:?}", vault_dir, radar_db_path));
-    if !radar_db_path.exists() {
-        match init_radar_db(&vault_dir) {
-            Ok(_) => write_log(&format!("[vault] Radar DB created at {:?}", radar_db_path)),
-            Err(e) => write_log(&format!("[vault] Failed to create radar DB: {}", e)),
-        }
-    } else {
-        println!("[open_vault] Radar DB already exists");
-    }
+    write_log(&format!("[vault] vault_dir={:?}", vault_dir));
+    write_log("[vault] Radar DB initialized at system dir");
 
     // 触发插件仓库切换（调用 on_disable/init/on_enable）
     if let Err(e) = crate::plugin_manager::PLUGIN_MANAGER.switch_vault(&vault_dir) {

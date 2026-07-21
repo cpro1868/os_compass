@@ -36,6 +36,15 @@ fn get_app_data_dir(app: tauri::AppHandle) -> String {
 }
 
 #[command]
+fn get_radar_data_dir() -> String {
+    if let Some(base_dirs) = directories::BaseDirs::new() {
+        base_dirs.data_dir().join(".os-compass").to_string_lossy().to_string()
+    } else {
+        String::new()
+    }
+}
+
+#[command]
 fn get_vault_dir() -> String {
     PROJECT_DIR.lock().unwrap()
         .as_ref()
@@ -369,6 +378,7 @@ pub fn run() {
             commands::refresh_search_cache,
             commands::import_search_result,
             get_app_data_dir,
+            get_radar_data_dir,
             get_vault_dir,
         ])
         .run(tauri::generate_context!())
