@@ -74,6 +74,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
   const [featurePlugins, setFeaturePlugins] = useState<FeaturePlugin[]>([]);
   const [vaultDir, setVaultDir] = useState<string>("");
   const [appDataDir, setAppDataDir] = useState<string>("");
+  const [radarDataDir, setRadarDataDir] = useState<string>("");
   const [pluginConfigOpen, setPluginConfigOpen] = useState(false);
   const [editingPlugin, setEditingPlugin] = useState<FeaturePlugin | null>(null);
   const [varModalOpen, setVarModalOpen] = useState(false);
@@ -141,6 +142,9 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
       invoke<string>("get_app_data_dir")
         .then(setAppDataDir)
         .catch(() => setAppDataDir(""));
+      invoke<string>("get_radar_data_dir")
+        .then(setRadarDataDir)
+        .catch(() => setRadarDataDir(""));
     }
   }, [open]);
 
@@ -1011,12 +1015,12 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                 <div className="grid grid-cols-1 gap-4 mt-3 text-sm">
                   <div className="flex flex-col">
                     <p className="text-blue-600 dark:text-blue-400 font-medium text-sm">{t("settings.storage.pluginConfig")}</p>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 font-mono break-all">{appDataDir}/plugins.db</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 font-mono break-all">{appDataDir}/.os-compass/plugins.db</p>
                     <p className="text-gray-400 dark:text-gray-500 text-xs">{t("settings.storage.pluginConfigDesc")}</p>
                   </div>
                   <div className="flex flex-col">
                     <p className="text-blue-600 dark:text-blue-400 font-medium text-sm">{t("settings.storage.pluginData")}</p>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 font-mono break-all">{appDataDir}/plugin_radar.db</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 font-mono break-all">{radarDataDir}/plugin_radar.db</p>
                     <p className="text-gray-400 dark:text-gray-500 text-xs">{t("settings.storage.pluginDataDesc")}</p>
                   </div>
                 </div>

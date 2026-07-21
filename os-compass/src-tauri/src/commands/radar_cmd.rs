@@ -72,8 +72,7 @@ pub fn debug_vault_status() -> String {
 
 fn get_radar_conn() -> Result<rusqlite::Connection, String> {
     // 采集数据在系统目录
-    let vault_dir = get_radar_vault_dir();
-    init_radar_db(&vault_dir)
+    init_radar_db()
 }
 
 #[command]
@@ -295,30 +294,14 @@ pub fn radar_item_action(
 
 #[command]
 pub fn trigger_radar_scan(time_range: Option<String>) -> Result<serde_json::Value, String> {
-    let vault_dir = get_radar_vault_dir();
     let time_range_str = time_range.as_deref();
-    let (scanned, new_items, errors) = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(&vault_dir, time_range_str))?;
+    let (scanned, new_items, errors) = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(time_range_str))?;
 
     Ok(serde_json::json!({
         "scanned": scanned,
         "newItems": new_items,
         "errors": errors
     }))
-}
-
-fn get_radar_vault_dir() -> std::path::PathBuf {
-    // 采集数据放在系统目录（简化设计，切换仓库不丢失）
-    get_default_radar_dir()
-}
-
-fn get_default_radar_dir() -> std::path::PathBuf {
-    // 系统目录
-    if let Some(app_data) = directories::BaseDirs::new() {
-        let os_compass_dir = app_data.data_dir().join(".os-compass");
-        std::fs::create_dir_all(&os_compass_dir).ok();
-        return os_compass_dir;
-    }
-    std::path::PathBuf::from(".")
 }
 
 #[command]
