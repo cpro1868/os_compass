@@ -73,6 +73,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
   const [extensions, setExtensions] = useState<SourcePlugin[]>([]);
   const [featurePlugins, setFeaturePlugins] = useState<FeaturePlugin[]>([]);
   const [vaultDir, setVaultDir] = useState<string>("");
+  const [appDataDir, setAppDataDir] = useState<string>("");
   const [pluginConfigOpen, setPluginConfigOpen] = useState(false);
   const [editingPlugin, setEditingPlugin] = useState<FeaturePlugin | null>(null);
   const [varModalOpen, setVarModalOpen] = useState(false);
@@ -137,6 +138,9 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
       invoke<string>("get_vault_dir")
         .then(setVaultDir)
         .catch(() => setVaultDir(""));
+      invoke<string>("get_app_data_dir")
+        .then(setAppDataDir)
+        .catch(() => setAppDataDir(""));
     }
   }, [open]);
 
@@ -999,7 +1003,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                 )}
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
                 <h4 className="font-medium text-blue-800 dark:text-blue-300 flex items-center gap-2">
                   <i className="fa-solid fa-info-circle"></i>
                   {t("settings.storage.info")}
@@ -1007,12 +1011,12 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                 <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
                   <div>
                     <p className="text-blue-600 dark:text-blue-400 font-medium">{t("settings.storage.pluginConfig")}</p>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 font-mono">$&#123;AppData&#125;/.os-compass/plugins.db</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 font-mono">{appDataDir}/plugins.db</p>
                     <p className="text-gray-400 dark:text-gray-500 text-xs">{t("settings.storage.pluginConfigDesc")}</p>
                   </div>
                   <div>
                     <p className="text-blue-600 dark:text-blue-400 font-medium">{t("settings.storage.pluginData")}</p>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 font-mono">{vaultDir}/plugin_*.db</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 font-mono">{appDataDir}/plugin_radar.db</p>
                     <p className="text-gray-400 dark:text-gray-500 text-xs">{t("settings.storage.pluginDataDesc")}</p>
                   </div>
                 </div>
