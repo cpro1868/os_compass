@@ -1686,15 +1686,38 @@ interface RadarSource {
 
 ### 3.16.2 get_radar_items
 
-获取收件箱条目。
+获取收件箱条目（支持搜索增强）。
 
 | 项目 | 说明 |
 |------|------|
 | 命令 | `get_radar_items` |
-| 参数 | `{ status?: string, limit?: number }`（status 默认 'unread'） |
-| 返回 | `Vec<RadarItem>` |
+| 参数 | `{ status?: string, limit?: number, keyword?: string, sourceIds?: number[], startDate?: string, endDate?: string, page?: number, pageSize?: number }` |
+| 返回 | `PaginatedRadarItems` |
+
+**参数说明**：
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| status | string | 状态筛选（默认 'unread'） |
+| limit | number | 限制数量（兼容旧版） |
+| keyword | string | 关键字搜索（模糊匹配 project_name、description） |
+| sourceIds | number[] | 信息源 ID 列表（多选） |
+| startDate | string | 开始日期（YYYY-MM-DD） |
+| endDate | string | 结束日期（YYYY-MM-DD） |
+| page | number | 页码（从 1 开始） |
+| pageSize | number | 每页数量（默认 20） |
+
+**返回结构**：
 
 ```typescript
+interface PaginatedRadarItems {
+  items: RadarItem[];  // 数据列表
+  total: number;        // 总数
+  page: number;         // 当前页
+  pageSize: number;     // 每页数量
+  totalPages: number;   // 总页数
+}
+
 interface RadarItem {
   id: number;
   source_id: number;
