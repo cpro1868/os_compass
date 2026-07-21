@@ -38,7 +38,9 @@ fn get_app_data_dir(app: tauri::AppHandle) -> String {
 #[command]
 fn get_radar_data_dir() -> String {
     if let Some(base_dirs) = directories::BaseDirs::new() {
-        base_dirs.data_dir().join(".os-compass").to_string_lossy().to_string()
+        base_dirs.data_dir().join(".os-compass")
+            .to_string_lossy()
+            .replace('\\', "/")
     } else {
         String::new()
     }
