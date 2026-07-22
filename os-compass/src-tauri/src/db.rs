@@ -27,12 +27,43 @@ impl Database {
                 println!("[db] External script failed: {}, falling back to embedded", e);
                 e
             })?;
-            return Ok(());
+        } else {
+            // 兜底：使用内嵌的脚本（防止脚本文件丢失导致无法启动）
+            println!("[db] Initializing schema from embedded SQL");
+            conn.execute_batch(INIT_SCHEMA_SQL)?;
         }
 
-        // 兜底：使用内嵌的脚本（防止脚本文件丢失导致无法启动）
-        println!("[db] Initializing schema from embedded SQL");
-        conn.execute_batch(INIT_SCHEMA_SQL)?;
+        // 检查并添加缺失的表（兼容已有数据库）
+        println!("[db] Checking for missing tables...");
+        let missing_tables = [
+            ("project_user_info", r#"
+                CREATE TABLE IF NOT EXISTS project_user_info (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                    info_key VARCHAR(100) NOT NULL,
+                    info_value TEXT,
+                    is_secret BOOLEAN DEFAULT FALSE,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(project_id, info_key)
+                );
+                CREATE INDEX IF NOT EXISTS idx_user_info_project ON project_user_info(project_id);
+            "#),
+        ];
+
+        for (table_name, create_sql) in &missing_tables {
+            let exists: i32 = conn.query_row(
+                &format!("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{}'", table_name),
+                [],
+                |row| row.get(0),
+            ).unwrap_or(1);
+            
+            if exists == 0 {
+                println!("[db] Creating missing table: {}", table_name);
+                conn.execute_batch(create_sql).ok();
+            }
+        }
+
         Ok(())
     }
 
