@@ -129,6 +129,19 @@ CREATE TABLE IF NOT EXISTS project_releases (
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
+-- 8.5 Project user info (数据保险箱)
+CREATE TABLE IF NOT EXISTS project_user_info (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    info_key VARCHAR(100) NOT NULL,
+    info_value TEXT,
+    is_secret BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(project_id, info_key),
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
 -- 9. Indexes
 CREATE INDEX IF NOT EXISTS idx_projects_category ON projects(category_id);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(lifecycle_status, data_status);
@@ -137,6 +150,7 @@ CREATE INDEX IF NOT EXISTS idx_variables_secret ON system_variables(is_secret);
 CREATE INDEX IF NOT EXISTS idx_plugins_enabled ON source_plugins(enabled);
 CREATE INDEX IF NOT EXISTS idx_releases_project ON project_releases(project_id);
 CREATE INDEX IF NOT EXISTS idx_releases_published ON project_releases(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_info_project ON project_user_info(project_id);
 
 -- 10. Seed data
 INSERT OR IGNORE INTO categories (id, name, sort_order) VALUES (1, '未分类', 0);
