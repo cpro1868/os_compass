@@ -119,34 +119,32 @@ pub fn run() {
                 println!("Loading existing database as default vault");
                 if db::switch_database(default_vault_path.clone()).is_ok() {
                     let vault_name = "默认仓库".to_string();
-                    let config_path = app_dir.join("config.json");
+                    let vaults_root = app_dir.join("vaults");
+                    let default_vault_dir = vaults_root.join("default");
 
                     let config = vault::VaultConfig {
                         path: default_vault_path.to_string_lossy().to_string(),
                     };
-
-                    let config_json = serde_json::to_string_pretty(&config).unwrap();
-                    std::fs::write(&config_path, config_json).ok();
 
                     let mut current = vault::CURRENT_VAULT_CONFIG.lock().unwrap();
                     *current = Some(config);
 
                     let vault_info = vault::VaultInfo {
                         name: vault_name.clone(),
-                        path: app_dir.to_string_lossy().to_string(),
+                        path: default_vault_dir.to_string_lossy().to_string(),
                     };
                     let app_handle = app.handle();
                     let mut index = vault::load_vault_index(&app_handle);
-                    if !index.vaults.iter().any(|v| v.path == app_dir.to_string_lossy().to_string()) {
+                    if !index.vaults.iter().any(|v| v.path == default_vault_dir.to_string_lossy().to_string()) {
                         index.vaults.push(vault_info);
                         vault::save_vault_index(&app_handle, &index).ok();
                     }
 
                     let last_vault_txt = app_dir.join("last-vault.txt");
-                    std::fs::write(&last_vault_txt, app_dir.to_string_lossy().as_ref()).ok();
+                    std::fs::write(&last_vault_txt, default_vault_dir.to_string_lossy().as_ref()).ok();
 
                     vault_path_loaded = true;
-                    current_vault_dir = Some(app_dir.clone());
+                    current_vault_dir = Some(default_vault_dir);
                 }
             }
 
@@ -355,6 +353,7 @@ pub fn run() {
             commands::migrate_old_data,
             commands::get_old_db_path,
             commands::import_vault,
+            commands::open_folder,
             commands::list_feature_plugins,
             commands::set_plugin_enabled,
             commands::get_plugin_config,

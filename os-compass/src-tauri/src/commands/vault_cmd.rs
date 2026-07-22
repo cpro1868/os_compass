@@ -69,3 +69,33 @@ pub fn get_old_db_path(app: AppHandle) -> Result<String, String> {
 pub fn import_vault(app: AppHandle, name: String, path: String) -> Result<Vault, String> {
     vault::import_vault(app, name, path)
 }
+
+#[cfg(target_os = "windows")]
+#[command]
+pub fn open_folder(path: String) -> Result<(), String> {
+    std::process::Command::new("explorer")
+        .arg(&path)
+        .spawn()
+        .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+#[command]
+pub fn open_folder(path: String) -> Result<(), String> {
+    std::process::Command::new("open")
+        .arg(&path)
+        .spawn()
+        .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+#[command]
+pub fn open_folder(path: String) -> Result<(), String> {
+    std::process::Command::new("xdg-open")
+        .arg(&path)
+        .spawn()
+        .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    Ok(())
+}
