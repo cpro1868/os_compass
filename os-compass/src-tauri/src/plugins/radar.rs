@@ -1,4 +1,5 @@
 use crate::db::open_db_at_path;
+use crate::content_filter::{filter_radar_item, FilterLevel};
 use crate::feature_plugin::{
     DbMode, FeaturePlugin, FeaturePluginType, FeatureResult, PluginContext, PluginError,
 };
@@ -77,6 +78,24 @@ fn compute_url_hash(url: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(url.as_bytes());
     hex::encode(hasher.finalize())
+}
+
+fn get_filter_threshold() -> i64 {
+    let config_str = PLUGIN_CONFIG_DB.get_config("radar");
+    let config: serde_json::Value = config_str
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or(serde_json::json!({}));
+    
+    let level = config.get("adFilterLevel")
+        .and_then(|v| v.as_str())
+        .unwrap_or("medium");
+    
+    match level {
+        "off" => i64::MAX,
+        "low" => 30,
+        "high" => 10,
+        _ => 20,
+    }
 }
 
 pub async fn radar_scan_source(
@@ -172,6 +191,14 @@ pub async fn radar_scan_source(
         if blacklisted {
             println!("[radar] Item is blacklisted, skipping");
             continue;
+        }
+
+        let filter_threshold = get_filter_threshold();
+        if filter_threshold < i64::MAX {
+            if filter_radar_item(&content.title, content.content.as_deref().unwrap_or(""), filter_threshold) {
+                println!("[radar] Item filtered as spam, skipping: {}", content.title);
+                continue;
+            }
         }
 
         let project_name = content.title.clone();
