@@ -1313,6 +1313,22 @@ function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
                 <input type="checkbox" id="notify" defaultChecked={config.notificationEnabled} className="rounded" />
                 <label htmlFor="notify" className="text-sm">{t("settings.pluginConfig.notificationEnabled")}</label>
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  <i className="fa-solid fa-shield-halved mr-1"></i>
+                  {t("settings.pluginConfig.adFilterLevel")}
+                </label>
+                <select
+                  defaultValue={config.adFilterLevel || "medium"}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg"
+                >
+                  <option value="off">{t("settings.pluginConfig.adFilterOptions.off")}</option>
+                  <option value="low">{t("settings.pluginConfig.adFilterOptions.low")}</option>
+                  <option value="medium">{t("settings.pluginConfig.adFilterOptions.medium")}</option>
+                  <option value="high">{t("settings.pluginConfig.adFilterOptions.high")}</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">{t("settings.pluginConfig.adFilterDesc")}</p>
+              </div>
             </>
           ) : (
             <>
