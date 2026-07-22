@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import type { Project, Category } from "../types";
 import { parseLanguages } from "../types";
 import { invoke } from "@tauri-apps/api/core";
-import { refreshProjectReadme } from "../api";
+import { refreshProjectReadme, getProjectUserInfo, addProjectUserInfo, updateProjectUserInfo, deleteProjectUserInfo, type ProjectUserInfo } from "../api";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { saveRunbook, tagApi, type Tag, saveReadmeTranslation, clearTranslations, deleteProject, testLlmDirect } from "../api";
@@ -78,6 +78,12 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
   const [toastId, setToastId] = useState(0);
   const [localPathExists, setLocalPathExists] = useState<boolean | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [userInfoList, setUserInfoList] = useState<ProjectUserInfo[]>([]);
+  const [showAddUserInfo, setShowAddUserInfo] = useState(false);
+  const [editingUserInfo, setEditingUserInfo] = useState<ProjectUserInfo | null>(null);
+  const [newInfoKey, setNewInfoKey] = useState("");
+  const [newInfoValue, setNewInfoValue] = useState("");
+  const [newInfoSecret, setNewInfoSecret] = useState(false);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
     const id = toastId + 1;
@@ -134,6 +140,7 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
         loadTags();
         noteApi.getByProject(project.id).then(setProjectNotes).catch(() => {});
         getCategories().then(setCategories).catch(() => {});
+        getProjectUserInfo(project.id).then(setUserInfoList).catch(() => {});
 
         invoke<any[]>("get_translations_cmd", { projectId: project.id, language: "zh-CN" })
           .then((translations) => {
@@ -526,6 +533,51 @@ const handleAnalyze = useCallback(async () => {
       }
     } catch (e) {
       showToast(`${t("detail.deleteFailed")}: ${String(e)}`, "error");
+    }
+  };
+
+  const handleSaveUserInfo = async () => {
+    if (!newInfoKey.trim()) {
+      showToast("请输入信息名称", "error");
+      return;
+    }
+    if (!editingUserInfo && !newInfoValue.trim()) {
+      showToast("请输入信息值", "error");
+      return;
+    }
+    try {
+      if (editingUserInfo) {
+        await updateProjectUserInfo(editingUserInfo.id, newInfoKey.trim(), newInfoValue, newInfoSecret);
+        showToast("更新成功", "success");
+      } else {
+        await addProjectUserInfo(project.id, newInfoKey.trim(), newInfoValue, newInfoSecret);
+        showToast("添加成功", "success");
+      }
+      setShowAddUserInfo(false);
+      setEditingUserInfo(null);
+      const list = await getProjectUserInfo(project.id);
+      setUserInfoList(list);
+    } catch (e) {
+      showToast(`保存失败: ${String(e)}`, "error");
+    }
+  };
+
+  const handleDeleteUserInfo = async (id: number) => {
+    try {
+      await deleteProjectUserInfo(id);
+      showToast("删除成功", "success");
+      setUserInfoList(list => list.filter(item => item.id !== id));
+    } catch (e) {
+      showToast(`删除失败: ${String(e)}`, "error");
+    }
+  };
+
+  const handleCopyUserInfo = async (id: number) => {
+    try {
+      await invoke("copy_user_info_value", { id });
+      showToast("已复制到剪贴板", "success");
+    } catch (e) {
+      showToast(`复制失败: ${String(e)}`, "error");
     }
   };
 
@@ -1438,11 +1490,157 @@ const handleAnalyze = useCallback(async () => {
           {tab === "releases" && <ReleasesPanel project={project} />}
 
           {tab === "user" && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
-              <i className="fa-solid fa-lock text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
-              <h2 className="text-lg font-bold dark:text-gray-100 mb-2">{t("detail.user")}</h2>
-              <p className="text-gray-500 dark:text-gray-400">用于存储项目相关的敏感信息（如 Token、密钥等）</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-4">功能开发中...</p>
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl border border-purple-200 dark:border-purple-800 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-xl flex items-center justify-center">
+                      <i className="fa-solid fa-shield-halved text-purple-600 dark:text-purple-400 text-xl"></i>
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-purple-900 dark:text-purple-100">{t("detail.user")}</h2>
+                      <p className="text-sm text-purple-600 dark:text-purple-400">安全存储项目相关的敏感信息</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setShowAddUserInfo(true); setEditingUserInfo(null); setNewInfoKey(""); setNewInfoValue(""); setNewInfoSecret(false); }}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <i className="fa-solid fa-plus mr-2"></i>添加信息
+                  </button>
+                </div>
+              </div>
+
+              {userInfoList.length === 0 ? (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+                  <i className="fa-solid fa-folder-open text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                  <p className="text-gray-500 dark:text-gray-400">暂无存储的敏感信息</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">点击上方按钮添加 Token、API 密钥等</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {userInfoList.map((info) => (
+                    <div
+                      key={info.id}
+                      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            {info.is_secret ? (
+                              <i className="fa-solid fa-lock text-yellow-500"></i>
+                            ) : (
+                              <i className="fa-solid fa-globe text-green-500"></i>
+                            )}
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{info.info_key}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              info.is_secret
+                                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            }`}>
+                              {info.is_secret ? "加密" : "明文"}
+                            </span>
+                          </div>
+                          <div className="font-mono text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded px-3 py-2">
+                            {info.is_secret ? "••••••••••••••••" : (info.info_value || "-")}
+                          </div>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                            创建于 {new Date(info.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <button
+                            onClick={() => handleCopyUserInfo(info.id)}
+                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                            title="复制"
+                          >
+                            <i className="fa-solid fa-copy"></i>
+                          </button>
+                          <button
+                            onClick={() => { setEditingUserInfo(info); setNewInfoKey(info.info_key); setNewInfoValue(""); setNewInfoSecret(info.is_secret); setShowAddUserInfo(true); }}
+                            className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                            title="编辑"
+                          >
+                            <i className="fa-solid fa-pen"></i>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUserInfo(info.id)}
+                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                            title="删除"
+                          >
+                            <i className="fa-solid fa-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showAddUserInfo && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 mx-4">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                      {editingUserInfo ? "编辑信息" : "添加新信息"}
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">名称</label>
+                        <input
+                          type="text"
+                          value={newInfoKey}
+                          onChange={(e) => setNewInfoKey(e.target.value)}
+                          className="w-full px-3 py-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 rounded-lg"
+                          placeholder="如：GitHub Token"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          {editingUserInfo ? "新值（留空则不修改）" : "值"}
+                        </label>
+                        <textarea
+                          value={newInfoValue}
+                          onChange={(e) => setNewInfoValue(e.target.value)}
+                          className="w-full px-3 py-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 rounded-lg font-mono text-sm"
+                          rows={3}
+                          placeholder={editingUserInfo ? "留空保持原值" : "输入敏感信息..."}
+                        />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="isSecret"
+                          checked={newInfoSecret}
+                          onChange={(e) => setNewInfoSecret(e.target.checked)}
+                          className="w-4 h-4 text-purple-600 rounded"
+                        />
+                        <label htmlFor="isSecret" className="text-sm text-gray-700 dark:text-gray-300">
+                          <i className="fa-solid fa-lock mr-1"></i>加密存储
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {newInfoSecret
+                          ? "启用后，值将使用 AES-256-GCM 加密存储在本机数据库"
+                          : "警告：明文存储可能被其他人访问"}
+                      </p>
+                    </div>
+                    <div className="flex justify-end gap-3 mt-6">
+                      <button
+                        onClick={() => { setShowAddUserInfo(false); setEditingUserInfo(null); }}
+                        className="px-4 py-2 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        {t("common.cancel")}
+                      </button>
+                      <button
+                        onClick={handleSaveUserInfo}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                      >
+                        {t("common.save")}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

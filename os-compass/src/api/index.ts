@@ -377,3 +377,53 @@ export interface TestLlmResult {
 export async function testLlmDirect(projectId: number): Promise<TestLlmResult> {
   return invoke("test_llm_direct", { projectId });
 }
+
+export interface ProjectUserInfo {
+  id: number;
+  project_id: number;
+  info_key: string;
+  info_value: string | null;
+  is_secret: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getProjectUserInfo(projectId: number): Promise<ProjectUserInfo[]> {
+  return invoke("get_project_user_info", { projectId });
+}
+
+export async function addProjectUserInfo(
+  projectId: number,
+  key: string,
+  value: string,
+  isSecret: boolean,
+  remark?: string
+): Promise<number> {
+  return invoke("add_project_user_info", {
+    projectId,
+    key,
+    value,
+    isSecret,
+    remark,
+  });
+}
+
+export async function updateProjectUserInfo(
+  id: number,
+  key: string,
+  value: string,
+  isSecret: boolean,
+  remark?: string
+): Promise<void> {
+  return invoke("update_project_user_info", {
+    id,
+    key,
+    value,
+    isSecret,
+    remark,
+  });
+}
+
+export async function deleteProjectUserInfo(id: number): Promise<void> {
+  return invoke("delete_project_user_info", { id });
+}
