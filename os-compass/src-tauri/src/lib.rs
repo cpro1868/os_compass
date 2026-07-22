@@ -89,7 +89,8 @@ pub fn run() {
             }
 
             let vaults_root = app_dir.join("vaults");
-            let default_vault_path = app_dir.join("os_compass.db");
+            let default_vault_dir = vaults_root.join("default");
+            let default_vault_path = default_vault_dir.join("os_compass.db");
 
             let mut vault_path_loaded = false;
             let mut current_vault_dir: Option<std::path::PathBuf> = None;
@@ -119,8 +120,6 @@ pub fn run() {
                 println!("Loading existing database as default vault");
                 if db::switch_database(default_vault_path.clone()).is_ok() {
                     let vault_name = "默认仓库".to_string();
-                    let vaults_root = app_dir.join("vaults");
-                    let default_vault_dir = vaults_root.join("default");
 
                     let config = vault::VaultConfig {
                         path: default_vault_path.to_string_lossy().to_string(),
