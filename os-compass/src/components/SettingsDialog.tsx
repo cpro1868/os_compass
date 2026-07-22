@@ -996,6 +996,16 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                       }
                     }}
                     onConfigure={() => handleConfigurePlugin(plugin)}
+                    onSave={async (config) => {
+                      try {
+                        await invoke("save_plugin_config", { pluginId: plugin.id, config });
+                        setFeaturePlugins(featurePlugins.map((p) =>
+                          p.id === plugin.id ? { ...p, config } : p
+                        ));
+                      } catch (e) {
+                        console.error("Failed to save plugin config:", e);
+                      }
+                    }}
                   />
                 ))}
 
@@ -1164,14 +1174,16 @@ interface PluginCardProps {
   plugin: FeaturePlugin;
   onToggle: (enabled: boolean) => void;
   onConfigure: () => void;
+  onSave: (config: string) => void;
 }
 
-function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
+function PluginCard({ plugin, onToggle, onConfigure: _onConfigure, onSave }: PluginCardProps) {
   const { t } = useTranslation();
   const [showConfig, setShowConfig] = useState(false);
   const isRadar = plugin.plugin_type === "radar";
   const color = isRadar ? "blue" : "purple";
   const icon = isRadar ? "satellite-dish" : "brain";
+  const [localConfig, setLocalConfig] = useState<Record<string, any>>({});
 
   const config = plugin.config ? JSON.parse(plugin.config) : {};
   const stats = isRadar ? {
@@ -1310,7 +1322,7 @@ function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="notify" defaultChecked={config.notificationEnabled} className="rounded" />
+                <input type="checkbox" id="notify" checked={config.notificationEnabled !== false} onChange={(e) => setLocalConfig({ ...localConfig, notificationEnabled: e.target.checked })} className="rounded" />
                 <label htmlFor="notify" className="text-sm">{t("settings.pluginConfig.notificationEnabled")}</label>
               </div>
               <div>
@@ -1319,7 +1331,8 @@ function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
                   {t("settings.pluginConfig.adFilterLevel")}
                 </label>
                 <select
-                  defaultValue={config.adFilterLevel || "medium"}
+                  value={config.adFilterLevel || "medium"}
+                  onChange={(e) => setLocalConfig({ ...localConfig, adFilterLevel: e.target.value })}
                   className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg"
                 >
                   <option value="off">{t("settings.pluginConfig.adFilterOptions.off")}</option>
@@ -1335,7 +1348,8 @@ function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
               <div>
                 <label className="block text-sm font-medium mb-1">{t("settings.pluginConfig.searchStrategy")}</label>
                 <select
-                  defaultValue={config.searchStrategy || "localFirst"}
+                  value={config.searchStrategy || "localFirst"}
+                  onChange={(e) => setLocalConfig({ ...localConfig, searchStrategy: e.target.value })}
                   className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg"
                 >
                   <option value="localFirst">{t("settings.pluginConfig.searchStrategyOptions.localFirst")}</option>
@@ -1344,7 +1358,7 @@ function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="aiSummary" defaultChecked={config.aiSummary !== false} className="rounded" />
+                <input type="checkbox" id="aiSummary" checked={config.aiSummary !== false} onChange={(e) => setLocalConfig({ ...localConfig, aiSummary: e.target.checked })} className="rounded" />
                 <label htmlFor="aiSummary" className="text-sm">{t("settings.pluginConfig.aiSummary")}</label>
               </div>
             </>
@@ -1357,7 +1371,11 @@ function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
               {t("settings.pluginConfig.cancel")}
             </button>
             <button
-              onClick={onConfigure}
+              onClick={() => {
+                const mergedConfig = { ...config, ...localConfig };
+                onSave(JSON.stringify(mergedConfig));
+                setShowConfig(false);
+              }}
               className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
             >
               {t("settings.pluginConfig.saveConfig")}
