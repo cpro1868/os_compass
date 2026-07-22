@@ -33,7 +33,7 @@ pub fn get_current_vault(app: AppHandle) -> Result<Option<Vault>, String> {
 
 #[command]
 pub fn get_vaults_root(app: AppHandle) -> Result<String, String> {
-    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let data_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
     let vaults_root = data_dir.join("vaults");
     std::fs::create_dir_all(&vaults_root).map_err(|e| e.to_string())?;
     Ok(vaults_root.to_string_lossy().to_string())
@@ -56,7 +56,7 @@ pub fn migrate_old_data(app: AppHandle, vault_path: String, old_db_path: String)
 
 #[command]
 pub fn get_old_db_path(app: AppHandle) -> Result<String, String> {
-    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let data_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
     let old_path = data_dir.join("os_compass.db");
     if old_path.exists() {
         Ok(old_path.to_string_lossy().to_string())

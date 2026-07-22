@@ -79,8 +79,9 @@ pub fn run() {
             }
         }))
         .setup(|app| {
+            // 系统库：Roaming 下的 .os-compass
             let app_dir = app.path().app_data_dir().expect("Failed to get app data dir");
-            println!("App data directory: {:?}", app_dir);
+            println!("App data directory (system): {:?}", app_dir);
             std::fs::create_dir_all(&app_dir).expect("Failed to create app data dir");
 
             if let Err(e) = system_db::init_system_db(&app_dir) {
@@ -89,14 +90,19 @@ pub fn run() {
                 println!("[system_db] System DB initialized successfully");
             }
 
-            let vaults_root = app_dir.join("vaults");
+            // 仓库库：Local 下的 com.administrator.os-compass
+            let vault_root = app.path().app_local_data_dir().expect("Failed to get local data dir");
+            println!("Vault root directory: {:?}", vault_root);
+            std::fs::create_dir_all(&vault_root).expect("Failed to create vault root dir");
+            
+            let vaults_root = vault_root.join("vaults");
             let default_vault_dir = vaults_root.join("default");
             let default_vault_path = default_vault_dir.join("os_compass.db");
 
             let mut vault_path_loaded = false;
             let mut current_vault_dir: Option<std::path::PathBuf> = None;
 
-            let last_vault_path = app_dir.join("last-vault.txt");
+            let last_vault_path = vault_root.join("last-vault.txt");
             if last_vault_path.exists() {
                 if let Ok(path) = std::fs::read_to_string(&last_vault_path) {
                     let path = path.trim().to_string();
@@ -140,7 +146,7 @@ pub fn run() {
                         vault::save_vault_index(&app_handle, &index).ok();
                     }
 
-                    let last_vault_txt = app_dir.join("last-vault.txt");
+                    let last_vault_txt = vault_root.join("last-vault.txt");
                     std::fs::write(&last_vault_txt, default_vault_dir.to_string_lossy().as_ref()).ok();
 
                     vault_path_loaded = true;
