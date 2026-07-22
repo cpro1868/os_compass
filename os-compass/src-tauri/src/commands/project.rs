@@ -362,7 +362,25 @@ pub fn delete_project_user_info(id: i64) -> Result<(), String> {
 
 #[tauri::command]
 pub fn copy_user_info_value(id: i64) -> Result<String, String> {
-    Err("Not implemented".to_string())
+    let db = DATABASE.lock().map_err(|e| e.to_string())?;
+    let db = db.as_ref().ok_or("Database not initialized")?;
+    let conn = db.get_connection();
+    
+    let result = conn.query_row(
+        "SELECT info_value, is_secret FROM project_user_info WHERE id = ?",
+        [id],
+        |row| {
+            let value: String = row.get(0)?;
+            let is_secret: i32 = row.get(1)?;
+            Ok((value, is_secret))
+        },
+    ).map_err(|e| e.to_string())?;
+    
+    if result.1 != 0 {
+        decrypt_string(&result.0).map_err(|e| e.to_string())
+    } else {
+        Ok(result.0)
+    }
 }
 
 #[tauri::command]
