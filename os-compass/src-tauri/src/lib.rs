@@ -99,6 +99,31 @@ pub fn run() {
             let default_vault_dir = vaults_root.join("default");
             let default_vault_path = default_vault_dir.join("os_compass.db");
 
+            // 迁移旧仓库到新位置（如果需要）
+            let old_vault_root = app_dir.clone();
+            let old_db_path = old_vault_root.join("os_compass.db");
+            let old_key_path = old_vault_root.join(".cryptokey");
+            let old_config_path = old_vault_root.join("config.json");
+            
+            if !default_vault_path.exists() && old_db_path.exists() {
+                println!("[vault] Migrating vault from old location: {:?}", old_vault_root);
+                std::fs::create_dir_all(&default_vault_dir).ok();
+                
+                // 复制仓库库文件
+                if old_db_path.exists() {
+                    std::fs::copy(&old_db_path, &default_vault_path).ok();
+                    println!("[vault] Copied os_compass.db");
+                }
+                if old_key_path.exists() {
+                    std::fs::copy(&old_key_path, &default_vault_dir.join(".cryptokey")).ok();
+                    println!("[vault] Copied .cryptokey");
+                }
+                if old_config_path.exists() {
+                    std::fs::copy(&old_config_path, &default_vault_dir.join("config.json")).ok();
+                    println!("[vault] Copied config.json");
+                }
+            }
+
             let mut vault_path_loaded = false;
             let mut current_vault_dir: Option<std::path::PathBuf> = None;
 
@@ -141,7 +166,18 @@ pub fn run() {
                     };
                     let app_handle = app.handle();
                     let mut index = vault::load_vault_index(&app_handle);
-                    if !index.vaults.iter().any(|v| v.path == default_vault_dir.to_string_lossy().to_string()) {
+                    let new_vault_path = default_vault_dir.to_string_lossy().to_string();
+                    
+                    // 更新已有仓库的路径（如果有旧的仓库指向旧位置）
+                    for vault in &mut index.vaults {
+                        if vault.path == old_vault_root.to_string_lossy().to_string() {
+                            vault.path = new_vault_path.clone();
+                            println!("[vault] Updated vault path in index");
+                        }
+                    }
+                    vault::save_vault_index(&app_handle, &index).ok();
+                    
+                    if !index.vaults.iter().any(|v| v.path == new_vault_path) {
                         index.vaults.push(vault_info);
                         vault::save_vault_index(&app_handle, &index).ok();
                     }
