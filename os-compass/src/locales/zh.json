@@ -607,7 +607,15 @@
       "viewInbox": "查看收件箱",
       "openSearch": "打开搜索",
       "saveConfig": "保存配置",
-      "cancel": "取消"
+      "cancel": "取消",
+      "adFilterLevel": "广告过滤强度",
+      "adFilterOptions": {
+        "off": "关闭",
+        "low": "低（仅过滤明显广告）",
+        "medium": "中（平衡过滤）",
+        "high": "高（严格过滤）"
+      },
+      "adFilterDesc": "采集时自动过滤广告和垃圾信息"
     },
     "storage": {
       "info": "数据存储说明",
