@@ -92,3 +92,14 @@ pub struct ProjectNote {
     pub created_at: String,
     pub updated_at: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectUserInfo {
+    pub id: i64,
+    pub project_id: i64,
+    pub info_key: String,
+    pub info_value: Option<String>,
+    pub is_secret: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
