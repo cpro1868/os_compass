@@ -682,7 +682,15 @@
       "viewInbox": "View Inbox",
       "openSearch": "Open Search",
       "saveConfig": "Save Config",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "adFilterLevel": "Ad Filter Level",
+      "adFilterOptions": {
+        "off": "Off",
+        "low": "Low (only obvious ads)",
+        "medium": "Medium (balanced)",
+        "high": "High (strict)"
+      },
+      "adFilterDesc": "Auto-filter ads and spam during collection"
     },
     "storage": {
       "info": "Data Storage",
