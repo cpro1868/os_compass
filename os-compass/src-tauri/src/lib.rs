@@ -135,8 +135,21 @@ pub fn run() {
                     };
                     let app_handle = app.handle();
                     let mut index = vault::load_vault_index(&app_handle);
-                    if !index.vaults.iter().any(|v| v.path == default_vault_dir.to_string_lossy().to_string()) {
+                    
+                    let new_path = default_vault_dir.to_string_lossy().to_string();
+                    let needs_update = if let Some(existing) = index.vaults.iter_mut().find(|v| v.name == vault_name) {
+                        if existing.path != new_path {
+                            existing.path = new_path.clone();
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
                         index.vaults.push(vault_info);
+                        true
+                    };
+                    
+                    if needs_update {
                         vault::save_vault_index(&app_handle, &index).ok();
                     }
 
