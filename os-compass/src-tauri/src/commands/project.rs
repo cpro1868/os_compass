@@ -1,5 +1,6 @@
 use crate::db::DATABASE;
-use crate::models::{Project, Category, Tag, ProjectNote};
+use crate::models::{Project, Category, Tag, ProjectNote, ProjectUserInfo};
+use crate::crypto::{encrypt_string, decrypt_string};
 
 #[tauri::command]
 pub fn get_projects() -> Result<Vec<Project>, String> {
@@ -267,6 +268,101 @@ pub fn get_categories() -> Result<Vec<Category>, String> {
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
     Ok(categories)
+}
+
+#[tauri::command]
+pub fn get_project_user_info(project_id: i64) -> Result<Vec<ProjectUserInfo>, String> {
+    let db = DATABASE.lock().map_err(|e| e.to_string())?;
+    let db = db.as_ref().ok_or("Database not initialized")?;
+    let conn = db.get_connection();
+    let mut stmt = conn
+        .prepare("SELECT id, project_id, info_key, info_value, is_secret, created_at, updated_at FROM project_user_info WHERE project_id = ?")
+        .map_err(|e| e.to_string())?;
+    let infos = stmt
+        .query_map([project_id], |row| {
+            Ok(ProjectUserInfo {
+                id: row.get(0)?,
+                project_id: row.get(1)?,
+                info_key: row.get(2)?,
+                info_value: row.get(3)?,
+                is_secret: row.get::<_, i32>(4)? != 0,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(infos)
+}
+
+#[tauri::command]
+pub fn add_project_user_info(
+    project_id: i64,
+    key: String,
+    value: String,
+    is_secret: bool,
+    remark: Option<String>,
+) -> Result<i64, String> {
+    let db = DATABASE.lock().map_err(|e| e.to_string())?;
+    let db = db.as_ref().ok_or("Database not initialized")?;
+    let conn = db.get_connection();
+    
+    let store_value = if is_secret {
+        encrypt_string(&value).map_err(|e| e.to_string())?
+    } else {
+        value
+    };
+    
+    conn.execute(
+        "INSERT INTO project_user_info (project_id, info_key, info_value, is_secret) VALUES (?, ?, ?, ?)",
+        rusqlite::params![project_id, key, store_value, is_secret as i32],
+    )
+    .map_err(|e| e.to_string())?;
+    
+    Ok(conn.last_insert_rowid())
+}
+
+#[tauri::command]
+pub fn update_project_user_info(
+    id: i64,
+    key: String,
+    value: String,
+    is_secret: bool,
+    remark: Option<String>,
+) -> Result<(), String> {
+    let db = DATABASE.lock().map_err(|e| e.to_string())?;
+    let db = db.as_ref().ok_or("Database not initialized")?;
+    let conn = db.get_connection();
+    
+    let store_value = if is_secret {
+        encrypt_string(&value).map_err(|e| e.to_string())?
+    } else {
+        value
+    };
+    
+    conn.execute(
+        "UPDATE project_user_info SET info_key = ?, info_value = ?, is_secret = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        rusqlite::params![key, store_value, is_secret as i32, id],
+    )
+    .map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_project_user_info(id: i64) -> Result<(), String> {
+    let db = DATABASE.lock().map_err(|e| e.to_string())?;
+    let db = db.as_ref().ok_or("Database not initialized")?;
+    let conn = db.get_connection();
+    conn.execute("DELETE FROM project_user_info WHERE id = ?", [id])
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn copy_user_info_value(id: i64) -> Result<String, String> {
+    Err("Not implemented".to_string())
 }
 
 #[tauri::command]
