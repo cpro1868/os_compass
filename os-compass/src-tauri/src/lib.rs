@@ -127,7 +127,8 @@ pub fn run() {
             let mut vault_path_loaded = false;
             let mut current_vault_dir: Option<std::path::PathBuf> = None;
 
-            let last_vault_path = vault_root.join("last-vault.txt");
+            // last-vault.txt 在系统库（Roaming）
+            let last_vault_path = app_dir.join("last-vault.txt");
             if last_vault_path.exists() {
                 if let Ok(path) = std::fs::read_to_string(&last_vault_path) {
                     let path = path.trim().to_string();
@@ -182,7 +183,7 @@ pub fn run() {
                         vault::save_vault_index(&app_handle, &index).ok();
                     }
 
-                    let last_vault_txt = vault_root.join("last-vault.txt");
+                    let last_vault_txt = app_dir.join("last-vault.txt");
                     std::fs::write(&last_vault_txt, default_vault_dir.to_string_lossy().as_ref()).ok();
 
                     vault_path_loaded = true;

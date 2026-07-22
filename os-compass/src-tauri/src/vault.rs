@@ -59,18 +59,17 @@ lazy_static::lazy_static! {
 }
 
 fn get_vault_index_path(app: &AppHandle) -> PathBuf {
-    let data_dir = app.path().app_local_data_dir().unwrap_or_default();
+    let data_dir = app.path().app_data_dir().unwrap_or_default();
     data_dir.join("vault-index.json")
 }
 
 fn get_last_vault_path(app: &AppHandle) -> PathBuf {
-    let data_dir = app.path().app_local_data_dir().unwrap_or_default();
+    let data_dir = app.path().app_data_dir().unwrap_or_default();
     data_dir.join("last-vault.txt")
 }
 
 fn get_vaults_root(app: &AppHandle) -> PathBuf {
-    let data_dir = app.path().app_local_data_dir().unwrap_or_default();
-    data_dir.join("vaults")
+    app.path().app_local_data_dir().unwrap_or_default()
 }
 
 pub fn load_vault_index(app: &AppHandle) -> VaultIndex {
@@ -119,9 +118,9 @@ pub fn create_vault(app: AppHandle, name: String, base_path: String) -> Result<V
     let current_db_path = {
         let db_guard = crate::db::DATABASE.lock().unwrap();
         if let Some(ref _db) = *db_guard {
-            // 获取当前数据库路径（通过 last-vault.txt）
+            // 获取当前数据库路径（通过 last-vault.txt，系统库）
             let last_vault = std::fs::read_to_string(
-                app.path().app_local_data_dir().unwrap_or_default().join("last-vault.txt")
+                app.path().app_data_dir().unwrap_or_default().join("last-vault.txt")
             ).unwrap_or_default();
             let last_vault = last_vault.trim().to_string();
             if !last_vault.is_empty() {
@@ -135,7 +134,7 @@ pub fn create_vault(app: AppHandle, name: String, base_path: String) -> Result<V
     };
     let current_crypto_key = {
         let last_vault = std::fs::read_to_string(
-            app.path().app_local_data_dir().unwrap_or_default().join("last-vault.txt")
+            app.path().app_data_dir().unwrap_or_default().join("last-vault.txt")
         ).unwrap_or_default();
         let last_vault = last_vault.trim().to_string();
         if !last_vault.is_empty() {
