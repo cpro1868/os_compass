@@ -96,7 +96,7 @@ export function VaultDialog({ open, onClose }: VaultDialogProps) {
                   <i className="fa-solid fa-right-left"></i>{t("vault.switchVault")}
                 </button>
                 <button
-                  onClick={() => invoke("open", { path: currentVault.path }).catch(() => {})}
+                  onClick={() => invoke("open_folder", { path: currentVault.path }).catch(() => {})}
                   className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm flex items-center gap-2"
                 >
                   <i className="fa-solid fa-folder"></i>{t("vault.openFolder")}
