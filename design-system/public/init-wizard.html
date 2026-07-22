@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>初始化向导 - OS-Compass</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+    .option-card { transition: all 0.3s ease; }
+    .option-card:hover { transform: translateY(-4px); }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="text-gray-100 min-h-screen flex items-center justify-center p-6">
+  
+  <div class="w-full max-w-4xl">
+    
+    <!-- Logo 和标题 -->
+    <div class="text-center mb-12">
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mb-6 shadow-2xl">
+        <i class="fa-solid fa-compass text-4xl"></i>
+      </div>
+      <h1 class="text-4xl font-bold mb-3 bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+        欢迎使用 OS-Compass
+      </h1>
+      <p class="text-slate-400 text-lg">开源项目智能管家 · 本地优先数据管理</p>
+    </div>
+    
+    <!-- ========== 步骤 1: 选择/创建/导入仓库 ========== -->
+    <div id="step1" class="fade-in">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        
+        <!-- 选项 1: 选择已有仓库 -->
+        <div class="option-card bg-slate-800/80 backdrop-blur rounded-2xl p-6 border border-slate-700 hover:border-blue-500/50">
+          <div class="w-14 h-14 bg-blue-600/20 rounded-xl flex items-center justify-center mb-4">
+            <i class="fa-solid fa-folder-open text-blue-400 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">选择已有仓库</h3>
+          <p class="text-slate-400 text-sm mb-4">打开您之前创建的仓库</p>
+          <div class="space-y-2">
+            <div class="bg-slate-700/50 rounded-lg p-3 flex items-center gap-3 hover:bg-slate-700 transition cursor-pointer">
+              <i class="fa-solid fa-folder text-amber-400"></i>
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-sm truncate">工作仓库</div>
+                <div class="text-xs text-slate-500 truncate">D:\Projects\vaults\work</div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-slate-500"></i>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 选项 2: 创建新仓库 -->
+        <div class="option-card bg-slate-800/80 backdrop-blur rounded-2xl p-6 border border-slate-700 hover:border-emerald-500/50">
+          <div class="w-14 h-14 bg-emerald-600/20 rounded-xl flex items-center justify-center mb-4">
+            <i class="fa-solid fa-plus text-emerald-400 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">创建新仓库</h3>
+          <p class="text-slate-400 text-sm mb-4">创建一个新的本地仓库</p>
+          <div class="space-y-3">
+            <input type="text" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-sm" value="我的仓库">
+            <div class="relative">
+              <input type="text" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-sm pr-20" value="D:\Projects\vaults">
+              <button class="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-slate-600 rounded text-xs">浏览</button>
+            </div>
+            <button class="w-full bg-emerald-600 text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-2">
+              <i class="fa-solid fa-arrow-right"></i>创建并继续
+            </button>
+          </div>
+        </div>
+        
+        <!-- 选项 3: 从备份导入 -->
+        <div class="option-card bg-slate-800/80 backdrop-blur rounded-2xl p-6 border border-slate-700 hover:border-purple-500/50">
+          <div class="w-14 h-14 bg-purple-600/20 rounded-xl flex items-center justify-center mb-4">
+            <i class="fa-solid fa-file-import text-purple-400 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">从备份导入</h3>
+          <p class="text-slate-400 text-sm mb-4">恢复之前导出的仓库备份</p>
+          <button class="w-full bg-purple-600 text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrow-right"></i>开始导入
+          </button>
+        </div>
+        
+      </div>
+    </div>
+    
+    <!-- 底部说明 -->
+    <div class="text-center text-slate-500 text-sm space-y-2 mt-8">
+      <p class="flex items-center justify-center gap-2">
+        <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+        您的数据将安全存储在本地，不会上传至任何服务器
+      </p>
+    </div>
+    
+  </div>
+  
+</body>
+</html>
