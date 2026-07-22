@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod content_filter;
 pub mod crypto;
 pub mod crawler_service;
 pub mod db;
