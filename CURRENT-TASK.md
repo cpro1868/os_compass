@@ -52,7 +52,7 @@
 | 情报雷达搜索增强 | `design-system/public/radar-inbox.html` | ✅ |
 | 广告过滤设置 | `design-system/public/radar-filter-settings.html` | ✅ |
 | 用户信息 | `design-system/public/project-detail.html`（用户信息标签页区域） | ✅ |
-| 主页 | `design-system/public/home.html` | 📋 待设计 |
+| 主页引导页 | `design-system/public/home.html` | ✅ |
 
 ---
 
