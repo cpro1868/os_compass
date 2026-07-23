@@ -2,7 +2,65 @@
 
 **创建日期**：2026-07-23
 **问题**：点击"重新分析"后长时间无输出（超过 30 秒）
-**状态**：🔴 未解决
+**状态**：✅ 已修复（待验证）
+
+---
+
+## 问题根因
+
+### 2026-07-24 - 代码块解析 Bug（已修复）
+
+**日志分析**：
+```
+[AI_ANALYZE] json_str created, len=1251
+[AI_ANALYZE] find ```json: Some(0), find ```: Some(0)
+```
+
+**问题**：当 LLM 返回以 ` ```json ` 开头的 JSON 时：
+1. `find("```json")` 返回 `Some(0)`
+2. `find("```")` 也在位置 0 找到
+3. 代码执行 `json_str[start + 7..start + end]` = `json_str[7..7]` = **空切片**
+4. 后续 JSON 解析因空字符串而卡住
+
+**错误代码**：
+```rust
+if let Some(start) = json_str.find("```json") {
+    if let Some(end) = json_str[start..].find("```") {
+        json_str = json_str[start + 7..start + end].trim().to_string();
+        //                                        ^^^^^^^^ ^^^^^^^^
+        //                                        start=0, end=0 → 空切片 json_str[7..7]！
+    }
+}
+```
+
+**正确代码**：
+```rust
+if let Some(start) = json_str.find("```json") {
+    if let Some(end) = json_str[start..].find("```") {
+        let actual_end = start + end;  // 计算绝对结束位置
+        json_str = json_str[start + 7..actual_end].trim().to_string();
+    }
+}
+```
+
+**修复文件**：`src-tauri/src/commands/ai.rs`
+
+---
+
+## 愚蠢建议记录（避免再犯）
+
+### 2026-07-23 - 桌面应用不应该用 F12 调试
+
+**错误建议**：
+```
+请打开浏览器开发者控制台（F12），运行"重新分析"
+```
+
+**问题**：这是 Tauri 桌面应用，不是浏览器，没有 F12 控制台。
+
+**正确做法**：
+- 使用后端文件日志：`%AppData%\.os-compass\logs\ai_analyze.log`
+- 或者使用 Tauri 的 webview 日志输出
 
 ---
 
