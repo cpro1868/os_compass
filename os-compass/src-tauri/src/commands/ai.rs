@@ -3,6 +3,7 @@ use crate::health::{calculate_health_score, health_score_to_rating, ProjectMetri
 use crate::llm::{build_system_prompt, LlmClient, LlmMessage};
 use crate::settings::AppSettings;
 use serde::{Deserialize, Serialize};
+use std::io::{Write, stderr};
 
 #[derive(Debug, Serialize)]
 pub struct AiAnalysisResult {
@@ -204,31 +205,69 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
         ),
     };
 
-    eprintln!("[analyze_project] Waiting for LLM response (timeout: 180s)...");
+    let log_to_file = |msg: &str| {
+        if let Some(base_dirs) = directories::BaseDirs::new() {
+            let app_data_dir = base_dirs.data_dir();
+            let log_dir = app_data_dir.join("logs");
+            let _ = std::fs::create_dir_all(&log_dir);
+            let log_file = log_dir.join("ai_analyze.log");
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&log_file)
+            {
+                let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+                let _ = writeln!(file, "[{}] {}", timestamp, msg);
+                let _ = file.flush();
+            }
+        }
+        eprintln!("{}", msg);
+    };
+
+    log_to_file(&format!("[analyze_project] Waiting for LLM response (timeout: 180s)..."));
+    let parse_start = std::time::Instant::now();
     let (summary, use_cases, risks, dependencies) = match llm.chat(vec![system_msg, user_msg]).await {
         Ok(response) => {
-            println!("[AI_ANALYZE] LLM response (first 500 chars): {}", response.chars().take(500).collect::<String>());
+            let response_len = response.len();
+            log_to_file(&format!("[AI_ANALYZE] LLM response received: {} chars, time: {:?}", response_len, parse_start.elapsed()));
+            log_to_file(&format!("[AI_ANALYZE] Raw response (first 800 chars):\n{}", &response[..response.len().min(800)]));
+            
+            let step1_start = std::time::Instant::now();
             let mut json_str = response.trim().to_string();
 
             if let Some(start) = json_str.find("```json") {
                 if let Some(end) = json_str[start..].find("```") {
                     json_str = json_str[start + 7..start + end].trim().to_string();
+                    println!("[AI_ANALYZE] Step 1a: Extract ```json block, time: {:?}", step1_start.elapsed());
                 }
             } else if let Some(start) = json_str.find("```") {
                 if let Some(end) = json_str[start..].find("```") {
                     json_str = json_str[start + 3..start + end].trim().to_string();
+                    println!("[AI_ANALYZE] Step 1b: Extract ``` block, time: {:?}", step1_start.elapsed());
+                    let _ = std::io::stdout().flush();
                 }
+            } else {
+                println!("[AI_ANALYZE] Step 1c: No code block found, time: {:?}", step1_start.elapsed());
+                let _ = std::io::stdout().flush();
             }
 
             if !json_str.starts_with('{') {
                 if let Some(start) = json_str.find('{') {
                     if let Some(end) = json_str.rfind('}') {
                         json_str = json_str[start..=end].to_string();
+                        println!("[AI_ANALYZE] Step 2: Extract JSON from text, time: {:?}", step1_start.elapsed());
+                        let _ = std::io::stdout().flush();
                     }
                 }
+            } else {
+                println!("[AI_ANALYZE] Step 2: JSON already starts with {{, time: {:?}", step1_start.elapsed());
+                let _ = std::io::stdout().flush();
             }
 
-            println!("[AI_ANALYZE] Parsed JSON string: {}", json_str.chars().take(500).collect::<String>());
+            println!("[AI_ANALYZE] JSON string to parse (first 500 chars):\n{}", json_str.chars().take(500).collect::<String>());
+            let _ = std::io::stdout().flush();
+            println!("[AI_ANALYZE] JSON string length: {} chars, time: {:?}", json_str.len(), step1_start.elapsed());
+            let _ = std::io::stdout().flush();
 
             #[derive(serde::Deserialize)]
             struct LlmResponse {
@@ -255,27 +294,33 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
                 })
             }
 
+            let step3_start = std::time::Instant::now();
+            println!("[AI_ANALYZE] >>> About to call serde_json::from_str, json_len={}", json_str.len());
+            let _ = std::io::stdout().flush();
             match serde_json::from_str::<LlmResponse>(&json_str) {
                 Ok(parsed) => {
-                    println!("[AI_ANALYZE] JSON parse OK: summary={:?}, use_cases={:?}, risks={:?}, deps={:?}", 
-                        parsed.summary.as_ref().map(|s| s.len()),
-                        parsed.use_cases.as_ref().map(|s| s.to_string().len()),
-                        parsed.risks.as_ref().map(|s| s.to_string().len()),
-                        parsed.dependencies.as_ref().map(|s| s.to_string().len()));
+                    println!("[AI_ANALYZE] Step 3: JSON parse OK, time: {:?}, summary_len={:?}", 
+                        step3_start.elapsed(),
+                        parsed.summary.as_ref().map(|s| s.len()));
+                    let _ = std::io::stdout().flush();
                     let use_cases = value_to_string(parsed.use_cases.clone()).or(value_to_string(parsed.use_cases_alt.clone()));
                     let risks = value_to_string(parsed.risks);
                     let dependencies = value_to_string(parsed.dependencies);
+                    println!("[AI_ANALYZE] Parsing complete, total time: {:?}", parse_start.elapsed());
+                    let _ = std::io::stdout().flush();
                     (parsed.summary, use_cases, risks, dependencies)
                 },
                 Err(e) => {
-                    println!("[AI_ANALYZE] JSON parse FAILED: {}", e);
+                    println!("[AI_ANALYZE] Step 3: JSON parse FAILED: {}, time: {:?}", e, step3_start.elapsed());
+                    let _ = std::io::stdout().flush();
                     let mut summary: Option<String> = None;
                     let mut use_cases: Option<String> = None;
                     let mut risks: Option<String> = None;
                     let mut dependencies: Option<String> = None;
 
-                    // 通用字段提取函数
-                    let extract_field = |json: &str, field_names: &[&str]| -> Option<String> {
+                    let step4_start = std::time::Instant::now();
+                    let extract_field = |json: &str, field_names: &[&str], field_label: &str| -> Option<String> {
+                        let field_start = std::time::Instant::now();
                         for &field in field_names {
                             let patterns = [
                                 format!("\"{}\":\"", field),
@@ -296,50 +341,75 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
                                                 .filter(|s| !s.is_empty())
                                                 .collect();
                                             if !items.is_empty() {
+                                                println!("[AI_ANALYZE] Extract field '{}' ({} patterns): found array with {} items, time: {:?}", 
+                                                    field_label, patterns.len(), items.len(), field_start.elapsed());
                                                 return Some(items.join(", "));
                                             }
                                         }
                                     } else if let Some(end) = rest.find('"') {
                                         let val = &rest[..end];
                                         if !val.contains('{') && val.len() > 2 && val.len() < 500 {
+                                            println!("[AI_ANALYZE] Extract field '{}' ({} patterns): found string, len={}, time: {:?}", 
+                                                field_label, patterns.len(), val.len(), field_start.elapsed());
                                             return Some(clean_json_value(val));
                                         }
                                     }
                                 }
                             }
                         }
+                        println!("[AI_ANALYZE] Extract field '{}': NOT FOUND, time: {:?}", field_label, field_start.elapsed());
+                        let _ = std::io::stdout().flush();
                         None
                     };
 
-                    summary = extract_field(&json_str, &["summary", "一句话总结"]);
-                    use_cases = extract_field(&json_str, &["use_cases", "useCases", "适用场景"]);
-                    risks = extract_field(&json_str, &["risks", "风险"]);
-                    dependencies = extract_field(&json_str, &["dependencies", "deps", "依赖"]);
+                    summary = extract_field(&json_str, &["summary", "一句话总结"], "summary");
+                    let after_summary = std::time::Instant::now();
+                    println!("[AI_ANALYZE] After summary extraction, time: {:?}", after_summary.elapsed());
+                    let _ = std::io::stdout().flush();
+                    
+                    use_cases = extract_field(&json_str, &["use_cases", "useCases", "适用场景"], "use_cases");
+                    let _ = std::io::stdout().flush();
+                    risks = extract_field(&json_str, &["risks", "风险"], "risks");
+                    let _ = std::io::stdout().flush();
+                    dependencies = extract_field(&json_str, &["dependencies", "deps", "依赖"], "dependencies");
+                    let _ = std::io::stdout().flush();
+                    let after_all_fields = std::time::Instant::now();
+                    println!("[AI_ANALYZE] After all field extractions, time: {:?}", after_all_fields.elapsed());
+                    let _ = std::io::stdout().flush();
 
                     if summary.is_none() {
+                        let lines_start = std::time::Instant::now();
                         let lines: Vec<&str> = response.lines()
                             .filter(|l| !l.trim().starts_with('{') && !l.trim().starts_with('}') && !l.trim().starts_with("```"))
                             .collect();
+                        println!("[AI_ANALYZE] Lines filtering: {} lines, time: {:?}", lines.len(), lines_start.elapsed());
+                        let _ = std::io::stdout().flush();
 
                         if !lines.is_empty() {
                             let first_para = lines.join(" ").trim().to_string();
                             if first_para.len() > 20 {
                                 summary = Some(clean_text(&first_para));
+                                println!("[AI_ANALYZE] Fallback summary extracted, len={}, time: {:?}", first_para.len(), lines_start.elapsed());
+                                let _ = std::io::stdout().flush();
                             }
                         }
                     }
 
-                    println!("[AI_ANALYZE] Fallback parse: summary={:?}, use_cases={:?}, risks={:?}, deps={:?}",
+                    println!("[AI_ANALYZE] Step 4 (fallback parse): summary={:?}, use_cases={:?}, risks={:?}, deps={:?}, total_time: {:?}",
                         summary.as_ref().map(|s| s.len()),
                         use_cases.as_ref().map(|s| s.len()),
                         risks.as_ref().map(|s| s.len()),
-                        dependencies.as_ref().map(|s| s.len()));
+                        dependencies.as_ref().map(|s| s.len()),
+                        parse_start.elapsed());
+                    let _ = std::io::stdout().flush();
 
                     (summary, use_cases, risks, dependencies)
                 }
             }
         },
         Err(e) => {
+            println!("[AI_ANALYZE] LLM chat FAILED: {}", e);
+            let _ = std::io::stdout().flush();
             return AiAnalysisResult {
                 summary: None,
                 use_cases: None,
