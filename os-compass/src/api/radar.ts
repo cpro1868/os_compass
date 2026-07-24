@@ -96,11 +96,34 @@ export async function deleteRadarSource(id: number): Promise<void> {
   return invoke('delete_radar_source', { id });
 }
 
+export interface RadarItemsResult {
+  items: RadarItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export async function getRadarItems(
   status?: string,
-  limit?: number
-): Promise<RadarItem[]> {
-  return invoke<RadarItem[]>('get_radar_items', { status, limit });
+  limit?: number,
+  keyword?: string,
+  sourceIds?: string,
+  startDate?: string,
+  endDate?: string,
+  page?: number,
+  pageSize?: number
+): Promise<RadarItemsResult> {
+  return invoke<RadarItemsResult>('get_radar_items', {
+    status,
+    limit,
+    keyword,
+    source_ids: sourceIds,
+    start_date: startDate,
+    end_date: endDate,
+    page,
+    page_size: pageSize,
+  });
 }
 
 export async function radarItemAction(

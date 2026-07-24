@@ -31,6 +31,12 @@ export function RadarInbox() {
   const [timeRange, setTimeRange] = useState<string>('1d');
   const [importUrl, setImportUrl] = useState<string | null>(null);
   const [supportedDomains, setSupportedDomains] = useState<string[]>([]);
+  // 搜索相关状态
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchSourceIds, setSearchSourceIds] = useState<string>('');
+  const [searchStartDate, setSearchStartDate] = useState<string>('');
+  const [searchEndDate, setSearchEndDate] = useState<string>('');
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
 
   const loadSupportedDomains = useCallback(async () => {
     try {
@@ -71,19 +77,33 @@ export function RadarInbox() {
 
   const loadItems = useCallback(async () => {
     try {
-      const data = await getRadarItems();
-      if (data === undefined || data === null) {
+      const result = await getRadarItems(
+        activeTab === 'all' ? undefined : activeTab,
+        undefined,
+        searchKeyword || undefined,
+        searchSourceIds || undefined,
+        searchStartDate || undefined,
+        searchEndDate || undefined,
+        pagination.page,
+        pagination.pageSize
+      );
+      if (result === undefined || result === null) {
         console.error('[RadarInbox] getRadarItems returned null/undefined');
         showToast('加载数据失败：返回数据为空', 'error');
         return;
       }
-      console.log('[RadarInbox] getRadarItems returned:', data.length, 'items');
-      setItems(data);
+      console.log('[RadarInbox] getRadarItems returned:', result.items.length, 'items (total:', result.total, ')');
+      setItems(result.items);
+      setPagination(prev => ({
+        ...prev,
+        total: result.total,
+        totalPages: result.total_pages,
+      }));
     } catch (e) {
       console.error('[RadarInbox] Failed to load items:', e);
       showToast('加载情报失败: ' + String(e), 'error');
     }
-  }, []);
+  }, [activeTab, searchKeyword, searchSourceIds, searchStartDate, searchEndDate, pagination.page, pagination.pageSize]);
 
   useEffect(() => {
     loadSources();
@@ -339,7 +359,7 @@ export function RadarInbox() {
             {tabs.map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => { setActiveTab(tab.key); setPagination(prev => ({ ...prev, page: 1 })); }}
                 className={`px-3 py-1.5 text-sm rounded-lg transition ${
                   activeTab === tab.key
                     ? 'bg-blue-600 text-white font-medium'
@@ -354,6 +374,57 @@ export function RadarInbox() {
                 </span>
               </button>
             ))}
+          </div>
+
+          {/* 搜索工具栏 */}
+          <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 flex-shrink-0">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="搜索关键字..."
+                value={searchKeyword}
+                onChange={e => { setSearchKeyword(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}
+                onKeyDown={e => e.key === 'Enter' && loadItems()}
+                className="w-full px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <select
+              value={searchSourceIds}
+              onChange={e => { setSearchSourceIds(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}
+              className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            >
+              <option value="">全部来源</option>
+              {sources.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <input
+              type="date"
+              value={searchStartDate}
+              onChange={e => { setSearchStartDate(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}
+              className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            />
+            <span className="text-gray-400">-</span>
+            <input
+              type="date"
+              value={searchEndDate}
+              onChange={e => { setSearchEndDate(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}
+              className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            />
+            <button
+              onClick={() => loadItems()}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition"
+            >
+              搜索
+            </button>
+            {(searchKeyword || searchSourceIds || searchStartDate || searchEndDate) && (
+              <button
+                onClick={() => { setSearchKeyword(''); setSearchSourceIds(''); setSearchStartDate(''); setSearchEndDate(''); setPagination(prev => ({ ...prev, page: 1 })); loadItems(); }}
+                className="px-3 py-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm transition"
+              >
+                清除
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-auto p-6 space-y-3">
@@ -428,6 +499,40 @@ export function RadarInbox() {
               ))
             )}
           </div>
+
+          {/* 分页控件 */}
+          {pagination.totalPages > 1 && (
+            <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                共 {pagination.total} 条，第 {pagination.page}/{pagination.totalPages} 页
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                  disabled={pagination.page <= 1}
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  上一页
+                </button>
+                <select
+                  value={pagination.pageSize}
+                  onChange={e => setPagination(prev => ({ ...prev, pageSize: Number(e.target.value), page: 1 }))}
+                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
+                >
+                  <option value={10}>10/页</option>
+                  <option value={20}>20/页</option>
+                  <option value={50}>50/页</option>
+                </select>
+                <button
+                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                  disabled={pagination.page >= pagination.totalPages}
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  下一页
+                </button>
+              </div>
+            </div>
+          )}
         </main>
 
         <aside className="w-72 bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-4 overflow-auto">

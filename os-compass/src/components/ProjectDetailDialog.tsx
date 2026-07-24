@@ -445,19 +445,22 @@ const handleAnalyze = useCallback(async () => {
       await clearTranslations(project.id);
       console.log("[analyze] Starting analyze_project for id:", project.id);
       const startTime = Date.now();
+      console.log("[analyze] Calling invoke...");
       const result = await invoke<AiResult>("analyze_project", { id: project.id });
-      const elapsed = Date.now() - startTime;
-      console.log("[analyze] Got result after", elapsed, "ms:", result);
+      console.log("[analyze] Got result after", Date.now() - startTime, "ms:", JSON.stringify(result).substring(0, 200));
       if (result.error) {
         console.error("[analyze] Error:", result.error);
         showToast(`${t("detail.reanalyzeFailed")}: ${result.error}`, "error");
       } else {
+        console.log("[analyze] Setting aiResult...");
         setAiResult(result);
+        console.log("[analyze] aiResult set complete");
       }
     } catch (e) {
       console.error("[analyze] Exception:", e);
       showToast(`${t("detail.reanalyzeFailed")}: ${String(e)}`, "error");
     } finally {
+      console.log("[analyze] Finally block, setting analyzing=false...");
       setAnalyzing(false);
       console.log("[analyze] Done, analyzing=false");
     }
@@ -574,7 +577,8 @@ const handleAnalyze = useCallback(async () => {
 
   const handleCopyUserInfo = async (id: number) => {
     try {
-      await invoke("copy_user_info_value", { id });
+      const value = await invoke<string>("copy_user_info_value", { id });
+      await navigator.clipboard.writeText(value);
       showToast("已复制到剪贴板", "success");
     } catch (e) {
       showToast(`复制失败: ${String(e)}`, "error");
@@ -1557,7 +1561,14 @@ const handleAnalyze = useCallback(async () => {
                             <i className="fa-solid fa-copy"></i>
                           </button>
                           <button
-                            onClick={() => { setEditingUserInfo(info); setNewInfoKey(info.info_key); setNewInfoValue(""); setNewInfoSecret(info.is_secret); setShowAddUserInfo(true); }}
+                            onClick={() => {
+                              setEditingUserInfo(info);
+                              setNewInfoKey(info.info_key);
+                              // 敏感信息显示脱敏值，非敏感信息显示原值（处理 null）
+                              setNewInfoValue(info.is_secret ? '********' : (info.info_value || ''));
+                              setNewInfoSecret(info.is_secret);
+                              setShowAddUserInfo(true);
+                            }}
                             className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
                             title="编辑"
                           >
