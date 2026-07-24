@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { marked } from "marked";
+import DOMPurify from "dompurify";
 
 interface DownloadUrl {
   name: string;
@@ -243,8 +245,8 @@ export function ReleasesPanel({ project }: { project: Project }) {
             const isLongBody = body.length > 500;
             const displayBody = isLongBody && !isExpanded ? body.slice(0, 500) + "..." : body;
 
-            return (
-              <div key={release.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              return (
+              <div key={release.id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
                 <div className="bg-gray-50 dark:bg-gray-900 px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded font-mono text-sm font-medium">
@@ -294,31 +296,15 @@ export function ReleasesPanel({ project }: { project: Project }) {
                   </div>
                 </div>
                 <div className="p-4">
-                  <div className="prose prose-sm max-w-none text-gray-600 dark:text-gray-400">
-                    {isLongBody && !isExpanded ? (
-                      <>
-                        <div dangerouslySetInnerHTML={{ __html: displayBody.replace(/\n/g, "<br>") }} />
-                        <button
-                          onClick={() => toggleBody(release.id)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm mt-2"
-                        >
-                          {t("releases.expandAll")}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <div dangerouslySetInnerHTML={{ __html: displayBody.replace(/\n/g, "<br>") }} />
-                        {isLongBody && (
-                          <button
-                            onClick={() => toggleBody(release.id)}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm mt-2"
-                          >
-                            {t("releases.collapse")}
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
+                  <div className="prose prose-sm max-w-none text-gray-600 dark:text-gray-400" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(displayBody) as string) }} />
+                  {isLongBody && (
+                    <button
+                      onClick={() => toggleBody(release.id)}
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm mt-2 block"
+                    >
+                      {isExpanded ? t("releases.collapse") : t("releases.expandAll")}
+                    </button>
+                  )}
                 </div>
               </div>
             );
