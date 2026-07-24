@@ -1,7 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, getSupportedPlatformDomains, RadarSource, RadarItem, RadarSourceInput } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
+
+// 获取一周前的日期（格式：YYYY-MM-DD）
+const getOneWeekAgo = (): string => {
+  const date = new Date();
+  date.setDate(date.getDate() - 7);
+  return date.toISOString().split('T')[0];
+};
+
+// 获取今天的日期（格式：YYYY-MM-DD）
+const getToday = (): string => {
+  return new Date().toISOString().split('T')[0];
+};
 
 export function RadarInbox() {
   const { t } = useTranslation();
@@ -31,11 +43,11 @@ export function RadarInbox() {
   const [timeRange, setTimeRange] = useState<string>('1d');
   const [importUrl, setImportUrl] = useState<string | null>(null);
   const [supportedDomains, setSupportedDomains] = useState<string[]>([]);
-  // 搜索相关状态
+  // 搜索相关状态（默认最近一周）
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchSourceIds, setSearchSourceIds] = useState<string>('');
-  const [searchStartDate, setSearchStartDate] = useState<string>('');
-  const [searchEndDate, setSearchEndDate] = useState<string>('');
+  const [searchStartDate, setSearchStartDate] = useState<string>(getOneWeekAgo());
+  const [searchEndDate, setSearchEndDate] = useState<string>(getToday());
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
 
   const loadSupportedDomains = useCallback(async () => {
@@ -77,38 +89,54 @@ export function RadarInbox() {
 
   const loadItems = useCallback(async () => {
     try {
+      // 只按状态筛选，从后端获取全部数据
       const result = await getRadarItems(
-        activeTab === 'all' ? undefined : activeTab,
-        undefined,
-        searchKeyword || undefined,
-        searchSourceIds || undefined,
-        searchStartDate || undefined,
-        searchEndDate || undefined,
-        pagination.page,
-        pagination.pageSize
+        activeTab === 'all' ? undefined : activeTab
       );
       if (result === undefined || result === null) {
         console.error('[RadarInbox] getRadarItems returned null/undefined');
         showToast('加载数据失败：返回数据为空', 'error');
         return;
       }
-      console.log('[RadarInbox] getRadarItems returned:', result.items.length, 'items (total:', result.total, ')');
+      console.log('[RadarInbox] getRadarItems returned:', result.items.length, 'items');
       setItems(result.items);
-      setPagination(prev => ({
-        ...prev,
-        total: result.total,
-        totalPages: result.total_pages,
-      }));
+      // 重置分页
+      setPagination(prev => ({ ...prev, page: 1, total: result.items.length, totalPages: Math.ceil(result.items.length / prev.pageSize) }));
     } catch (e) {
       console.error('[RadarInbox] Failed to load items:', e);
       showToast('加载情报失败: ' + String(e), 'error');
     }
-  }, [activeTab, searchKeyword, searchSourceIds, searchStartDate, searchEndDate, pagination.page, pagination.pageSize]);
+  }, [activeTab]);
 
-  // 搜索条件变化时自动加载
-  useEffect(() => {
-    loadItems();
-  }, [activeTab, searchKeyword, searchSourceIds, searchStartDate, searchEndDate, pagination.page, pagination.pageSize]);
+  // 前端展示筛选（根据搜索条件过滤已加载的数据）
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      // 关键字筛选
+      if (searchKeyword) {
+        const kw = searchKeyword.toLowerCase();
+        const matchName = item.project_name?.toLowerCase().includes(kw);
+        const matchDesc = item.description?.toLowerCase().includes(kw);
+        if (!matchName && !matchDesc) return false;
+      }
+      // 来源筛选
+      if (searchSourceIds && String(item.source_id) !== searchSourceIds) {
+        return false;
+      }
+      // 日期筛选
+      const itemDate = item.published_at || item.fetched_at;
+      if (itemDate) {
+        if (searchStartDate && itemDate < searchStartDate) return false;
+        if (searchEndDate) {
+          const endDate = new Date(searchEndDate);
+          endDate.setDate(endDate.getDate() + 1); // 包含结束日期当天
+          if (itemDate > endDate.toISOString()) return false;
+        }
+      }
+      return true;
+    });
+  }, [items, searchKeyword, searchSourceIds, searchStartDate, searchEndDate]);
+
+  // 移除错误的自动加载 useEffect
 
   useEffect(() => {
     loadSources();
@@ -422,24 +450,24 @@ export function RadarInbox() {
             >
               搜索
             </button>
-            {(searchKeyword || searchSourceIds || searchStartDate || searchEndDate) && (
+            {(searchKeyword || searchSourceIds || searchStartDate !== getOneWeekAgo() || searchEndDate !== getToday()) && (
               <button
-                onClick={() => { setSearchKeyword(''); setSearchSourceIds(''); setSearchStartDate(''); setSearchEndDate(''); setPagination(prev => ({ ...prev, page: 1 })); loadItems(); }}
+                onClick={() => { setSearchKeyword(''); setSearchSourceIds(''); setSearchStartDate(getOneWeekAgo()); setSearchEndDate(getToday()); }}
                 className="px-3 py-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm transition"
               >
-                清除
+                重置
               </button>
             )}
           </div>
 
           <div className="flex-1 overflow-auto p-6 space-y-3">
-            {items.length === 0 ? (
+            {filteredItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
                 <i className="fa-solid fa-inbox text-4xl mb-4" />
-                <p>{t('radar.empty')}</p>
+                <p>{searchKeyword || searchSourceIds || searchStartDate ? '无匹配结果' : t('radar.empty')}</p>
               </div>
             ) : (
-              items.filter(item => activeTab === 'all' || item.status === activeTab).map(item => (
+              filteredItems.map(item => (
                 <div
                   key={item.id}
                   className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-gray-300 dark:hover:border-gray-600 transition"
