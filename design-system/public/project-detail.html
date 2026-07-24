@@ -113,9 +113,12 @@
             <i class="fa-solid fa-tag mr-1"></i>Releases
           </button>
           <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="notes">本地笔记</button>
-          <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="user-info">
-            <i class="fa-solid fa-lock mr-1"></i>用户信息
-          </button>
+           <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="user-info">
+             <i class="fa-solid fa-lock mr-1"></i>用户信息
+           </button>
+           <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="article">
+             <i class="fa-solid fa-file-alt mr-1"></i>文章生成
+           </button>
         </nav>
       </div>
 
@@ -770,12 +773,121 @@
                   <input type="checkbox" class="rounded"> 敏感信息（加密存储）
                 </label>
                 <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 文章生成 -->
+          <div id="content-article" class="tab-content hidden">
+            <div class="space-y-6">
+              <!-- 生成配置 -->
+              <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 class="text-lg font-bold mb-4">
+                  <i class="fa-solid fa-file-alt mr-2 text-blue-600"></i>文章生成配置
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <!-- 文章风格 -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2">文章风格</label>
+                    <select id="article-style" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <option value="tech-science">技术科普风格</option>
+                      <option value="business">商业推广风格</option>
+                      <option value="tech-blog">技术博客风格</option>
+                      <option value="brief">简介说明风格</option>
+                      <option value="humor">幽默吐槽风格</option>
+                      <option value="custom">自定义</option>
+                    </select>
+                  </div>
+
+                  <!-- 字数要求 -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2">字数要求</label>
+                    <select id="article-length" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <option value="short">短文（500-800字）</option>
+                      <option value="medium">中等（1000-1500字）</option>
+                      <option value="long">长文（2000-3000字）</option>
+                      <option value="custom">自定义</option>
+                    </select>
+                  </div>
+
+                  <!-- 输出格式 -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2">输出格式</label>
+                    <select id="article-format" class="w-full px-3 py-2 border rounded-lg text-sm">
+                      <option value="markdown">Markdown</option>
+                      <option value="pdf">PDF</option>
+                      <option value="txt">纯文本</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- 自定义输入（当选择自定义时显示） -->
+                <div id="article-custom-section" class="hidden mt-4 p-4 bg-gray-50 rounded-lg border">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium mb-1">自定义风格描述</label>
+                      <textarea id="article-custom-style" rows="2" placeholder="描述期望的文章风格..." class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-1">自定义字数</label>
+                      <input type="number" id="article-custom-length" placeholder="输入期望字数" class="w-full px-3 py-2 border rounded-lg text-sm">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 生成按钮 -->
+                <div class="mt-6 flex items-center gap-4">
+                  <button id="generate-article" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>生成文章
+                  </button>
+                  <span class="text-sm text-gray-500">基于项目 README 和 AI 分析结果生成</span>
+                </div>
+              </div>
+
+              <!-- 文章编辑器 -->
+              <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="font-medium">文章内容</h3>
+                  <div class="flex items-center gap-2">
+                    <input type="text" id="article-filename" value="react项目介绍" placeholder="文件名" class="px-3 py-1.5 border rounded-lg text-sm w-48">
+                    <select id="article-export-format" class="px-3 py-1.5 border rounded-lg text-sm">
+                      <option value="markdown">.md</option>
+                      <option value="pdf">.pdf</option>
+                      <option value="txt">.txt</option>
+                    </select>
+                    <button id="export-article" class="px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-1">
+                      <i class="fa-solid fa-download"></i>导出
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 编辑器 -->
+                <div class="border rounded-lg overflow-hidden">
+                  <div class="bg-gray-50 px-3 py-2 border-b flex items-center gap-4 text-xs text-gray-500">
+                    <span><i class="fa-solid fa-pen mr-1"></i>Markdown 编辑器</span>
+                  </div>
+                  <textarea id="article-editor" rows="20" placeholder="生成的文章将显示在这里..." class="w-full p-4 text-sm font-mono leading-relaxed resize-y"></textarea>
+                </div>
+
+                <!-- 生成状态 -->
+                <div id="article-generating" class="hidden mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-spinner fa-spin text-blue-600"></i>
+                    <span class="text-blue-700">正在生成文章中，请稍候...</span>
+                  </div>
+                </div>
+
+                <!-- 提示信息 -->
+                <div class="mt-4 text-xs text-gray-500 flex items-start gap-2">
+                  <i class="fa-solid fa-info-circle mt-0.5"></i>
+                  <span>文章基于项目 README、AI 分析结果和适用场景生成，支持 Markdown 格式导出</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
   </div>
   
   <script>
@@ -983,7 +1095,59 @@
             }
 
             alert('AI 分类完成：前端 / UI框架（置信度 92%）');
-          }, 2000);
+          });
+        });
+      });
+
+      // 文章生成页面交互
+      var articleStyle = document.getElementById('article-style');
+      var articleLength = document.getElementById('article-length');
+      var articleFormat = document.getElementById('article-format');
+      var articleCustomSection = document.getElementById('article-custom-section');
+      var generateBtn = document.getElementById('generate-article');
+      var exportBtn = document.getElementById('export-article');
+      var articleEditor = document.getElementById('article-editor');
+      var articleFilename = document.getElementById('article-filename');
+      var articleExportFormat = document.getElementById('article-export-format');
+      var articleGenerating = document.getElementById('article-generating');
+
+      if (articleStyle) {
+        articleStyle.addEventListener('change', function() {
+          if (articleCustomSection) articleCustomSection.classList.toggle('hidden', this.value !== 'custom');
+        });
+      }
+      if (articleLength) {
+        articleLength.addEventListener('change', function() {
+          if (articleCustomSection) articleCustomSection.classList.toggle('hidden', this.value !== 'custom');
+        });
+      }
+      if (generateBtn) {
+        generateBtn.addEventListener('click', function() {
+          if (articleGenerating) articleGenerating.classList.remove('hidden');
+          this.disabled = true;
+          this.classList.add('opacity-75');
+          setTimeout(function() {
+            if (articleGenerating) articleGenerating.classList.add('hidden');
+            this.disabled = false;
+            this.classList.remove('opacity-75');
+            if (articleEditor) {
+              articleEditor.value = '# React 项目介绍\n\n## 项目概述\n\nReact 是 Facebook 推出的用于构建用户界面的 JavaScript 库，采用组件化开发模式。\n\n## 核心特性\n\n- 组件化开发\n- 虚拟 DOM\n- 单向数据流\n- 丰富生态\n\n## 适用场景\n\n1. 中大型 Web 应用\n2. 移动端跨平台开发\n3. SSR 应用\n\n## 总结\n\nReact 作为主流前端框架，值得深入学习。';
+          }.bind(this), 3000);
+        });
+      }
+      if (exportBtn) {
+        exportBtn.addEventListener('click', function() {
+          alert('导出文件（原型演示，实际会弹出系统保存对话框）');
+        });
+      }
+      if (articleExportFormat) {
+        articleExportFormat.addEventListener('change', function() {
+          if (articleFormat) articleFormat.value = this.value;
+        });
+      }
+      if (articleFormat) {
+        articleFormat.addEventListener('change', function() {
+          if (articleExportFormat) articleExportFormat.value = this.value;
         });
       }
     });
