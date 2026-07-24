@@ -185,27 +185,72 @@ pub fn delete_radar_source(id: i64) -> Result<(), String> {
 }
 
 #[command]
-pub fn get_radar_items(status: Option<String>, limit: Option<i64>) -> Result<Vec<RadarItem>, String> {
+pub fn get_radar_items(
+    status: Option<String>,
+    limit: Option<i64>,
+    keyword: Option<String>,
+    source_ids: Option<String>,
+    start_date: Option<String>,
+    end_date: Option<String>,
+    page: Option<i64>,
+    page_size: Option<i64>,
+) -> Result<RadarItemsResult, String> {
     let conn = get_radar_conn()?;
     let lim = limit.unwrap_or(500);
+    let page = page.unwrap_or(1).max(1);
+    let page_size = page_size.unwrap_or(20).min(100);
+    let offset = (page - 1) * page_size;
 
-    let mut items = Vec::new();
-    let query = if let Some(s) = status {
-        format!(
-            "SELECT id, source_id, project_name, project_url, description, language, status, published_at, fetched_at \
-             FROM radar_items \
-             WHERE status = '{}' \
-             ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT {}",
-            s, lim
-        )
+    let mut conditions = Vec::new();
+
+    if let Some(ref s) = status {
+        conditions.push(format!("status = '{}'", s));
+    }
+
+    if let Some(ref kw) = keyword {
+        if !kw.is_empty() {
+            conditions.push(format!(
+                "(project_name LIKE '%{}%' OR description LIKE '%{}%')",
+                kw.replace('\'', "''"),
+                kw.replace('\'', "''")
+            ));
+        }
+    }
+
+    if let Some(ref ids) = source_ids {
+        if !ids.is_empty() {
+            conditions.push(format!("source_id IN ({})", ids));
+        }
+    }
+
+    if let Some(ref start) = start_date {
+        conditions.push(format!("COALESCE(published_at, fetched_at) >= '{}'", start));
+    }
+
+    if let Some(ref end) = end_date {
+        conditions.push(format!("COALESCE(published_at, fetched_at) <= '{}'", end));
+    }
+
+    let where_clause = if conditions.is_empty() {
+        String::new()
     } else {
-        format!(
-            "SELECT id, source_id, project_name, project_url, description, language, status, published_at, fetched_at \
-             FROM radar_items \
-             ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT {}",
-            lim
-        )
+        format!("WHERE {}", conditions.join(" AND "))
     };
+
+    // 查询总数
+    let count_query = format!("SELECT COUNT(*) FROM radar_items {}", where_clause);
+    let total: i64 = conn
+        .query_row(&count_query, [], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+
+    // 查询数据
+    let query = format!(
+        "SELECT id, source_id, project_name, project_url, description, language, status, published_at, fetched_at \
+         FROM radar_items {} \
+         ORDER BY COALESCE(published_at, fetched_at) DESC \
+         LIMIT {} OFFSET {}",
+        where_clause, lim, offset
+    );
 
     let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
     let rows = stmt.query_map([], |row| {
@@ -223,17 +268,34 @@ pub fn get_radar_items(status: Option<String>, limit: Option<i64>) -> Result<Vec
         })
     }).map_err(|e| e.to_string())?;
 
+    let mut items = Vec::new();
     for row in rows {
         let mut item = row.map_err(|e| e.to_string())?;
-        // 从系统库获取信息源名称
         if let Ok(sources) = PLUGIN_CONFIG_DB.get_radar_source_name(item.source_id) {
             item.source_name = Some(sources);
         }
         items.push(item);
     }
 
-    println!("[radar] get_radar_items returning {} items", items.len());
-    Ok(items)
+    let total_pages = (total as f64 / page_size as f64).ceil() as i64;
+
+    println!("[radar] get_radar_items returning {} items (page {}/{})", items.len(), page, total_pages);
+    Ok(RadarItemsResult {
+        items,
+        total,
+        page,
+        page_size,
+        total_pages,
+    })
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RadarItemsResult {
+    pub items: Vec<RadarItem>,
+    pub total: i64,
+    pub page: i64,
+    pub page_size: i64,
+    pub total_pages: i64,
 }
 
 #[command]

@@ -1158,6 +1158,9 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
           onSave={async (config) => {
             try {
               await invoke("save_plugin_config", { pluginId: editingPlugin.id, config });
+              // 重新加载插件列表以更新配置
+              const plugins = await invoke<FeaturePlugin[]>("list_feature_plugins");
+              setFeaturePlugins(plugins);
               setPluginConfigOpen(false);
               setEditingPlugin(null);
             } catch (e) {
