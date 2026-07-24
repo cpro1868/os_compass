@@ -2,7 +2,25 @@
 
 **创建日期**：2026-07-23
 **问题**：点击"重新分析"后长时间无输出（超过 30 秒）
-**状态**：✅ 已修复（待验证）
+**状态**：✅ 已修复（已验证）
+
+---
+
+## 修复验证
+
+### 2026-07-24 - 测试通过
+
+**测试结果**：
+1. 第一次调用：网络错误 `Failed to parse response: error decoding response body`（非代码问题）
+2. 第二次调用：成功
+   ```
+   Step 1a: Extract ```json block, extracted 1468 chars
+   Step 2: JSON already starts with {
+   Step 3: JSON parse OK, summary_len= Some(516)
+   Parsing complete, total time: 7.0581092s
+   ```
+
+**结论**：代码块解析逻辑修复有效
 
 ---
 
