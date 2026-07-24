@@ -27,6 +27,11 @@ export interface Project {
   deleted_at?: string;
   created_at: string;
   updated_at: string;
+  // AI 分析结果字段
+  ai_summary?: string;
+  ai_use_cases?: string;
+  ai_risks?: string;
+  ai_dependencies?: string;
 }
 
 export interface CreateProjectInput {
