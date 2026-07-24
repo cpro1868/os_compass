@@ -266,8 +266,10 @@ fn clean_llm_output(text: &str) -> String {
 }
 
 async fn translate_with_llm(text: &str, target_lang: &str) -> Result<String, String> {
+    println!("[TRANSLATE_LLM] Start, text length: {}, target: {}", text.len(), target_lang);
     let client = LlmClient::from_settings()
         .ok_or_else(|| "LLM not configured".to_string())?;
+    println!("[TRANSLATE_LLM] LLM client created");
 
     let prompt = format!(
         r#"Translate the following text to {}. Return ONLY the translated text without any explanations, quotes, or markers.
@@ -289,7 +291,9 @@ Text:
         },
     ];
 
+    println!("[TRANSLATE_LLM] Calling LLM chat...");
     let result = client.chat(messages).await?;
+    println!("[TRANSLATE_LLM] LLM chat success, result length: {}", result.len());
     Ok(clean_llm_output(&result))
 }
 
