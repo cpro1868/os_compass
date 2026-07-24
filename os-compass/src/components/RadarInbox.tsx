@@ -89,10 +89,8 @@ export function RadarInbox() {
 
   const loadItems = useCallback(async () => {
     try {
-      // 只按状态筛选，从后端获取全部数据
-      const result = await getRadarItems(
-        activeTab === 'all' ? undefined : activeTab
-      );
+      // 加载全部数据，用于显示各 tab 的数量
+      const result = await getRadarItems(undefined);
       if (result === undefined || result === null) {
         console.error('[RadarInbox] getRadarItems returned null/undefined');
         showToast('加载数据失败：返回数据为空', 'error');
@@ -106,11 +104,13 @@ export function RadarInbox() {
       console.error('[RadarInbox] Failed to load items:', e);
       showToast('加载情报失败: ' + String(e), 'error');
     }
-  }, [activeTab]);
+  }, []);
 
-  // 前端展示筛选（根据搜索条件过滤已加载的数据）
+  // 前端展示筛选（根据状态和搜索条件过滤已加载的数据）
   const filteredItems = useMemo(() => {
     return items.filter(item => {
+      // 状态筛选
+      if (activeTab !== 'all' && item.status !== activeTab) return false;
       // 关键字筛选
       if (searchKeyword) {
         const kw = searchKeyword.toLowerCase();
@@ -134,7 +134,7 @@ export function RadarInbox() {
       }
       return true;
     });
-  }, [items, searchKeyword, searchSourceIds, searchStartDate, searchEndDate]);
+  }, [items, activeTab, searchKeyword, searchSourceIds, searchStartDate, searchEndDate]);
 
   // 移除错误的自动加载 useEffect
 
