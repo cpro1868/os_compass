@@ -84,6 +84,7 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
   const [newInfoKey, setNewInfoKey] = useState("");
   const [newInfoValue, setNewInfoValue] = useState("");
   const [newInfoSecret, setNewInfoSecret] = useState(false);
+  const [showSecretValue, setShowSecretValue] = useState(false);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
     const id = toastId + 1;
@@ -1564,9 +1565,10 @@ const handleAnalyze = useCallback(async () => {
                             onClick={() => {
                               setEditingUserInfo(info);
                               setNewInfoKey(info.info_key);
-                              // 敏感信息显示脱敏值，非敏感信息显示原值（处理 null）
-                              setNewInfoValue(info.is_secret ? '********' : (info.info_value || ''));
                               setNewInfoSecret(info.is_secret);
+                              // 敏感信息显示脱敏值，非敏感信息显示原值
+                              setNewInfoValue(info.is_secret ? '********' : (info.info_value || ''));
+                              setShowSecretValue(false); // 默认隐藏敏感信息
                               setShowAddUserInfo(true);
                             }}
                             className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
@@ -1609,13 +1611,41 @@ const handleAnalyze = useCallback(async () => {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           {editingUserInfo ? "新值（留空则不修改）" : "值"}
                         </label>
-                        <textarea
-                          value={newInfoValue}
-                          onChange={(e) => setNewInfoValue(e.target.value)}
-                          className="w-full px-3 py-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 rounded-lg font-mono text-sm"
-                          rows={3}
-                          placeholder={editingUserInfo ? "留空保持原值" : "输入敏感信息..."}
-                        />
+                        <div className="relative">
+                          <textarea
+                            value={newInfoValue}
+                            onChange={(e) => setNewInfoValue(e.target.value)}
+                            className="w-full px-3 py-2 pr-10 border dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 rounded-lg font-mono text-sm"
+                            rows={3}
+                            placeholder={editingUserInfo ? "留空保持原值" : "输入敏感信息..."}
+                          />
+                          {editingUserInfo && newInfoSecret && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (showSecretValue) {
+                                  setShowSecretValue(false);
+                                  setNewInfoValue('********');
+                                } else {
+                                  try {
+                                    const decrypted = await invoke<string>("copy_user_info_value", { id: editingUserInfo.id });
+                                    setNewInfoValue(decrypted);
+                                    setShowSecretValue(true);
+                                  } catch (e) {
+                                    showToast(`解密失败: ${String(e)}`, "error");
+                                  }
+                                }
+                              }}
+                              className="absolute right-2 top-2 p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                              title={showSecretValue ? "隐藏" : "显示原文"}
+                            >
+                              <i className={`fa-solid ${showSecretValue ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                            </button>
+                          )}
+                        </div>
+                        {editingUserInfo && newInfoSecret && !showSecretValue && (
+                          <p className="text-xs text-gray-400 mt-1">点击眼睛图标查看原文</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-3">
                         <input
