@@ -105,6 +105,11 @@ export function RadarInbox() {
     }
   }, [activeTab, searchKeyword, searchSourceIds, searchStartDate, searchEndDate, pagination.page, pagination.pageSize]);
 
+  // 搜索条件变化时自动加载
+  useEffect(() => {
+    loadItems();
+  }, [activeTab, searchKeyword, searchSourceIds, searchStartDate, searchEndDate, pagination.page, pagination.pageSize]);
+
   useEffect(() => {
     loadSources();
     loadItems();
