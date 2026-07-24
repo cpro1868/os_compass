@@ -368,7 +368,9 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
 
     const hasAiResult = aiResult && (aiResult.summary || aiResult.useCases || aiResult.risks || aiResult.dependencies);
     const hasDescription = !!project.description;
+    console.log("[translateOverview] hasAiResult:", !!hasAiResult, "hasDescription:", hasDescription, "description length:", project.description?.length);
     if (!hasAiResult && !hasDescription) {
+      console.log("[translateOverview] No content to translate, returning early");
       return;
     }
 
@@ -382,17 +384,20 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
       setter: (v: string | null) => void,
       existing: string | null,
     ) => {
-      if (!text || text.trim() === "") return;
-      if (existing && existing.trim()) return;
+      console.log("[translateOverview] Processing field:", field, "text length:", text?.length);
+      if (!text || text.trim() === "") { console.log("[translateOverview] Empty text, skip"); return; }
+      if (existing && existing.trim()) { console.log("[translateOverview] Already translated, skip"); return; }
       setTranslatingFields(prev => new Set(prev).add(field));
       try {
+        console.log("[translateOverview] Calling translate_with_llm for:", field);
         const result = await invoke<string>("translate_with_llm", { text, targetLang: lang });
+        console.log("[translateOverview] Success for", field, ":", result?.substring(0, 50));
         if (result && result.trim()) {
           setter(result);
           await invoke("save_translation_cmd", { projectId: project.id, fieldName: field, language: lang, content: result }).catch(() => {});
         }
       } catch (e) {
-        // 翻译失败，保留原文
+        console.error("[translateOverview] Failed for", field, ":", e);
       } finally {
         setTranslatingFields(prev => {
           const next = new Set(prev);
@@ -407,8 +412,11 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
     if (aiResult?.useCases) tasks.push(translateAndSave("use_cases", aiResult.useCases, setTranslatedUseCases, translatedUseCases));
     if (aiResult?.risks) tasks.push(translateAndSave("risks", aiResult.risks, setTranslatedRisks, translatedRisks));
     if (aiResult?.dependencies) tasks.push(translateAndSave("dependencies", aiResult.dependencies, setTranslatedDeps, translatedDeps));
-    if (project.description) tasks.push(translateAndSave("description", project.description, setTranslatedDescription, translatedDescription));
-
+    if (project.description) {
+      console.log("[translateOverview] Adding description to tasks");
+      tasks.push(translateAndSave("description", project.description, setTranslatedDescription, translatedDescription));
+    }
+    console.log("[translateOverview] Total tasks:", tasks.length);
     await Promise.all(tasks);
     setIsTranslating(false);
   };
