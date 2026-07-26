@@ -26,7 +26,9 @@ impl CrawlerService {
 
     pub fn is_running(&mut self) -> bool {
         let url = self.get_url();
-        if TcpStream::connect_timeout(&url[7..].parse().ok().unwrap_or_else(|| "127.0.0.1:8080".parse().unwrap()), Duration::from_millis(100)).is_ok() {
+        let host_part = url.strip_prefix("http://").unwrap_or(&url);
+        let addr = host_part.parse().ok().unwrap_or_else(|| "127.0.0.1:8080".parse().unwrap());
+        if TcpStream::connect_timeout(&addr, Duration::from_millis(100)).is_ok() {
             self.was_running = true;
             true
         } else {

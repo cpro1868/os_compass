@@ -1,8 +1,10 @@
+pub mod article;
 pub mod commands;
 pub mod content_filter;
 pub mod crypto;
 pub mod crawler_service;
 pub mod db;
+pub mod error;
 pub mod feature_plugin;
 pub mod health;
 pub mod llm;
@@ -12,11 +14,14 @@ pub mod plugin_config_db;
 pub mod plugin_loader;
 pub mod plugin_manager;
 pub mod plugins;
+pub mod services;
 pub mod settings;
 pub mod source_engine;
 pub mod system_db;
 pub mod translate;
 pub mod vault;
+
+mod prompts;
 
 #[cfg(test)]
 mod db_tests;
@@ -24,6 +29,7 @@ mod db_tests;
 use std::sync::Mutex;
 use tauri::Manager;
 use tauri::{command, Emitter};
+use log;
 
 lazy_static::lazy_static! {
     pub static ref PROJECT_DIR: Mutex<Option<std::path::PathBuf>> = Mutex::new(None);
@@ -67,7 +73,7 @@ fn find_git_root(path: &std::path::Path) -> Option<std::path::PathBuf> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    println!("OS-Compass starting...");
+    log::info!("OS-Compass starting...");
     
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -78,21 +84,39 @@ pub fn run() {
                 let _ = window.unminimize();
             }
         }))
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::LogDir { file_name: Some("os-compass".into()) },
+                ))
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                .build(),
+        )
         .setup(|app| {
             // 系统库：Roaming 下的 .os-compass
             let app_dir = app.path().app_data_dir().expect("Failed to get app data dir");
-            println!("App data directory (system): {:?}", app_dir);
+            log::info!("App data directory (system): {:?}", app_dir);
             std::fs::create_dir_all(&app_dir).expect("Failed to create app data dir");
 
             if let Err(e) = system_db::init_system_db(&app_dir) {
-                eprintln!("[system_db] Failed to initialize system DB: {}", e);
+                log::error!("[system_db] Failed to initialize system DB: {}", e);
             } else {
-                println!("[system_db] System DB initialized successfully");
+                log::info!("[system_db] System DB initialized successfully");
+                if let Ok(system_db) = system_db::SYSTEM_DB.lock() {
+                    if let Some(db) = system_db.as_ref() {
+                        let conn = db.get_connection();
+                        if let Err(e) = article::ArticlePrompts::init_system_db(&conn) {
+                            log::error!("[article_prompts] Failed to initialize: {}", e);
+                        } else {
+                            log::info!("[article_prompts] Article prompts initialized successfully");
+                        }
+                    }
+                }
             }
 
             // 仓库库：Local 下的 com.administrator.os-compass
             let vault_root = app.path().app_local_data_dir().expect("Failed to get local data dir");
-            println!("Vault root directory: {:?}", vault_root);
+            log::info!("Vault root directory: {:?}", vault_root);
             std::fs::create_dir_all(&vault_root).expect("Failed to create vault root dir");
             
             let vaults_root = vault_root.join("vaults");
@@ -106,21 +130,21 @@ pub fn run() {
             let old_config_path = old_vault_root.join("config.json");
             
             if !default_vault_path.exists() && old_db_path.exists() {
-                println!("[vault] Migrating vault from old location: {:?}", old_vault_root);
+                log::info!("[vault] Migrating vault from old location: {:?}", old_vault_root);
                 std::fs::create_dir_all(&default_vault_dir).ok();
                 
                 // 复制仓库库文件
                 if old_db_path.exists() {
                     std::fs::copy(&old_db_path, &default_vault_path).ok();
-                    println!("[vault] Copied os_compass.db");
+                    log::info!("[vault] Copied os_compass.db");
                 }
                 if old_key_path.exists() {
                     std::fs::copy(&old_key_path, &default_vault_dir.join(".cryptokey")).ok();
-                    println!("[vault] Copied .cryptokey");
+                    log::info!("[vault] Copied .cryptokey");
                 }
                 if old_config_path.exists() {
                     std::fs::copy(&old_config_path, &default_vault_dir.join("config.json")).ok();
-                    println!("[vault] Copied config.json");
+                    log::info!("[vault] Copied config.json");
                 }
             }
 
@@ -136,7 +160,7 @@ pub fn run() {
                         let vault_dir = std::path::PathBuf::from(&path);
                         let db_path = vault_dir.join("os_compass.db");
                         if db_path.exists() {
-                            println!("Auto-opening last vault: {:?}", path);
+                            log::info!("Auto-opening last vault: {:?}", path);
                             if db::switch_database(db_path).is_ok() {
                                 let config = vault::load_vault_config(&path);
                                 let mut current = vault::CURRENT_VAULT_CONFIG.lock().unwrap();
@@ -150,7 +174,7 @@ pub fn run() {
             }
 
             if !vault_path_loaded && default_vault_path.exists() {
-                println!("Loading existing database as default vault");
+                log::info!("Loading existing database as default vault");
                 if db::switch_database(default_vault_path.clone()).is_ok() {
                     let vault_name = "默认仓库".to_string();
 
@@ -173,7 +197,7 @@ pub fn run() {
                     for vault in &mut index.vaults {
                         if vault.path == old_vault_root.to_string_lossy().to_string() {
                             vault.path = new_vault_path.clone();
-                            println!("[vault] Updated vault path in index");
+                            log::info!("[vault] Updated vault path in index");
                         }
                     }
                     vault::save_vault_index(&app_handle, &index).ok();
@@ -209,7 +233,7 @@ pub fn run() {
                             if res_script.exists() {
                                 if std::fs::copy(&res_script, &target_script).is_ok() {
                                     copied = true;
-                                    println!("Copied init_schema.sql from resource dir");
+                                    log::info!("Copied init_schema.sql from resource dir");
                                 }
                             }
                         }
@@ -219,7 +243,7 @@ pub fn run() {
                                 let dev_script = proj_dir.join("scripts").join("init_schema.sql");
                                 if dev_script.exists() {
                                     if std::fs::copy(&dev_script, &target_script).is_ok() {
-                                        println!("Copied init_schema.sql from project dir");
+                                        log::info!("Copied init_schema.sql from project dir");
                                     }
                                 }
                             }
@@ -231,13 +255,13 @@ pub fn run() {
             // 加密密钥：系统级密钥，存储在 app_data_dir，不跟随仓库切换
             // 所有系统级配置（llm_api_key 等）使用此密钥加密
             let key_path = app_dir.join(".cryptokey");
-            println!("Using system-level crypto key path: {:?}", key_path);
+            log::info!("Using system-level crypto key path: {:?}", key_path);
             let crypto_key = if key_path.exists() {
                 match std::fs::read_to_string(&key_path) {
                     Ok(content) => {
                         match crypto::key_from_base64(content.trim()) {
                             Ok(k) => {
-                                println!("Loaded system-level crypto key");
+                                log::info!("Loaded system-level crypto key");
                                 k
                             }
                             Err(_) => {
@@ -262,11 +286,11 @@ pub fn run() {
                     if let Ok(content) = std::fs::read_to_string(&legacy_key_path) {
                         if let Ok(k) = crypto::key_from_base64(content.trim()) {
                             let _ = std::fs::write(&key_path, crypto::key_to_base64(&k));
-                            println!("Migrated crypto key from vault dir to system dir");
+                            log::info!("Migrated crypto key from vault dir to system dir");
                             crypto::init_crypto(k);
                             let _ = crate::settings::get_settings();
                             crate::commands::variables::cleanup_undecryptable_secrets();
-                            println!("Database, settings, and crypto initialized (legacy vault key)");
+                            log::info!("Database, settings, and crypto initialized (legacy vault key)");
                             return Ok(());
                         }
                     }
@@ -274,15 +298,15 @@ pub fn run() {
                 // 首次启动：生成新密钥
                 let k = crypto::generate_key();
                 let _ = std::fs::write(&key_path, crypto::key_to_base64(&k));
-                println!("Generated new system-level crypto key");
+                log::info!("Generated new system-level crypto key");
                 k
             };
             crypto::init_crypto(crypto_key);
 
             // 验证加密服务可用
             match crypto::encrypt_string("__verify__") {
-                Ok(_) => println!("[crypto] Verification: encrypt/decrypt service OK"),
-                Err(e) => println!("[crypto] WARNING: encrypt verification failed: {}", e),
+                Ok(_) => log::info!("[crypto] Verification: encrypt/decrypt service OK"),
+                Err(e) => log::warn!("[crypto] WARNING: encrypt verification failed: {}", e),
             }
 
             // 启动时立即触发一次 settings 读取，确保从 settings.db 迁移到 app_settings
@@ -291,7 +315,7 @@ pub fn run() {
             // 检查 system_variables 中无法用当前密钥解密的旧密文（仅警告，不清空）
             crate::commands::variables::cleanup_undecryptable_secrets();
 
-            println!("Database, settings, and crypto initialized");
+            log::info!("Database, settings, and crypto initialized");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -426,6 +450,9 @@ pub fn run() {
             commands::delete_search_source,
             commands::refresh_search_cache,
             commands::import_search_result,
+            commands::generate_article,
+            commands::export_article,
+            commands::get_article_styles,
             get_app_data_dir,
             get_radar_data_dir,
             get_vault_dir,

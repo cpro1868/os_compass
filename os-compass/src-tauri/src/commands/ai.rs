@@ -4,6 +4,7 @@ use crate::llm::{build_system_prompt, LlmClient, LlmMessage};
 use crate::settings::AppSettings;
 use serde::{Deserialize, Serialize};
 use std::io::{Write, stderr};
+use log;
 
 #[derive(Debug, Serialize)]
 pub struct AiAnalysisResult {
@@ -172,7 +173,7 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
     let llm = match LlmClient::from_settings() {
         Some(llm) => llm,
         None => {
-            eprintln!("[analyze_project] LLM not configured");
+            log::error!("[analyze_project] LLM not configured");
             return AiAnalysisResult {
                 summary: None,
                 use_cases: None,
@@ -186,7 +187,7 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
     };
 
     let readme_len = project_data.1.as_ref().map(|r| r.len()).unwrap_or(0);
-    eprintln!("[analyze_project] Processing README ({} chars) for project '{}'...", readme_len, project_data.2);
+    log::debug!("[analyze_project] Processing README ({} chars) for project '{}'...", readme_len, project_data.2);
 
     let system_msg = build_system_prompt();
 
@@ -194,7 +195,7 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
         .map(|r| crate::llm::preprocess_readme_for_analysis(r))
         .unwrap_or_else(|| "No README available".to_string());
 
-    eprintln!("[analyze_project] Prompt prepared, sending to LLM (prompt length: {})...", readme_snippet.len());
+    log::debug!("[analyze_project] Prompt prepared, sending to LLM (prompt length: {})...", readme_snippet.len());
 
     let user_msg = LlmMessage {
         role: "user".to_string(),
@@ -207,7 +208,7 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
 
     let log_to_file = |msg: &str| {
         let log_msg = format!("[{}] {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"), msg);
-        eprintln!("{}", log_msg);
+        log::debug!("{}", log_msg);
         
         if let Some(base_dirs) = directories::BaseDirs::new() {
             let app_data_dir = base_dirs.data_dir();
@@ -244,18 +245,28 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
             let code_block_start = json_str.find("```json");
             let code_block_tick = json_str.find("```");
             log_to_file(&format!("[AI_ANALYZE] find ```json: {:?}, find ```: {:?}", code_block_start, code_block_tick));
-            
+
             if let Some(start) = code_block_start {
-                if let Some(end) = json_str[start..].find("```") {
-                    let actual_end = start + end;
-                    json_str = json_str[start + 7..actual_end].trim().to_string();
-                    log_to_file(&format!("[AI_ANALYZE] Step 1a: Extract ```json block, time: {:?}", step1_start.elapsed()));
+                let after_start = start + 7;
+                if let Some(rel_end) = json_str[after_start..].find("```") {
+                    let end = after_start + rel_end;
+                    if end > after_start {
+                        json_str = json_str[after_start..end].trim().to_string();
+                        log_to_file(&format!("[AI_ANALYZE] Step 1a: Extract ```json block, extracted {} chars, time: {:?}", json_str.len(), step1_start.elapsed()));
+                    } else {
+                        log_to_file(&format!("[AI_ANALYZE] Step 1a: Invalid range after_start={}, end={}", after_start, end));
+                    }
                 }
             } else if let Some(start) = json_str.find("```") {
-                if let Some(end) = json_str[start..].find("```") {
-                    let actual_end = start + end;
-                    json_str = json_str[start + 3..actual_end].trim().to_string();
-                    log_to_file(&format!("[AI_ANALYZE] Step 1b: Extract ``` block, time: {:?}", step1_start.elapsed()));
+                let after_start = start + 3;
+                if let Some(rel_end) = json_str[after_start..].find("```") {
+                    let end = after_start + rel_end;
+                    if end > after_start {
+                        json_str = json_str[after_start..end].trim().to_string();
+                        log_to_file(&format!("[AI_ANALYZE] Step 1b: Extract ``` block, extracted {} chars, time: {:?}", json_str.len(), step1_start.elapsed()));
+                    } else {
+                        log_to_file(&format!("[AI_ANALYZE] Step 1b: Invalid range after_start={}, end={}", after_start, end));
+                    }
                 }
             } else {
                 log_to_file(&format!("[AI_ANALYZE] Step 1c: No code block found, time: {:?}", step1_start.elapsed()));
@@ -334,7 +345,7 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
                             for pattern in &patterns {
                                 if let Some(pos) = json.find(pattern) {
                                     let value_start = pos + pattern.len();
-                                    let rest = &json[value_start..];
+                                    let Some(rest) = json.get(value_start..) else { continue };
                                     if rest.starts_with('[') {
                                         if let Some(end) = rest.find(']') {
                                             let arr_str = &rest[1..end];
@@ -418,7 +429,7 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
         let db = match DATABASE.lock() {
             Ok(db) => db,
             Err(e) => {
-                eprintln!("Failed to acquire lock for saving: {}", e);
+                log::error!("Failed to acquire lock for saving: {}", e);
                 return AiAnalysisResult {
                     summary,
                     use_cases,
@@ -437,7 +448,7 @@ pub async fn analyze_project(id: i64) -> AiAnalysisResult {
                 "UPDATE projects SET ai_summary = ?, ai_use_cases = ?, ai_risks = ?, ai_dependencies = ?, health_score = ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
                 rusqlite::params![summary, use_cases, risks, dependencies, project_data.3.overall, id],
             ) {
-                eprintln!("Failed to save AI analysis: {}", e);
+                log::error!("Failed to save AI analysis: {}", e);
             }
         }
     }
@@ -707,7 +718,7 @@ pub fn debug_translations(id: i64) -> Result<String, String> {
 
     match result {
         Ok((s, u, r, d, desc)) => {
-            println!("[DEBUG] Project {} translations: summary={:?}, use_cases={:?}, risks={:?}, deps={:?}, desc={:?}",
+            log::debug!("[DEBUG] Project {} translations: summary={:?}, use_cases={:?}, risks={:?}, deps={:?}, desc={:?}",
                 id, s.as_ref().map(|x| x.len()), u.as_ref().map(|x| x.len()), r.as_ref().map(|x| x.len()), d.as_ref().map(|x| x.len()), desc.as_ref().map(|x| x.len()));
             Ok(format!("translated_summary={:?}, translated_use_cases={:?}, translated_risks={:?}, translated_dependencies={:?}, translated_description={:?}", s, u, r, d, desc))
         },
@@ -717,9 +728,9 @@ pub fn debug_translations(id: i64) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn test_translate(text: String, target_lang: String) -> Result<String, String> {
-    println!("[TEST_TRANSLATE] text_len={}, target_lang={}", text.len(), target_lang);
+    log::debug!("[TEST_TRANSLATE] text_len={}, target_lang={}", text.len(), target_lang);
     let result = crate::translate::translate_text(&text, &target_lang).await?;
-    println!("[TEST_TRANSLATE] result_len={}", result.len());
+    log::debug!("[TEST_TRANSLATE] result_len={}", result.len());
     Ok(result)
 }
 
@@ -749,7 +760,7 @@ pub fn test_readme(id: i64) -> Result<String, String> {
 
 #[tauri::command]
 pub fn get_translations(id: i64) -> Result<Translations, String> {
-    println!("Loading translations for project {}", id);
+    log::debug!("Loading translations for project {}", id);
     let db = DATABASE.lock().map_err(|e| e.to_string())?;
     let db = db.as_ref().ok_or("Database not initialized")?;
     let conn = db.get_connection();
@@ -771,7 +782,7 @@ pub fn get_translations(id: i64) -> Result<Translations, String> {
         )
         .map_err(|e| e.to_string())?;
 
-    println!("Loaded translations: {:?}", translations);
+    log::debug!("Loaded translations: {:?}", translations);
     Ok(translations)
 }
 
@@ -943,7 +954,7 @@ pub struct LlmDebugInfo {
 
 #[tauri::command]
 pub fn debug_llm_status() -> LlmDebugInfo {
-    println!("[debug_llm_status] Called");
+    log::debug!("[debug_llm_status] Called");
     let s = crate::settings::get_settings();
 
     let api_key_preview = if s.llm_api_key.is_empty() {
@@ -975,7 +986,7 @@ pub struct TestLlmResult {
 pub async fn test_llm_direct(project_id: i64) -> TestLlmResult {
     use std::time::Instant;
 
-    println!("[test_llm_direct] Testing LLM for project_id={}", project_id);
+    log::debug!("[test_llm_direct] Testing LLM for project_id={}", project_id);
 
     let start = Instant::now();
 
@@ -1015,7 +1026,7 @@ pub async fn test_llm_direct(project_id: i64) -> TestLlmResult {
         (readme_content, name)
     };
 
-    println!("[test_llm_direct] Project loaded: {}, readme len={}", project_data.1, project_data.0.as_ref().map(|s| s.len()).unwrap_or(0));
+    log::debug!("[test_llm_direct] Project loaded: {}, readme len={}", project_data.1, project_data.0.as_ref().map(|s| s.len()).unwrap_or(0));
 
     let llm = match crate::llm::LlmClient::from_settings() {
         Some(llm) => llm,
@@ -1027,7 +1038,7 @@ pub async fn test_llm_direct(project_id: i64) -> TestLlmResult {
         },
     };
 
-    println!("[test_llm_direct] LLM client created");
+    log::debug!("[test_llm_direct] LLM client created");
 
     let system_msg = crate::llm::build_system_prompt();
     let readme_snippet = project_data.0.as_ref()
@@ -1039,12 +1050,12 @@ pub async fn test_llm_direct(project_id: i64) -> TestLlmResult {
         content: format!("Project: {}\n\nREADME Content:\n{}\n\nPlease analyze this project briefly in one sentence.", project_data.1, readme_snippet),
     };
 
-    println!("[test_llm_direct] Calling LLM...");
+    log::debug!("[test_llm_direct] Calling LLM...");
 
     match llm.chat(vec![system_msg, user_msg]).await {
         Ok(response) => {
             let elapsed = start.elapsed().as_millis() as u64;
-            println!("[test_llm_direct] Success after {}ms", elapsed);
+            log::info!("[test_llm_direct] Success after {}ms", elapsed);
             TestLlmResult {
                 success: true,
                 elapsed_ms: elapsed,
@@ -1054,7 +1065,7 @@ pub async fn test_llm_direct(project_id: i64) -> TestLlmResult {
         }
         Err(e) => {
             let elapsed = start.elapsed().as_millis() as u64;
-            println!("[test_llm_direct] Failed after {}ms: {}", elapsed, e);
+            log::error!("[test_llm_direct] Failed after {}ms: {}", elapsed, e);
             TestLlmResult {
                 success: false,
                 elapsed_ms: elapsed,
