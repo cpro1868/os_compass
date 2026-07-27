@@ -93,6 +93,52 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
+            use tauri::menu::{MenuBuilder, MenuItemBuilder};
+            use tauri::tray::TrayIconBuilder;
+
+            let show_item = MenuItemBuilder::with_id("show", "显示/隐藏").build(app)?;
+            let quit_item = MenuItemBuilder::with_id("quit", "退出").build(app)?;
+
+            let menu = MenuBuilder::new(app)
+                .items(&[&show_item, &quit_item])
+                .build()?;
+
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .tooltip("OS-Compass")
+                .on_menu_event(|app, event| {
+                    match event.id().as_ref() {
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                if window.is_visible().unwrap_or(false) {
+                                    let _ = window.hide();
+                                } else {
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                }
+                            }
+                        }
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .build(app)?;
+
+            // 拦截窗口关闭事件，最小化到托盘
+            let window = app.get_webview_window("main").unwrap();
+            let app_handle = app.handle().clone();
+            window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    if let Some(w) = app_handle.get_webview_window("main") {
+                        let _ = w.hide();
+                    }
+                }
+            });
+
             // 系统库：Roaming 下的 .os-compass
             let app_dir = app.path().app_data_dir().expect("Failed to get app data dir");
             log::info!("App data directory (system): {:?}", app_dir);
@@ -321,6 +367,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_projects,
             commands::get_project,
+            commands::get_recent_projects,
+            commands::get_project_preview,
             commands::create_project,
             commands::update_project,
             commands::update_project_status,

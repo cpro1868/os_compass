@@ -1,6 +1,7 @@
 use crate::db::DATABASE;
 use crate::models::{Project, Category, Tag, ProjectNote, ProjectUserInfo};
 use crate::crypto::{encrypt_string, decrypt_string};
+use log;
 
 #[tauri::command]
 pub fn get_projects() -> Result<Vec<Project>, String> {
@@ -112,7 +113,7 @@ pub fn get_project(id: i64) -> Result<Option<Project>, String> {
         .ok();
 
     if let Some(ref p) = project {
-        println!("[GET_PROJECT] Project {}: translated_summary={:?}, translated_use_cases={:?}, translated_risks={:?}, translated_dependencies={:?}, translated_description={:?}",
+        log::debug!("[GET_PROJECT] Project {}: translated_summary={:?}, translated_use_cases={:?}, translated_risks={:?}, translated_dependencies={:?}, translated_description={:?}",
             p.id, p.translated_summary, p.translated_use_cases, p.translated_risks, p.translated_dependencies, p.translated_description);
     }
 
@@ -268,6 +269,73 @@ pub fn get_categories() -> Result<Vec<Category>, String> {
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
     Ok(categories)
+}
+
+#[tauri::command]
+pub fn get_recent_projects(limit: i64) -> Result<Vec<Project>, String> {
+    let db = DATABASE.lock().map_err(|e| e.to_string())?;
+    let db = db.as_ref().ok_or("Database not initialized")?;
+    let conn = db.get_connection();
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, url, source, source_id, description, languages, stars, forks, open_issues, license, homepage, latest_commit, latest_release, readme_content, readme_lang, health_score, ai_summary, ai_use_cases, ai_risks, ai_dependencies, translated_summary, translated_use_cases, translated_risks, translated_dependencies, translated_description, readme_translation, category_id, lifecycle_status, data_status, is_downloaded, local_path, runbook, archived_at, deleted_at, created_at, updated_at FROM projects WHERE data_status = 'ACTIVE' ORDER BY updated_at DESC LIMIT ?"
+        )
+        .map_err(|e| e.to_string())?;
+    let projects = stmt
+        .query_map([limit], |row| {
+            Ok(Project {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                url: row.get(2)?,
+                source: row.get(3)?,
+                source_id: row.get(4)?,
+                description: row.get(5)?,
+                languages: row.get(6)?,
+                stars: row.get(7)?,
+                forks: row.get(8)?,
+                open_issues: row.get(9)?,
+                license: row.get(10)?,
+                homepage: row.get(11)?,
+                latest_commit: row.get(12)?,
+                latest_release: row.get(13)?,
+                readme_content: row.get(14)?,
+                readme_lang: row.get(15)?,
+                health_score: row.get(16)?,
+                ai_summary: row.get(17)?,
+                ai_use_cases: row.get(18)?,
+                ai_risks: row.get(19)?,
+                ai_dependencies: row.get(20)?,
+                translated_summary: row.get(21)?,
+                translated_use_cases: row.get(22)?,
+                translated_risks: row.get(23)?,
+                translated_dependencies: row.get(24)?,
+                translated_description: row.get(25)?,
+                readme_translation: row.get(26)?,
+                category_id: row.get(27)?,
+                lifecycle_status: row.get(28)?,
+                data_status: row.get(29)?,
+                is_downloaded: row.get::<_, i32>(30)? != 0,
+                local_path: row.get(31)?,
+                runbook: row.get(32)?,
+                archived_at: row.get(33)?,
+                deleted_at: row.get(34)?,
+                created_at: row.get(35)?,
+                updated_at: row.get(36)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(projects)
+}
+
+#[tauri::command]
+pub fn get_project_preview(url: String) -> Result<serde_json::Value, String> {
+    Ok(serde_json::json!({
+        "name": "",
+        "stars": null,
+        "language": null,
+    }))
 }
 
 #[tauri::command]
