@@ -8,6 +8,7 @@ import type { Category } from "../types";
 interface ImportModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  initialUrl?: string;
 }
 
 interface ImportResult {
@@ -18,11 +19,11 @@ interface ImportResult {
   duplicate?: { projectId: number; projectName: string };
 }
 
-export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
+export function ImportModal({ onClose, onSuccess, initialUrl }: ImportModalProps) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<"single" | "batch">("single");
   const [urls, setUrls] = useState("");
-  const [singleUrl, setSingleUrl] = useState("");
+  const [singleUrl, setSingleUrl] = useState(initialUrl || "");
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [generateAIReport, setGenerateAIReport] = useState(true);

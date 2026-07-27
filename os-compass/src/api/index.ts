@@ -92,6 +92,10 @@ export async function getArchivedProjects(): Promise<Project[]> {
   return invoke("get_archived_projects");
 }
 
+export async function getRecentProjects(limit: number = 5): Promise<Project[]> {
+  return invoke("get_recent_projects", { limit });
+}
+
 export async function importProject(input: ImportInput): Promise<ImportResponse> {
   return invoke("import_project", { input });
 }

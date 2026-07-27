@@ -55,6 +55,10 @@ export const projectApi = {
     return invoke('get_projects', { dataStatus });
   },
 
+  async getRecent(limit: number): Promise<Project[]> {
+    return invoke('get_recent_projects', { limit });
+  },
+
   async getById(id: number): Promise<Project | null> {
     return invoke('get_project', { id });
   },

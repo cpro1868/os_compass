@@ -903,3 +903,321 @@
   - 在 `docs/开发连续性保障机制.md` 中新增"工具无关性"核心原则
   - 将关键上下文文件迁移/创建到项目根目录
 - 状态：已完成
+
+---
+
+## 2026-07-26 13:32 - M16 初始化向导完成 + i18n 完善
+
+### 完成的工作
+
+1. **初始化向导 UI 优化**
+   - Logo 尺寸缩小（80x80 → 56x56）
+   - 标题字号缩小（4xl → 2xl）
+   - 步骤指示器缩小
+   - 卡片图标和内边距缩小
+
+2. **返回按钮**
+   - 左上角返回按钮，仅手动触发时可见
+   - 首次启动无返回按钮
+
+3. **按钮顺序调整**
+   - 初始化向导按钮移至设置按钮下方
+
+4. **i18n 完善**
+   - InitWizard 组件添加 useTranslation
+   - 新增 20+ 翻译键到 zh.json 和 en.json
+   - 覆盖欢迎信息、步骤指示、按钮文字等
+
+### 验证状态
+- [x] TypeScript 类型检查通过
+- [x] release 构建成功
+- [x] Previous 目录更新
+
+### M16 任务状态
+- Task 15: 导航优化 - ✅ 完成
+- Task 16: i18n + 构建验证 - ✅ 完成
+- Task 17: unwrap 替换 - ✅ 完成
+- Task 18: log crate 集成 - ✅ 完成（radar.rs）
+- Task 24-26: 文章生成 - 待完成
+
+- 状态：M16 进行中
+
+---
+
+## 2026-07-26 14:15 - M16 导航优化完成 + 异常处理开始
+
+### 完成的工作
+
+1. **Task 15: 导航优化**
+   - Logo 添加渐变背景
+   - Logo 添加点击事件打开导航页
+   - Logo 添加 hover 缩放效果
+   - 导航按钮添加 i18n 支持
+
+2. **Task 16: i18n 完善**
+   - InitWizard 组件添加 useTranslation
+   - 新增 20+ 翻译键
+
+3. **Task 17: unwrap 替换**
+   - download.rs 关键位置替换 unwrap
+   - 添加错误处理
+
+4. **Task 18: log crate 集成**
+   - radar.rs 添加 log crate
+   - 替换 20+ 处 println! 为 log::info!/debug!/error!
+
+### 验证状态
+- [x] TypeScript 类型检查通过
+- [x] Rust 编译通过
+- [x] release 构建成功
+- [x] Previous 目录更新
+
+- 状态：M16 进行中
+
+---
+
+## 2026-07-26 14:45 - Task 18 println 替换（lib.rs）
+
+### 完成的工作
+
+1. **Task 18: log crate 集成 - lib.rs**
+   - 添加 `use log;`
+   - 替换 lib.rs 中所有 println! 为 log::info!
+   - 替换 eprintln! 为 log::error!
+   - 约 20 处修改
+
+2. **剩余待处理文件**（100+ 处）：
+   - system_db.rs（15 处）
+   - vault.rs（8 处）
+   - llm.rs（3 处）
+   - health.rs（1 处）
+   - translate.rs（10 处）
+   - plugin_manager.rs（5 处）
+   - plugin_loader.rs（1 处）
+   - plugin_config_db.rs（2 处）
+   - db.rs（5 处）
+   - content_filter.rs（3 处）
+   - source_engine/*.rs（22 处）
+   - commands/*.rs（10 处）
+
+### 验证状态
+- [x] Rust 编译通过
+- [x] release 构建成功
+- [x] Previous 目录更新
+
+- 状态：M16 进行中
+
+---
+
+## 2026-07-26 18:07 - M16 文章生成功能完成
+
+### 完成的工作
+
+1. **Task 24: 后端 API**
+   - 创建 `prompts/` 目录和 5 个 Prompt 模板文件
+   - 创建 `article.rs`：Prompt 模板管理
+   - 创建 `services/article_service.rs`：文章生成服务
+   - 创建 `commands/article_cmd.rs`：Tauri 命令
+
+2. **Task 25: 前端 UI**
+   - 创建 `ArticleGenerationPanel.tsx` 组件
+   - 集成到 `ProjectDetailDialog.tsx` 的文章标签页
+   - 添加 i18n 翻译键
+
+3. **Task 26: 导出功能**
+   - 支持 Markdown 和 TXT 格式导出
+   - 使用系统保存对话框
+
+### 新增文件
+- `src-tauri/src/prompts/mod.rs`
+- `src-tauri/src/prompts/tech_popular.txt`
+- `src-tauri/src/prompts/business.txt`
+- `src-tauri/src/prompts/tech_blog.txt`
+- `src-tauri/src/prompts/brief.txt`
+- `src-tauri/src/prompts/humor.txt`
+- `src-tauri/src/article.rs`
+- `src-tauri/src/services/mod.rs`
+- `src-tauri/src/services/article_service.rs`
+- `src-tauri/src/commands/article_cmd.rs`
+- `src/components/ArticleGenerationPanel.tsx`
+
+### 验证状态
+- [x] TypeScript 类型检查通过
+- [x] Rust 编译通过
+- [x] release 构建成功
+- [x] Previous 目录更新
+
+- 状态：M16 基本完成
+
+---
+
+## 2026-07-26 18:20 - 文章生成功能增强
+
+### 完成的改进
+
+1. **Markdown 编辑器优化**
+   - 添加源码/预览模式切换按钮
+   - 使用 marked + DOMPurify 渲染 Markdown 预览
+   - 预览模式使用 prose 样式，美化排版
+
+2. **PDF 导出功能**
+   - 使用 html2pdf.js 库
+   - 支持导出为 PDF 格式
+   - PDF 包含美化的样式（标题、代码块、表格等）
+
+### 文件变更
+- `src/components/ArticleGenerationPanel.tsx` - 重写组件
+- `package.json` - 添加 html2pdf.js 依赖
+
+### 验证状态
+- [x] TypeScript 类型检查通过
+- [x] release 构建成功
+- [x] Previous 目录更新
+
+- 状态：M16 完成
+
+---
+
+## 2026-07-26 20:07 - M16 异常处理完成
+
+### 完成的工作
+
+1. **切片边界修复**
+   - `crawler_service.rs`: 使用 strip_prefix 替代 url[7..] 防止 panic
+   - `ai.rs`: 使用 json.get() 替代直接切片
+
+2. **统一错误类型**
+   - 创建 `error.rs` 模块
+   - 包含 AppError 枚举（Database、Io、Parse、Config、Llm 等）
+   - 实现 From trait 用于错误转换
+
+3. **日志轮转配置**
+   - 添加 tauri-plugin-log 依赖
+   - 配置日志输出到 LogDir
+   - 使用 RotationStrategy::KeepAll
+
+4. **前端错误组件**
+   - ErrorState 组件已完善
+
+### 文件变更
+- `src-tauri/src/error.rs` - 新增
+- `src-tauri/src/commands/ai.rs` - 切片修复
+- `src-tauri/src/crawler_service.rs` - 切片修复
+- `src-tauri/src/lib.rs` - 添加 tauri-plugin-log
+- `src-tauri/Cargo.toml` - 添加依赖
+
+### 验证状态
+- [x] cargo check 通过
+- [x] release 构建成功
+- [x] Previous 目录更新
+- [x] git commit 提交
+
+### 提交
+- `7140148` - M16: 异常处理完成
+
+---
+
+## 2026-07-26 22:56 - M17 设计讨论
+
+### 讨论的问题
+
+1. **极简首页定位**
+   - 决定：替代当前直接加载看板视图，作为系统启动默认页
+   - 入口：左侧导航按钮下面
+
+2. **URL 识别平台**
+   - 决定：支持 GitHub, Gitee, GitLab, NPM, PyPI, Crates.io
+
+3. **交互流程**
+   - 决定：确认后导入（显示预览 → 用户确认 → 导入）
+
+4. **其他决策**
+   - Ctrl+K 提示：不保留
+   - 页面风格：与系统主题保持一致
+
+5. **M18 需求**
+   - 默认页选择功能移至 M18
+
+### 待确认
+- 等待用户确认 M17 开发
+
+- 状态：M17 设计讨论完成
+
+---
+
+## 2026-07-26 23:42 - M17/M18 需求讨论
+
+### M17 需求确认
+1. 首页入口：侧边栏 Logo 下方
+2. URL 识别 + 预览：复用 ImportModal 和已有 API
+3. 主题：跟随 App 设置
+4. 默认启动页：极简首页
+5. 最近项目、快捷入口
+
+### M18 需求初稿：通用分类预置
+- 用户建议：预置一套科学的项目分类标准
+- 参考来源：GitHub Topics、PyPI Classifiers、crates.io
+- 分类结构：三级分类
+- 预置 9 个一级分类、26 个二级分类
+- 安装时可选导入
+
+### 待完成
+- M17 需求最终确认
+- M18 开发前进一步细化分类
+
+- 状态：M17/M18 需求讨论完成
+
+---
+
+## 2026-07-27 09:52 - 规范文档更新
+
+### 完成的工作
+1. M17 需求最终确认
+2. M18 需求初稿（通用分类预置）
+3. **将 Vibe Coding 八荣八耻添加到 AGENTS.md**
+
+### 八荣八耻已记录
+- 位置：`AGENTS.md` 规则 3
+- 内容：查档求证、对齐需求、请示规则、复用存量、完备校验、恪守规范、坦诚存疑、分步迭代
+
+- 状态：规范文档已更新
+
+---
+
+## 2026-07-27 10:27 - M17 开发完成
+
+### 完成的功能
+1. **HomePage 组件**
+   - 基于 home.html 原型创建
+   - URL 平台识别（6个平台）
+   - 项目预览确认
+   - 最近项目（5个）
+   - 主题适配
+
+2. **侧边栏入口**
+   - Logo 下方添加首页按钮
+
+3. **默认启动页**
+   - App 启动默认显示首页
+
+4. **系统托盘**
+   - 托盘图标
+   - 托盘菜单（显示/隐藏、退出）
+   - 关闭按钮最小化到托盘
+
+### 文件变更
+- `src/components/HomePage.tsx` - 新增
+- `src/components/Sidebar.tsx` - 添加首页入口
+- `src/App.tsx` - 默认视图改为首页
+- `src/api/project.ts` - 添加 getRecent
+- `src/api/index.ts` - 导出 getRecentProjects
+- `src-tauri/src/commands/project.rs` - 添加后端命令
+- `src-tauri/src/lib.rs` - 托盘初始化
+- `src-tauri/Cargo.toml` - 添加 tray-icon feature
+
+### 验证状态
+- [x] TypeScript 类型检查通过
+- [x] release 构建成功
+- [x] Previous 目录更新
+
+- 状态：M17 开发完成
