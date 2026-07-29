@@ -44,6 +44,12 @@ pub fn init_module() -> Result<(), String> {
     Ok(())
 }
 
+pub fn update_config(config: EmbeddingConfig) {
+    let mut guard = EMBEDDING_CONFIG.lock().unwrap();
+    *guard = Some(config);
+    log::info!("[embedding] Config updated");
+}
+
 pub fn is_enabled() -> bool {
     if let Ok(guard) = EMBEDDING_CONFIG.lock() {
         if let Some(config) = guard.as_ref() {

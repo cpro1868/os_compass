@@ -1,9 +1,12 @@
 use crate::db::DATABASE;
+use crate::embedding::{EmbeddingConfig, update_config as update_embedding_config};
 use crate::plugins::search::{three_layer_search, SearchResult, ProjectMatch};
 use crate::vault::CURRENT_VAULT_CONFIG;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use tauri::command;
+
+pub use crate::embedding::EmbeddingConfig as EmbeddingSettings;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchHistoryItem {
@@ -199,17 +202,6 @@ pub fn import_search_result(
     Ok(project_id)
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct EmbeddingSettings {
-    pub embedding_enabled: bool,
-    pub embedding_api_type: String,
-    pub embedding_api_url: String,
-    pub embedding_api_key: String,
-    pub embedding_model: String,
-    pub embedding_dimension: i32,
-    pub vss_extension_path: String,
-}
-
 fn get_system_db() -> Result<rusqlite::Connection, String> {
     let base_dirs = directories::BaseDirs::new().ok_or("Cannot find base directories")?;
     let app_data = base_dirs.data_dir().join(".os-compass");
@@ -274,6 +266,16 @@ pub fn save_embedding_settings(settings: EmbeddingSettings) -> Result<(), String
         ],
     ).map_err(|e| e.to_string())?;
 
+    update_embedding_config(EmbeddingConfig {
+        embedding_enabled: settings.embedding_enabled,
+        embedding_api_type: settings.embedding_api_type,
+        embedding_api_url: settings.embedding_api_url,
+        embedding_api_key: settings.embedding_api_key,
+        embedding_model: settings.embedding_model,
+        embedding_dimension: settings.embedding_dimension,
+        vss_extension_path: settings.vss_extension_path,
+    });
+
     Ok(())
 }
 
@@ -285,7 +287,7 @@ pub fn test_embedding_connection() -> Result<bool, String> {
 #[command]
 pub fn list_embedding_models(provider: String, api_url: String, api_key: String) -> Result<Vec<String>, String> {
     match provider.as_str() {
-        "openai" => {
+        "openai" | "custom" => {
             let client = reqwest::blocking::Client::new();
             let response = client.get(&format!("{}/models", api_url.trim_end_matches('/')))
                 .header("Authorization", format!("Bearer {}", api_key))
