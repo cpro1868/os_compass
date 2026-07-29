@@ -113,3 +113,11 @@ export async function saveEmbeddingSettings(settings: Partial<EmbeddingSettings>
 export async function testEmbeddingConnection(): Promise<boolean> {
   return invoke<boolean>('test_embedding_connection');
 }
+
+export async function rebuildEmbeddings(projectId?: number): Promise<number> {
+  return invoke<number>('rebuild_embeddings', { projectId });
+}
+
+export async function generateProjectEmbedding(projectId: number): Promise<number> {
+  return invoke<number>('generate_project_embeddings', { projectId });
+}

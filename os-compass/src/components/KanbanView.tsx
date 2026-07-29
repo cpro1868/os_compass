@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { invoke } from "@tauri-apps/api/core";
 import type { Project, LifecycleStatus, Category } from "../types";
 import { parseLanguages } from "../types";
 import { getCategories } from "../api";
 import { MoveCategoryDialog } from "./MoveCategoryDialog";
 import { EmptyState } from "./EmptyState";
+import { useToastStore } from "../stores/toastStore";
 
 interface KanbanViewProps {
   projects: Project[];
@@ -29,6 +31,7 @@ const STATUS_CONFIG: Record<LifecycleStatus, { emoji: string; title: string }> =
 
 export function KanbanView({ projects, onProjectClick, onStatusChange, selectedIds = new Set(), onSelectionChange, onBatchMoveCategory, onBatchArchive, onBatchExport }: KanbanViewProps) {
   const { t } = useTranslation();
+  const { showToast } = useToastStore();
   const [dragOverColumn, setDragOverColumn] = useState<LifecycleStatus | null>(null);
   const [showFilter, setShowFilter] = useState(false);
   const [showSort, setShowSort] = useState(false);
@@ -40,10 +43,50 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
   const [draggingProject, setDraggingProject] = useState<{ project: Project; offsetX: number; offsetY: number } | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [vectorizing, setVectorizing] = useState(false);
   const dragStateRef = useRef<{ projectId: number; fromStatus: LifecycleStatus } | null>(null);
   const columnsRef = useRef<Map<LifecycleStatus, HTMLDivElement>>(new Map());
 
   const hasSelection = selectedIds.size > 0;
+
+  const handleBatchVectorize = async () => {
+    if (selectedIds.size === 0) {
+      showToast("请先选择要向量化的项目", "info");
+      return;
+    }
+    if (!confirm(`确认向量化选中的 ${selectedIds.size} 个项目？`)) return;
+
+    setVectorizing(true);
+    try {
+      const selectedProjects = projects.filter(p => selectedIds.has(p.id));
+      let success = 0;
+      for (const project of selectedProjects) {
+        await invoke("generate_project_embeddings", { projectId: project.id });
+        success++;
+      }
+      showToast(`成功向量化 ${success} 个项目`, "success");
+    } catch (err) {
+      console.error("批量向量化失败:", err);
+      showToast("向量化失败：" + String(err), "error");
+    } finally {
+      setVectorizing(false);
+    }
+  };
+
+  const handleVectorizeAll = async () => {
+    if (!confirm(`确认向量化当前仓库的所有 ${projects.length} 个项目？`)) return;
+
+    setVectorizing(true);
+    try {
+      const count = await invoke<number>("rebuild_embeddings", { projectId: null });
+      showToast(`成功向量化 ${count} 个项目`, "success");
+    } catch (err) {
+      console.error("全量向量化失败:", err);
+      showToast("向量化失败：" + String(err), "error");
+    } finally {
+      setVectorizing(false);
+    }
+  };
 
   const toggleSelect = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -255,6 +298,18 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
               </div>
             )}
           </div>
+          <button
+            onClick={handleVectorizeAll}
+            disabled={vectorizing}
+            className="px-3 py-1.5 text-sm border border-purple-200 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/30 dark:border-purple-700 rounded-lg flex items-center gap-1"
+          >
+            {vectorizing ? (
+              <i className="fa-solid fa-spinner fa-spin text-purple-600"></i>
+            ) : (
+              <i className="fa-solid fa-brain text-purple-600"></i>
+            )}
+            <span className="text-purple-700 dark:text-purple-400">{vectorizing ? "向量化中..." : "向量化全部"}</span>
+          </button>
           <div className="relative">
             <button
               onClick={() => { setShowSort(!showSort); setShowFilter(false); }}
@@ -352,6 +407,18 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
               className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm flex items-center gap-2"
             >
               <i className="fa-solid fa-box"></i>归档
+            </button>
+            <button
+              onClick={handleBatchVectorize}
+              disabled={vectorizing}
+              className="px-3 py-1.5 bg-purple-500/80 hover:bg-purple-500 disabled:opacity-50 rounded-lg text-sm flex items-center gap-2"
+            >
+              {vectorizing ? (
+                <i className="fa-solid fa-spinner fa-spin"></i>
+              ) : (
+                <i className="fa-solid fa-brain"></i>
+              )}
+              向量化{hasSelection ? `选中(${selectedIds.size})` : ""}
             </button>
             <button
               onClick={handleBatchExport}
