@@ -1555,6 +1555,7 @@ function VectorSettings({}: VectorSettingsProps) {
     embedding_api_key: '',
     embedding_model: 'text-embedding-3-small',
     embedding_dimension: 1536,
+    vss_extension_path: '',
   });
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
@@ -1746,6 +1747,17 @@ function VectorSettings({}: VectorSettingsProps) {
               value={settings.embedding_dimension}
               onChange={(e) => setSettings({ ...settings, embedding_dimension: parseInt(e.target.value) || 1536 })}
               disabled={!settings.embedding_enabled}
+              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">{t("settings.vector.vssPath") || "VSS 扩展路径"}</label>
+            <input
+              type="text"
+              value={settings.vss_extension_path}
+              onChange={(e) => setSettings({ ...settings, vss_extension_path: e.target.value })}
+              disabled={!settings.embedding_enabled}
+              placeholder={t("settings.vector.vssPathPlaceholder") || "留空使用默认路径"}
               className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
             />
           </div>
