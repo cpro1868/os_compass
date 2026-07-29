@@ -1,6 +1,7 @@
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
 use std::sync::Mutex;
+use log;
 
 pub type MutexGuard<'a, T> = std::sync::MutexGuard<'a, T>;
 
@@ -75,6 +76,10 @@ impl SystemDb {
             ('gitee', 'Gitee', 'plugins::GiteePlugin', '获取 Gitee 项目信息、健康度评分', 1, '1.0.0',
              '[{"key": "gitee_token", "name": "Gitee 私有令牌", "description": "Gitee 私有令牌，用于访问 Gitee API","secret": true}]',
              '["gitee.com", "www.gitee.com"]'),
+            ('gitlab', 'GitLab', 'plugins::GitLabPlugin', '获取 GitLab 项目信息', 1, '1.0.0', '[]', '["gitlab.com", "www.gitlab.com"]'),
+            ('npm', 'NPM', 'plugins::NpmPlugin', '获取 NPM 包信息', 1, '1.0.0', '[]', '["npmjs.com", "www.npmjs.com", "registry.npmjs.org"]'),
+            ('pypi', 'PyPI', 'plugins::PyPiPlugin', '获取 PyPI 包信息', 1, '1.0.0', '[]', '["pypi.org", "www.pypi.org"]'),
+            ('crates', 'Crates.io', 'plugins::CratesPlugin', '获取 crates.io 包信息', 1, '1.0.0', '[]', '["crates.io", "www.crates.io", "crates.rust-lang.org"]'),
             ('crawler', '通用爬虫', 'plugins::CrawlerPlugin', '无 Token 时的降级方案', 1, '1.0.0', '[]', '[]')
             "#,
             [],
@@ -120,7 +125,7 @@ pub fn init_system_db(app_data_dir: &PathBuf) -> Result<(), String> {
     let mut db_lock = SYSTEM_DB.lock().map_err(|e| e.to_string())?;
     *db_lock = Some(system_db);
 
-    println!("[system_db] System settings DB initialized at {:?}", settings_path);
+    log::info!("[system_db] System settings DB initialized at {:?}", settings_path);
 
     Ok(())
 }
@@ -156,7 +161,7 @@ pub fn mark_migration_completed(backup_path: Option<&str>) -> Result<(), String>
     )
     .map_err(|e| e.to_string())?;
 
-    println!("[system_db] Migration marked as completed");
+    log::info!("[system_db] Migration marked as completed");
     Ok(())
 }
 
@@ -188,7 +193,7 @@ pub fn get_system_setting(key: &str) -> Option<String> {
     };
 
     if has_is_secret {
-        println!("[system_db] get_system_setting: key='{}', has is_secret column", key);
+        log::debug!("[system_db] get_system_setting: key='{}', has is_secret column", key);
         let result: (String, i32) = conn
             .query_row(
                 "SELECT value, is_secret FROM app_settings WHERE key = ?",
@@ -198,16 +203,16 @@ pub fn get_system_setting(key: &str) -> Option<String> {
             .ok()?;
 
         let (value, is_secret) = result;
-        println!("[system_db] get_system_setting: key='{}', is_secret={}", key, is_secret);
+        log::debug!("[system_db] get_system_setting: key='{}', is_secret={}", key, is_secret);
         if is_secret != 0 {
-            println!("[system_db] Decrypting key='{}', value len={}", key, value.len());
+            log::debug!("[system_db] Decrypting key='{}', value len={}", key, value.len());
             match crate::crypto::decrypt_string(&value) {
                 Ok(plaintext) => {
-                    println!("[system_db] Decrypted successfully, plaintext len={}", plaintext.len());
+log::debug!("[system_db] Decrypted successfully, plaintext len={}", plaintext.len());
                     Some(plaintext)
                 }
                 Err(e) => {
-                    println!("[system_db] ERROR decrypting key='{}': {}", key, e);
+                    log::warn!("[system_db] ERROR decrypting key='{}': {}", key, e);
                     None
                 }
             }
@@ -215,7 +220,7 @@ pub fn get_system_setting(key: &str) -> Option<String> {
             Some(value)
         }
     } else {
-        println!("[system_db] get_system_setting: key='{}', no is_secret column (legacy table)", key);
+        log::debug!("[system_db] get_system_setting: key='{}', no is_secret column (legacy table)", key);
         let value: String = conn
             .query_row(
                 "SELECT value FROM app_settings WHERE key = ?",
@@ -223,14 +228,14 @@ pub fn get_system_setting(key: &str) -> Option<String> {
                 |row| row.get(0),
             )
             .ok()?;
-        println!("[system_db] get_system_setting: key='{}', value len={}, attempting decrypt", key, value.len());
+        log::debug!("[system_db] get_system_setting: key='{}', value len={}, attempting decrypt", key, value.len());
         match crate::crypto::decrypt_string(&value) {
             Ok(plaintext) => {
-                println!("[system_db] Decrypted successfully, plaintext len={}", plaintext.len());
+                log::debug!("[system_db] Decrypted successfully, plaintext len={}", plaintext.len());
                 Some(plaintext)
             }
             Err(_) => {
-                println!("[system_db] Decrypt failed, returning raw value");
+                log::warn!("[system_db] Decrypt failed, returning raw value");
                 Some(value)
             }
         }
@@ -262,14 +267,14 @@ pub fn set_system_setting(key: &str, value: &str, is_secret: bool) -> Result<(),
     }
 
     let stored_value = if is_secret {
-        println!("[system_db] Encrypting key='{}' (len={})", key, value.len());
+        log::debug!("[system_db] Encrypting key='{}' (len={})", key, value.len());
         match crate::crypto::encrypt_string(value) {
             Ok(encrypted) => {
-                println!("[system_db] Encrypted successfully, result len={}", encrypted.len());
+                log::debug!("[system_db] Encrypted successfully, result len={}", encrypted.len());
                 encrypted
             }
             Err(e) => {
-                println!("[system_db] ERROR encrypting key='{}': {}", key, e);
+                log::warn!("[system_db] ERROR encrypting key='{}': {}", key, e);
                 return Err(format!("Failed to encrypt: {}", e));
             }
         }
@@ -308,7 +313,7 @@ pub fn get_all_system_variables() -> Result<Vec<(String, Option<String>, bool)>,
             match crate::crypto::decrypt_string(&encrypted_value) {
                 Ok(plain) => Some(plain),
                 Err(e) => {
-                    println!("[system_db] WARNING: Cannot decrypt variable key='{}': {}", key, e);
+                    log::warn!("[system_db] WARNING: Cannot decrypt variable key='{}': {}", key, e);
                     Some(String::new())
                 }
             }
@@ -362,7 +367,7 @@ pub fn get_system_variable(key: &str) -> Option<String> {
     match crate::crypto::decrypt_string(&result) {
         Ok(plaintext) => Some(plaintext),
         Err(e) => {
-            println!("[system_db] WARNING: Cannot decrypt variable key='{}': {}.", key, e);
+            log::warn!("[system_db] WARNING: Cannot decrypt variable key='{}': {}.", key, e);
             None
         }
     }
