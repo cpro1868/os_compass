@@ -289,30 +289,40 @@ pub fn list_embedding_models(provider: String, api_url: String, api_key: String)
     match provider.as_str() {
         "openai" | "custom" => {
             let client = reqwest::blocking::Client::new();
-            let response = client.get(&format!("{}/models", api_url.trim_end_matches('/')))
+            let url = format!("{}/models", api_url.trim_end_matches('/'));
+
+            let response = client.get(&url)
                 .header("Authorization", format!("Bearer {}", api_key))
                 .send()
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| format!("Request failed: {}", e))?;
+
+            let body = response.text().unwrap_or_default();
 
             #[derive(serde::Deserialize)]
             struct OpenAIResponse {
-                data: Vec<OpenAIModel>,
-            }
-            #[derive(serde::Deserialize)]
-            struct OpenAIModel {
-                id: String,
+                data: Vec<serde_json::Value>,
             }
 
-            let result: OpenAIResponse = response.json().map_err(|e| e.to_string())?;
+            let result: OpenAIResponse = serde_json::from_str(&body)
+                .map_err(|e| format!("Parse error: {}", e))?;
+
             let models: Vec<String> = result.data
                 .into_iter()
-                .filter(|m| m.id.contains("embedding"))
-                .map(|m| m.id)
+                .filter_map(|m| {
+                    m.get("id")
+                        .and_then(|id| id.as_str())
+                        .filter(|id| id.contains("embedding"))
+                        .map(|s| s.to_string())
+                })
                 .collect();
             Ok(models)
         }
         "deepseek" => {
-            Ok(vec!["deepseek-embedding".to_string()])
+            Ok(vec![
+                "text-embedding-3".to_string(),
+                "text-embedding-3-small".to_string(),
+                "text-embedding-2".to_string(),
+            ])
         }
         "ollama" => {
             let client = reqwest::blocking::Client::new();
