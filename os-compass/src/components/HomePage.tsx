@@ -1,267 +1,308 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { intentSearch } from "../api/search";
 import { getRecentProjects } from "../api";
 import type { Project } from "../types";
-import { ImportModal } from "./ImportModal";
+import { useToastStore } from "../stores/toastStore";
 
-interface ProjectPreview {
-  name: string;
-  url: string;
-  platform: string;
-  icon: string;
-  stars?: string;
-  language?: string;
+interface SearchResult {
+  project_name: string | null;
+  project_url: string | null;
+  description: string | null;
+  language: string | null;
+  source: string;
+  match_score: number;
+  stars?: number;
+  forks?: number;
 }
 
-const PLATFORMS = [
-  { pattern: /github\.com/i, name: "GitHub", icon: "fa-brands fa-github" },
-  { pattern: /gitee\.com/i, name: "Gitee", icon: "fa-solid fa-code-branch" },
-  { pattern: /gitlab\.com/i, name: "GitLab", icon: "fa-brands fa-gitlab" },
-  { pattern: /npmjs\.com/i, name: "NPM", icon: "fa-brands fa-npm" },
-  { pattern: /pypi\.org/i, name: "PyPI", icon: "fa-brands fa-python" },
-  { pattern: /crates\.io/i, name: "Crates.io", icon: "fa-solid fa-cube" },
-];
+function getPlatformIcon(url: string | null): string {
+  if (!url) return "fa-solid fa-link";
+  const u = url.toLowerCase();
+  if (u.includes("github")) return "fa-brands fa-github";
+  if (u.includes("gitee")) return "fa-solid fa-code-branch";
+  if (u.includes("gitlab")) return "fa-brands fa-gitlab";
+  if (u.includes("npm")) return "fa-brands fa-npm";
+  if (u.includes("pypi") || u.includes("python")) return "fa-brands fa-python";
+  if (u.includes("crates")) return "fa-solid fa-cube";
+  return "fa-solid fa-link";
+}
+
+function getActivityLevel(stars?: number): { label: string; color: string } {
+  if (!stars) return { label: "活跃度未知", color: "bg-slate-600" };
+  if (stars > 50000) return { label: "活跃度极高", color: "bg-green-600" };
+  if (stars > 10000) return { label: "活跃度高", color: "bg-green-600/70" };
+  if (stars > 1000) return { label: "活跃度一般", color: "bg-yellow-600" };
+  return { label: "活跃度低", color: "bg-slate-600" };
+}
 
 export function HomePage() {
   const { t } = useTranslation();
-  const [url, setUrl] = useState("");
-  const [preview, setPreview] = useState<ProjectPreview | null>(null);
+  const { showToast } = useToastStore();
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
-  const [showImport, setShowImport] = useState(false);
   const [loading, setLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     loadRecentProjects();
-    inputRef.current?.focus();
   }, []);
 
   const loadRecentProjects = async () => {
     try {
-      const projects = await getRecentProjects(5);
+      const projects = await getRecentProjects(20);
       setRecentProjects(projects);
     } catch {
       console.error("Failed to load recent projects");
     }
   };
 
-  const detectPlatform = (url: string) => {
-    for (const p of PLATFORMS) {
-      if (p.pattern.test(url)) {
-        return p;
-      }
-    }
-    return null;
-  };
-
-  const fetchPreview = async (url: string) => {
-    const platform = detectPlatform(url);
-    if (!platform) {
-      setPreview(null);
-      return;
-    }
-
+  const handleSearch = useCallback(async () => {
+    if (!query.trim()) return;
     setLoading(true);
+    setHasSearched(true);
     try {
-      const info = await invoke<{ name?: string; stars?: string; language?: string }>("get_project_preview", { url });
-      setPreview({
-        name: info.name || extractProjectName(url),
-        url,
-        platform: platform.name,
-        icon: platform.icon,
-        stars: info.stars,
-        language: info.language,
-      });
+      const data = await intentSearch(query);
+      setResults(data.results || []);
     } catch {
-      setPreview({
-        name: extractProjectName(url),
-        url,
-        platform: platform.name,
-        icon: platform.icon,
-      });
+      showToast(t("search.error.searchFailed") || "搜索失败", "error");
+      setResults([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const extractProjectName = (url: string): string => {
-    const match = url.match(/\/([^\/]+)\/?$/);
-    return match ? match[1] : url;
-  };
-
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setUrl(value);
-    if (value.length > 10) {
-      fetchPreview(value);
-    } else {
-      setPreview(null);
-    }
-  };
-
-  const handleImport = () => {
-    if (preview) {
-      setUrl(preview.url);
-      setShowImport(true);
-    }
-  };
-
-  const handleImportSuccess = () => {
-    setShowImport(false);
-    setUrl("");
-    setPreview(null);
-    loadRecentProjects();
-  };
+  }, [query, showToast, t]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && preview) {
-      handleImport();
+    if (e.key === "Enter") {
+      handleSearch();
     }
   };
 
-  const handleProjectClick = async (project: Project) => {
-    const window = getCurrentWindow();
-    window.emit("openProjectDetail", { projectId: project.id });
+  const handleProjectClick = (project: Project) => {
+    window.dispatchEvent(new CustomEvent("openProjectDetail", { detail: { projectId: project.id } }));
   };
 
-  const getPlatformIcon = (url: string) => {
-    const platform = detectPlatform(url);
-    return platform?.icon || "fa-solid fa-link";
+  const handleResultClick = (url: string | null) => {
+    if (!url) return;
+    const project = recentProjects.find(p => p.url === url);
+    if (project) {
+      handleProjectClick(project);
+    } else {
+      showToast("项目详情功能开发中", "info");
+    }
   };
+
+  const quickSuggestions = [
+    "Vue.js 相关项目",
+    "Python 机器学习",
+    "Rust CLI 工具",
+    "Java 微服务框架",
+  ];
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center min-h-full px-4 py-8 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-slate-900">
-      <div className="w-full max-w-2xl mb-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mb-4 shadow-lg">
-            <i className="fa-solid fa-compass text-3xl text-white"></i>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">开源罗盘</h1>
-          <p className="text-gray-500 dark:text-gray-400">AI 开源资产智能管家</p>
-        </div>
-
-        <div className="relative">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-2">
-            <div className="flex items-center gap-4">
-              <div className="pl-4">
-                <i className="fa-solid fa-link text-gray-400 text-xl"></i>
-              </div>
-              <input
-                ref={inputRef}
-                type="text"
-                value={url}
-                onChange={handleUrlChange}
-                onKeyDown={handleKeyDown}
-                placeholder={t("home.placeholder") || "粘贴开源项目链接..."}
-                className="flex-1 bg-transparent text-lg py-4 focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100"
-              />
-              <button
-                onClick={handleImport}
-                disabled={!preview || loading}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl font-medium transition flex items-center gap-2 text-white"
-              >
-                {loading ? (
-                  <i className="fa-solid fa-spinner fa-spin"></i>
-                ) : (
-                  <>
-                    <i className="fa-solid fa-arrow-right"></i>
-                    <span>{t("home.import") || "导入"}</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {preview && (
-            <div className="mt-4 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center">
-                    <i className={`${preview.icon} text-2xl text-gray-600 dark:text-gray-300`}></i>
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-gray-100">{preview.name}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">{preview.platform}</div>
-                  </div>
+    <div className="flex h-full bg-white dark:bg-gray-900">
+      {/* 左侧搜索区域 */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* 搜索结果区域（可滚动） */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="max-w-3xl mx-auto">
+            {!hasSearched && !loading && (
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mb-4 shadow-lg">
+                  <i className="fa-solid fa-compass text-3xl text-white"></i>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                  {preview.stars && (
-                    <span className="flex items-center gap-1">
-                      <i className="fa-solid fa-star text-yellow-500"></i>
-                      {preview.stars}
-                    </span>
-                  )}
-                  {preview.language && (
-                    <span className="flex items-center gap-1">
-                      <i className="fa-solid fa-code text-green-500"></i>
-                      {preview.language}
-                    </span>
-                  )}
+                <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
+                  {t("home.title") || "开源罗盘"}
+                </h1>
+                <p className="text-gray-500 dark:text-gray-400">
+                  {t("home.subtitle") || "AI 开源资产智能管家"}
+                </p>
+              </div>
+            )}
+
+            {loading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+                  <p className="text-gray-500 dark:text-gray-400">{t("common.searching") || "搜索中..."}</p>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
 
-        <div className="mt-6 flex items-center justify-center gap-6 text-gray-400 dark:text-gray-500 text-sm">
-          <span className="flex items-center gap-2">
-            <i className="fa-brands fa-github"></i> GitHub
-          </span>
-          <span className="flex items-center gap-2">
-            <i className="fa-solid fa-code-branch"></i> Gitee
-          </span>
-          <span className="flex items-center gap-2">
-            <i className="fa-brands fa-npm"></i> NPM
-          </span>
-          <span className="flex items-center gap-2">
-            <i className="fa-brands fa-python"></i> PyPI
-          </span>
-        </div>
-      </div>
+            {hasSearched && !loading && results.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 bg-green-600/20 rounded-lg flex items-center justify-center">
+                    <i className="fa-solid fa-check text-green-400 text-xs"></i>
+                  </div>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    找到 {results.length} 个相关项目
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {results.map((result, index) => {
+                    const platform = getPlatformIcon(result.project_url);
+                    const activity = getActivityLevel(result.stars);
+                    return (
+                      <div
+                        key={index}
+                        onClick={() => handleResultClick(result.project_url)}
+                        className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:border-blue-500/50 cursor-pointer transition"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`w-12 h-12 ${platform.includes("github") ? "bg-blue-600/20" : platform.includes("python") ? "bg-orange-600/20" : "bg-purple-600/20"} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                            <i className={`${platform} text-xl ${platform.includes("github") ? "text-blue-500" : platform.includes("python") ? "text-orange-500" : "text-purple-500"}`}></i>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                                {result.project_name || "未知项目"}
+                              </h3>
+                              <span className={`px-2 py-0.5 ${activity.color} bg-opacity-20 text-xs rounded text-gray-300`}>
+                                {activity.label}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                              {result.description || "暂无描述"}
+                            </p>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                              {result.stars !== undefined && (
+                                <span className="flex items-center gap-1">
+                                  <i className="fa-solid fa-star text-yellow-500"></i>
+                                  {result.stars.toLocaleString()}
+                                </span>
+                              )}
+                              {result.forks !== undefined && (
+                                <span className="flex items-center gap-1">
+                                  <i className="fa-solid fa-code-branch"></i>
+                                  {result.forks.toLocaleString()}
+                                </span>
+                              )}
+                              {result.language && (
+                                <span className="flex items-center gap-1">
+                                  <i className="fa-solid fa-code"></i>
+                                  {result.language}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button className="px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-sm transition flex-shrink-0">
+                            查看详情 →
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-      {recentProjects.length > 0 && (
-        <div className="w-full max-w-4xl">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-700 dark:text-gray-300">{t("home.recentProjects") || "最近项目"}</h2>
+            {hasSearched && !loading && results.length === 0 && (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className="fa-solid fa-search text-2xl text-gray-400"></i>
+                </div>
+                <p className="text-gray-500 dark:text-gray-400">未找到相关项目</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">尝试其他关键词</p>
+              </div>
+            )}
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {recentProjects.map((project) => (
+        {/* 搜索输入区（底部固定） */}
+        <div className="border-t border-gray-200 dark:border-gray-800 px-6 py-4 bg-white dark:bg-gray-900 flex-shrink-0">
+          <div className="max-w-3xl mx-auto">
+            {/* 快捷提示 */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              <span className="text-xs text-gray-400">快捷：</span>
+              {quickSuggestions.map((suggestion, i) => (
+                <button
+                  key={i}
+                  onClick={() => setQuery(suggestion)}
+                  className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 transition"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+            {/* 搜索框 */}
+            <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <i className="fa-solid fa-robot text-blue-400 text-sm"></i>
+                </div>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={t("home.searchPlaceholder") || "例如：找一个人工智能相关的开源项目..."}
+                  className="flex-1 bg-transparent text-sm py-2 focus:outline-none placeholder-gray-400 text-gray-900 dark:text-white"
+                />
+                <button
+                  onClick={handleSearch}
+                  disabled={!query.trim() || loading}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-300 dark:disabled:bg-gray-600 rounded-xl font-medium transition flex items-center gap-2 text-sm text-white"
+                >
+                  <i className="fa-solid fa-paper-plane"></i>
+                  <span>搜索</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* 右侧最近使用侧栏 */}
+      <aside className="w-72 border-l border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900/50 overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">最近使用</h3>
+          <button className="text-xs text-blue-500 hover:text-blue-400 transition">
+            查看全部 →
+          </button>
+        </div>
+        <div className="space-y-3">
+          {recentProjects.slice(0, 10).map((project) => {
+            const platform = getPlatformIcon(project.url);
+            const statusMap: Record<string, string> = {
+              "TO_EXPLORE": "待探索",
+              "DIVING": "深入了解",
+              "IN_USE": "使用中",
+              "ABANDONED": "已弃用",
+            };
+            return (
               <div
                 key={project.id}
                 onClick={() => handleProjectClick(project)}
-                className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 cursor-pointer transition group"
+                className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 hover:border-blue-500/50 cursor-pointer transition"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                    <i className={`${getPlatformIcon(project.url || "")} text-blue-500`}></i>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-8 h-8 ${platform.includes("github") ? "bg-blue-600/20" : "bg-slate-600/20"} rounded-lg flex items-center justify-center`}>
+                    <i className={`${platform} text-sm ${platform.includes("github") ? "text-blue-500" : "text-gray-400"}`}></i>
                   </div>
-                  {project.lifecycle_status && (
-                    <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-gray-500 dark:text-gray-400">
-                      {project.lifecycle_status}
-                    </span>
-                  )}
+                  <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500 dark:text-gray-400">
+                    {statusMap[project.lifecycle_status] || project.lifecycle_status}
+                  </span>
                 </div>
-                <h3 className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-500 transition truncate">
+                <h4 className="font-medium text-sm text-gray-900 dark:text-white truncate">
                   {project.name}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                  {project.description || project.url}
+                </h4>
+                <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
+                  <i className="fa-solid fa-star text-yellow-500"></i>
+                  {project.stars?.toLocaleString() || 0}
                 </p>
               </div>
-            ))}
-          </div>
+            );
+          })}
+          {recentProjects.length === 0 && (
+            <div className="text-center py-8">
+              <i className="fa-solid fa-inbox text-2xl text-gray-300 dark:text-gray-600 mb-2"></i>
+              <p className="text-xs text-gray-400">暂无最近使用</p>
+            </div>
+          )}
         </div>
-      )}
-
-      {showImport && (
-        <ImportModal
-          onClose={() => setShowImport(false)}
-          onSuccess={handleImportSuccess}
-        />
-      )}
+      </aside>
     </div>
   );
 }
