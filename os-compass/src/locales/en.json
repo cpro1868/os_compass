@@ -717,7 +717,10 @@
       "apiKey": "API Key",
       "apiKeyPlaceholder": "Enter API Key (will be encrypted)",
       "model": "Model Name",
+      "modelPlaceholder": "text-embedding-3-small",
       "dimension": "Vector Dimension",
+      "vssPath": "VSS Extension Path",
+      "vssPathPlaceholder": "Leave empty for default",
       "testConnection": "Test Connection",
       "testSuccess": "Connection successful",
       "testFailed": "Connection failed"
