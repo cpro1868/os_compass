@@ -1,6 +1,7 @@
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
 use std::sync::Mutex;
+use log;
 
 pub type MutexGuard<'a, T> = std::sync::MutexGuard<'a, T>;
 
@@ -22,19 +23,19 @@ impl Database {
 
         // 优先从外部脚本文件加载（exe 同级 scripts/init_schema.sql）
         if let Some(sql) = load_external_init_script() {
-            println!("[db] Initializing schema from external script");
+            log::debug!("[db] Initializing schema from external script");
             conn.execute_batch(&sql).map_err(|e| {
-                println!("[db] External script failed: {}, falling back to embedded", e);
+                log::warn!("[db] External script failed: {}, falling back to embedded", e);
                 e
             })?;
         } else {
             // 兜底：使用内嵌的脚本（防止脚本文件丢失导致无法启动）
-            println!("[db] Initializing schema from embedded SQL");
+            log::debug!("[db] Initializing schema from embedded SQL");
             conn.execute_batch(INIT_SCHEMA_SQL)?;
         }
 
         // 检查并添加缺失的表（兼容已有数据库）
-        println!("[db] Checking for missing tables...");
+        log::debug!("[db] Checking for missing tables...");
         let missing_tables = [
             ("project_user_info", r#"
                 CREATE TABLE IF NOT EXISTS project_user_info (
@@ -59,7 +60,7 @@ impl Database {
             ).unwrap_or(1);
             
             if exists == 0 {
-                println!("[db] Creating missing table: {}", table_name);
+                log::debug!("[db] Creating missing table: {}", table_name);
                 conn.execute_batch(create_sql).ok();
             }
         }
@@ -241,13 +242,32 @@ CREATE INDEX IF NOT EXISTS idx_feature_plugins_enabled ON feature_plugins(enable
 INSERT OR IGNORE INTO feature_plugins (id, name, plugin_type, enabled, version, db_mode, db_path_template) VALUES
 ('radar', '情报雷达', 'radar', 0, '1.0.0', 'vault', '${vault_dir}/plugin_${plugin_id}.db'),
 ('search', '意图搜索', 'search', 0, '1.0.0', 'vault', '${vault_dir}/plugin_${plugin_id}.db');
+
+-- 向量搜索表（sqlite-vss）
+CREATE TABLE IF NOT EXISTS project_embeddings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL UNIQUE,
+    embedding BLOB NOT NULL,
+    dimension INTEGER NOT NULL DEFAULT 1536,
+    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_embeddings_project ON project_embeddings(project_id);
 "#;
 
 pub fn switch_database(path: PathBuf) -> Result<(), String> {
+    let db_path_for_log = path.clone();
     let new_db = Database::new(path).map_err(|e| e.to_string())?;
     new_db.init_schema().map_err(|e| e.to_string())?;
     let mut global = DATABASE.lock().unwrap();
     *global = Some(new_db);
+    drop(global);
+
+    #[cfg(feature = "embedding")]
+    {
+        crate::embedding::reset_vss_state();
+    }
+
+    log::info!("[db] Database switched to: {:?}", db_path_for_log);
     Ok(())
 }
 
