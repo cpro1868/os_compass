@@ -39,13 +39,49 @@ pub async fn clone_project(id: i64) -> CloneResult {
     }
 
     let (project_url, project_name) = {
-        let db = DATABASE.lock().map_err(|e| e.to_string()).unwrap();
-        let db = db.as_ref().ok_or("Database not initialized").unwrap();
+        let db_lock = match DATABASE.lock() {
+            Ok(guard) => guard,
+            Err(e) => {
+                return CloneResult {
+                    success: false,
+                    local_path: None,
+                    error: Some(format!("Database lock error: {}", e)),
+                };
+            }
+        };
+        let db = match db_lock.as_ref() {
+            Some(db) => db,
+            None => {
+                return CloneResult {
+                    success: false,
+                    local_path: None,
+                    error: Some("Database not initialized".to_string()),
+                };
+            }
+        };
         let conn = db.get_connection();
-        let mut stmt = conn.prepare("SELECT url, name FROM projects WHERE id = ?").unwrap();
-        stmt.query_row([id], |row| {
+        let mut stmt = match conn.prepare("SELECT url, name FROM projects WHERE id = ?") {
+            Ok(stmt) => stmt,
+            Err(e) => {
+                return CloneResult {
+                    success: false,
+                    local_path: None,
+                    error: Some(format!("Failed to prepare statement: {}", e)),
+                };
+            }
+        };
+        match stmt.query_row([id], |row| {
             Ok((row.get::<_, Option<String>>(0)?, row.get::<_, String>(1)?))
-        }).unwrap()
+        }) {
+            Ok(result) => result,
+            Err(e) => {
+                return CloneResult {
+                    success: false,
+                    local_path: None,
+                    error: Some(format!("Failed to query project: {}", e)),
+                };
+            }
+        }
     };
 
     let project_url = match project_url {
@@ -101,13 +137,14 @@ pub async fn clone_project(id: i64) -> CloneResult {
             if output.status.success() {
                 let local_path = target_dir.display().to_string();
                 
-                let db = DATABASE.lock().map_err(|e| e.to_string()).unwrap();
-                if let Some(db) = db.as_ref() {
-                    let conn = db.get_connection();
-                    let _ = conn.execute(
-                        "UPDATE projects SET is_downloaded = 1, local_path = ? WHERE id = ?",
-                        rusqlite::params![&local_path, id],
-                    );
+                if let Ok(db_lock) = DATABASE.lock() {
+                    if let Some(db) = db_lock.as_ref() {
+                        let conn = db.get_connection();
+                        let _ = conn.execute(
+                            "UPDATE projects SET is_downloaded = 1, local_path = ? WHERE id = ?",
+                            rusqlite::params![&local_path, id],
+                        );
+                    }
                 }
 
                 CloneResult {

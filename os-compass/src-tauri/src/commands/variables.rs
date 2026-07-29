@@ -1,5 +1,6 @@
 use crate::db::DATABASE;
 use crate::crypto;
+use log;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SystemVariable {
@@ -44,7 +45,7 @@ pub fn get_system_variables() -> Result<Vec<serde_json::Value>, String> {
                             Ok(plain) => Some(plain),
                             Err(e) => {
                                 let key: String = row.get::<_, String>(0)?;
-                                println!("[get_system_variables] WARNING: decrypt failed for key='{}', stored_len={}, err={}. Returning empty.", key, v.len(), e);
+                                log::warn!("[get_system_variables] WARNING: decrypt failed for key='{}', stored_len={}, err={}. Returning empty.", key, v.len(), e);
                                 Some(String::new())
                             }
                         }
@@ -115,7 +116,7 @@ pub fn set_system_variable(key: String, value: String, is_secret: bool) -> Resul
     )
     .map_err(|e| e.to_string())?;
 
-    println!("[variables] Saved: key={}, is_secret={}, stored_len={}", key, is_secret, stored_value.len());
+    log::debug!("[variables] Saved: key={}, is_secret={}, stored_len={}", key, is_secret, stored_value.len());
 
     Ok(())
 }
@@ -159,7 +160,7 @@ pub fn get_variable_value_internal(key: &str) -> Option<String> {
                 Ok(plain) => Some(plain),
                 Err(e) => {
                     // 解密失败：保留密文，不清理，避免密钥临时不匹配导致数据永久丢失
-                    println!("[variables] WARNING: Cannot decrypt secret '{}' (len={}): {}. Data preserved.", key, v.len(), e);
+                    log::warn!("[variables] WARNING: Cannot decrypt secret '{}' (len={}): {}. Data preserved.", key, v.len(), e);
                     None
                 }
             }
@@ -201,11 +202,11 @@ pub fn cleanup_undecryptable_secrets() {
     for (key, value) in keys {
         if crypto::decrypt_string(&value).is_err() {
             undecryptable += 1;
-            println!("[variables] WARNING: Cannot decrypt secret '{}' with current key. Data preserved (not cleared).", key);
+            log::warn!("[variables] WARNING: Cannot decrypt secret '{}' with current key. Data preserved (not cleared).", key);
         }
     }
 
     if undecryptable > 0 {
-        println!("[variables] WARNING: {} secret(s) could not be decrypted with current crypto key. Check .cryptokey file matches the vault.", undecryptable);
+        log::warn!("[variables] WARNING: {} secret(s) could not be decrypted with current crypto key. Check .cryptokey file matches the vault.", undecryptable);
     }
 }

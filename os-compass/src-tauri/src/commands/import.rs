@@ -1,5 +1,6 @@
 use crate::crawler_service;
 use crate::db::DATABASE;
+use crate::embedding;
 use crate::plugins::{self, crawler, gitee, github, ImportResult, Platform, ProjectData};
 use serde::{Deserialize, Serialize};
 
@@ -109,12 +110,25 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
                 );
 
                 match result {
-                    Ok(_) => ImportResponse {
-                        success: true,
-                        project_id: Some(conn.last_insert_rowid()),
-                        error: None,
-                        data: Some(data),
-                    },
+                    Ok(_) => {
+                        let project_id = conn.last_insert_rowid();
+                        
+                        drop(conn);
+                        drop(db);
+
+                        if embedding::is_enabled() {
+                            tokio::spawn(async move {
+                                let _ = embedding::generate_project_embeddings(project_id).await;
+                            });
+                        }
+
+                        ImportResponse {
+                            success: true,
+                            project_id: Some(project_id),
+                            error: None,
+                            data: Some(data),
+                        }
+                    }
                     Err(e) => ImportResponse {
                         success: false,
                         project_id: None,

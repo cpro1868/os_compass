@@ -2,6 +2,7 @@ use crate::db::DATABASE;
 use std::collections::HashMap;
 use crate::models::{ReadmeVariant, Translation};
 use crate::plugins;
+use log;
 
 #[tauri::command]
 pub async fn refresh_project_readme(project_id: i64) -> Result<RefreshReadmeResult, String> {
@@ -119,7 +120,7 @@ pub fn save_readme_variants_cmd(project_id: i64, variants: HashMap<String, Strin
 
 #[tauri::command]
 pub fn get_translations_cmd(project_id: i64, language: String) -> Result<Vec<Translation>, String> {
-    println!("[GET_TRANSLATIONS] project_id={}, language={}", project_id, language);
+    log::debug!("[GET_TRANSLATIONS] project_id={}, language={}", project_id, language);
     let db = DATABASE.lock().map_err(|e| e.to_string())?;
     let db = db.as_ref().ok_or("Database not initialized")?;
     let conn = db.get_connection();
@@ -139,7 +140,7 @@ pub fn get_translations_cmd(project_id: i64, language: String) -> Result<Vec<Tra
     ).ok();
 
     let count: i64 = conn.query_row("SELECT COUNT(*) FROM translations WHERE project_id = ? AND language = ?", rusqlite::params![project_id, language], |row| row.get(0)).unwrap_or(0);
-    println!("[GET_TRANSLATIONS] found {} records in DB", count);
+    log::debug!("[GET_TRANSLATIONS] found {} records in DB", count);
 
     let mut stmt = conn.prepare(
         "SELECT id, project_id, field_name, language, content, created_at, updated_at FROM translations WHERE project_id = ? AND language = ?"
@@ -156,7 +157,7 @@ pub fn get_translations_cmd(project_id: i64, language: String) -> Result<Vec<Tra
         })
     }).map_err(|e| e.to_string())?
     .collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?;
-    println!("[GET_TRANSLATIONS] returning {} records", translations.len());
+    log::debug!("[GET_TRANSLATIONS] returning {} records", translations.len());
     Ok(translations)
 }
 

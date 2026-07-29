@@ -33,7 +33,7 @@ pub fn calculate_health_score(metrics: ProjectMetrics) -> HealthScore {
     let raw_overall = activity * 0.25 + popularity * 0.30 + maintenance * 0.25 + documentation * 0.20;
     let overall = (raw_overall * 100.0).round();
 
-    println!("Health score calculation - activity: {:.2}, popularity: {:.2}, maintenance: {:.2}, documentation: {:.2}, raw: {:.3}, final: {:.0}",
+    log::debug!("Health score calculation - activity: {:.2}, popularity: {:.2}, maintenance: {:.2}, documentation: {:.2}, raw: {:.3}, final: {:.0}",
         activity, popularity, maintenance, documentation, raw_overall, overall);
 
     HealthScore {
