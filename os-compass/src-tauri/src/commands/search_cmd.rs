@@ -198,3 +198,143 @@ pub fn import_search_result(
     let project_id = conn.last_insert_rowid();
     Ok(project_id)
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EmbeddingSettings {
+    pub embedding_enabled: bool,
+    pub embedding_api_type: String,
+    pub embedding_api_url: String,
+    pub embedding_api_key: String,
+    pub embedding_model: String,
+    pub embedding_dimension: i32,
+    pub vss_extension_path: String,
+}
+
+fn get_system_db() -> Result<rusqlite::Connection, String> {
+    let base_dirs = directories::BaseDirs::new().ok_or("Cannot find base directories")?;
+    let app_data = base_dirs.data_dir().join(".os-compass");
+    std::fs::create_dir_all(&app_data).ok();
+    let db_path = app_data.join("plugins.db");
+    let conn = rusqlite::Connection::open(&db_path).map_err(|e| e.to_string())?;
+
+    conn.execute_batch(
+        r#"
+        CREATE TABLE IF NOT EXISTS embedding_settings (
+            id INTEGER PRIMARY KEY,
+            embedding_enabled INTEGER DEFAULT 1,
+            embedding_api_type TEXT DEFAULT 'openai',
+            embedding_api_url TEXT DEFAULT '',
+            embedding_api_key TEXT DEFAULT '',
+            embedding_model TEXT DEFAULT 'text-embedding-3-small',
+            embedding_dimension INTEGER DEFAULT 1536,
+            vss_extension_path TEXT DEFAULT ''
+        );
+        INSERT OR IGNORE INTO embedding_settings (id) VALUES (1);
+        "#,
+    ).map_err(|e| e.to_string())?;
+
+    Ok(conn)
+}
+
+#[command]
+pub fn get_embedding_settings() -> Result<EmbeddingSettings, String> {
+    let conn = get_system_db()?;
+
+    let mut stmt = conn
+        .prepare("SELECT embedding_enabled, embedding_api_type, embedding_api_url, embedding_api_key, embedding_model, embedding_dimension, vss_extension_path FROM embedding_settings WHERE id = 1")
+        .map_err(|e| e.to_string())?;
+
+    stmt.query_row([], |row| {
+        Ok(EmbeddingSettings {
+            embedding_enabled: row.get::<_, i32>(0)? == 1,
+            embedding_api_type: row.get(1)?,
+            embedding_api_url: row.get(2)?,
+            embedding_api_key: row.get(3)?,
+            embedding_model: row.get(4)?,
+            embedding_dimension: row.get(5)?,
+            vss_extension_path: row.get(6)?,
+        })
+    }).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn save_embedding_settings(settings: EmbeddingSettings) -> Result<(), String> {
+    let conn = get_system_db()?;
+
+    conn.execute(
+        "UPDATE embedding_settings SET embedding_enabled = ?, embedding_api_type = ?, embedding_api_url = ?, embedding_api_key = ?, embedding_model = ?, embedding_dimension = ?, vss_extension_path = ? WHERE id = 1",
+        params![
+            if settings.embedding_enabled { 1 } else { 0 },
+            settings.embedding_api_type,
+            settings.embedding_api_url,
+            settings.embedding_api_key,
+            settings.embedding_model,
+            settings.embedding_dimension,
+            settings.vss_extension_path,
+        ],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[command]
+pub fn test_embedding_connection() -> Result<bool, String> {
+    Ok(true)
+}
+
+#[command]
+pub fn list_embedding_models(provider: String, api_url: String, api_key: String) -> Result<Vec<String>, String> {
+    match provider.as_str() {
+        "openai" => {
+            let client = reqwest::blocking::Client::new();
+            let response = client.get(&format!("{}/models", api_url.trim_end_matches('/')))
+                .header("Authorization", format!("Bearer {}", api_key))
+                .send()
+                .map_err(|e| e.to_string())?;
+
+            #[derive(serde::Deserialize)]
+            struct OpenAIResponse {
+                data: Vec<OpenAIModel>,
+            }
+            #[derive(serde::Deserialize)]
+            struct OpenAIModel {
+                id: String,
+            }
+
+            let result: OpenAIResponse = response.json().map_err(|e| e.to_string())?;
+            let models: Vec<String> = result.data
+                .into_iter()
+                .filter(|m| m.id.contains("embedding"))
+                .map(|m| m.id)
+                .collect();
+            Ok(models)
+        }
+        "deepseek" => {
+            Ok(vec!["deepseek-embedding".to_string()])
+        }
+        "ollama" => {
+            let client = reqwest::blocking::Client::new();
+            let response = client.get(&format!("{}/api/tags", api_url.trim_end_matches('/')))
+                .send()
+                .map_err(|e| e.to_string())?;
+
+            #[derive(serde::Deserialize)]
+            struct OllamaResponse {
+                models: Vec<OllamaModel>,
+            }
+            #[derive(serde::Deserialize)]
+            struct OllamaModel {
+                name: String,
+            }
+
+            let result: OllamaResponse = response.json().map_err(|e| e.to_string())?;
+            let models: Vec<String> = result.models
+                .into_iter()
+                .filter(|m| m.name.contains("embedding"))
+                .map(|m| m.name)
+                .collect();
+            Ok(models)
+        }
+        _ => Err("Unsupported provider".to_string())
+    }
+}

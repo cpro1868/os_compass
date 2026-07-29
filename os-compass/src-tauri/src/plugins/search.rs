@@ -20,16 +20,21 @@ impl SearchPlugin {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResult {
     pub query: String,
-    pub results: Vec<ProjectMatch>,
+    pub local_results: Vec<ProjectMatch>,
+    pub web_results: Vec<ProjectMatch>,
     pub total: i64,
+    pub conversation_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectMatch {
-    pub project_name: Option<String>,
-    pub project_url: Option<String>,
+    pub name: String,
+    pub url: String,
     pub description: Option<String>,
+    pub stars: Option<i64>,
+    pub forks: Option<i64>,
     pub language: Option<String>,
+    pub health_score: Option<i64>,
     pub source: String,
     pub match_score: f64,
 }
@@ -96,65 +101,79 @@ pub async fn three_layer_search(
     let search_conn = init_search_db(vault_dir)?;
     let settings = get_settings();
 
-    let mut results: Vec<ProjectMatch> = Vec::new();
+    let mut local_results: Vec<ProjectMatch> = Vec::new();
+    let mut web_results: Vec<ProjectMatch> = Vec::new();
 
-    let local_results = {
-        let db_guard = crate::db::DATABASE.lock().unwrap();
-        let db = db_guard.as_ref().ok_or("Database not initialized")?;
-        let main_conn = db.get_connection();
+    let db_guard = crate::db::DATABASE.lock().unwrap();
+    let db = db_guard.as_ref().ok_or("Database not initialized")?;
+    let main_conn = db.get_connection();
 
+    if crate::embedding::is_enabled() {
+        match crate::embedding::semantic_search(query, 10).await {
+            Ok(matches) => {
+                for (project_id, distance) in matches {
+                    if let Ok((name, url, description, language, stars, forks)) = main_conn.query_row(
+                        "SELECT name, url, description, languages, stars, forks FROM projects WHERE id = ?",
+                        rusqlite::params![project_id],
+                        |row| Ok((
+                            row.get::<_, String>(0)?,
+                            row.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                            row.get::<_, Option<String>>(2)?,
+                            row.get::<_, Option<String>>(3)?,
+                            row.get::<_, Option<i64>>(4)?,
+                            row.get::<_, Option<i64>>(5)?,
+                        )),
+                    ) {
+                        local_results.push(ProjectMatch {
+                            name,
+                            url,
+                            description,
+                            stars,
+                            forks,
+                            language,
+                            health_score: None,
+                            source: "local".to_string(),
+                            match_score: ((1.0f32 - distance).max(0.0f32) as f64),
+                        });
+                    }
+                }
+            }
+            Err(e) => {
+                log::warn!("[search] Vector search failed, falling back to keyword: {}", e);
+            }
+        }
+    }
+
+    if local_results.is_empty() {
         let search_pattern = format!("%{}%", query.to_lowercase());
         let mut stmt = main_conn
-            .prepare("SELECT id, name, url, description, languages FROM projects WHERE lifecycle_status != 'DELETED' AND (name LIKE ? OR description LIKE ? OR languages LIKE ?)")
+            .prepare("SELECT id, name, url, description, languages, stars, forks FROM projects WHERE lifecycle_status != 'DELETED' AND (name LIKE ? OR description LIKE ? OR languages LIKE ?)")
             .map_err(|e| e.to_string())?;
 
         let rows = stmt
             .query_map(params![&search_pattern, &search_pattern, &search_pattern], |row| {
                 Ok(ProjectMatch {
-                    project_name: row.get(1)?,
-                    project_url: row.get(2)?,
+                    name: row.get::<_, String>(1).unwrap_or_default(),
+                    url: row.get::<_, String>(2).unwrap_or_default(),
                     description: row.get(3)?,
+                    stars: row.get(5)?,
+                    forks: row.get(6)?,
                     language: row.get(4)?,
+                    health_score: None,
                     source: "local".to_string(),
                     match_score: 1.0,
                 })
             })
             .map_err(|e| e.to_string())?;
 
-        let mut local = Vec::new();
         for row in rows {
-            local.push(row.map_err(|e| e.to_string())?);
-        }
-        local
-    };
-
-    results.extend(local_results);
-
-    if results.len() < 5 {
-        let cache_pattern = format!("%{}%", query.to_lowercase());
-        let mut stmt = search_conn
-            .prepare("SELECT project_name, project_url, description, language FROM search_cache WHERE keywords LIKE ? LIMIT ?")
-            .map_err(|e| e.to_string())?;
-
-        let cache_rows = stmt
-            .query_map(params![&cache_pattern, &(10 - results.len())], |row| {
-                Ok(ProjectMatch {
-                    project_name: row.get(0)?,
-                    project_url: row.get(1)?,
-                    description: row.get(2)?,
-                    language: row.get(3)?,
-                    source: "cache".to_string(),
-                    match_score: 0.7,
-                })
-            })
-            .map_err(|e| e.to_string())?;
-
-        for row in cache_rows {
-            results.push(row.map_err(|e| e.to_string())?);
+            if let Ok(result) = row {
+                local_results.push(result);
+            }
         }
     }
 
-    if results.len() < 5 {
+    if local_results.len() < 10 {
         let proxy = if settings.proxy_host.is_empty() {
             None
         } else {
@@ -165,37 +184,42 @@ pub async fn three_layer_search(
         let search_url = format!("https://api.github.com/search/repositories?q={}", urlencoding::encode(query));
 
         if let Ok(contents) = adapter.fetch(&search_url, proxy, None).await {
-            for content in contents.iter().take(10 - results.len()) {
-                let url_hash = compute_url_hash(&content.url);
+            for content in contents.iter().take(10 - local_results.len()) {
+                let _url_hash = compute_url_hash(&content.url);
                 let parsed = parse_content_with_llm(content, &settings).unwrap_or_default();
 
-                let project_name = parsed
+                let name = parsed
                     .first()
                     .and_then(|p| p.project_name.clone())
                     .unwrap_or_else(|| content.title.clone());
 
-                let project_url = parsed
+                let url = parsed
                     .first()
                     .and_then(|p| p.project_url.clone())
                     .unwrap_or_else(|| content.url.clone());
 
                 let description = parsed.first().and_then(|p| p.description.clone());
 
-                results.push(ProjectMatch {
-                    project_name: Some(project_name),
-                    project_url: Some(project_url),
+                web_results.push(ProjectMatch {
+                    name,
+                    url,
                     description,
+                    stars: None,
+                    forks: None,
                     language: None,
-                    source: "web".to_string(),
-                    match_score: 0.3,
+                    health_score: None,
+                    source: "llm".to_string(),
+                    match_score: 0.5,
                 });
             }
         }
     }
 
-    results.sort_by(|a, b| b.match_score.partial_cmp(&a.match_score).unwrap());
-
-    let total = results.len() as i64;
+    let total = (local_results.len() + web_results.len()) as i64;
+    let conversation_id = format!("conv_{}", std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis());
 
     search_conn.execute(
         "INSERT INTO search_history (query, result_count) VALUES (?, ?)",
@@ -204,8 +228,10 @@ pub async fn three_layer_search(
 
     Ok(SearchResult {
         query: (*query).to_string(),
-        results,
+        local_results,
+        web_results,
         total,
+        conversation_id,
     })
 }
 

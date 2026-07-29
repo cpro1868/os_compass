@@ -1,5 +1,5 @@
 use crate::db::open_db_at_path;
-use crate::content_filter::{filter_radar_item, FilterLevel};
+use crate::content_filter::{filter_radar_item, FilterLevel, load_lexicon_from_file, scan_content};
 use crate::feature_plugin::{
     DbMode, FeaturePlugin, FeaturePluginType, FeatureResult, PluginContext, PluginError,
 };
@@ -7,13 +7,49 @@ use crate::plugin_config_db::PLUGIN_CONFIG_DB;
 use crate::settings::get_settings;
 use crate::source_engine::{get_adapter, SourceType};
 use async_trait::async_trait;
+use log;
 use rusqlite::params;
 use sha2::{Digest, Sha256};
 use std::sync::Mutex;
 use std::time::Duration;
+use std::path::PathBuf;
 
 pub struct RadarPlugin {
     _scan_flag: Mutex<bool>,
+}
+
+fn get_log_path() -> PathBuf {
+    if let Some(base_dirs) = directories::BaseDirs::new() {
+        base_dirs.data_dir().join(".os-compass").join("radar_filter.log")
+    } else {
+        PathBuf::from("radar_filter.log")
+    }
+}
+
+fn write_filter_log(message: &str) {
+    let log_path = get_log_path();
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let duration = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+    let secs = duration.as_secs();
+    let hours = (secs / 3600) % 24 + 8;
+    let mins = (secs / 60) % 60;
+    let secs = secs % 60;
+    let timestamp = format!("{:02}:{:02}:{:02}", hours, mins, secs);
+    let log_line = format!("[{}] {}", timestamp, message);
+    
+    let _ = std::fs::create_dir_all(log_path.parent().unwrap());
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+        .and_then(|mut file| {
+            use std::io::Write;
+            writeln!(file, "{}", log_line)
+        });
+    
+    log::debug!("{}", message);
 }
 
 impl RadarPlugin {
@@ -21,6 +57,25 @@ impl RadarPlugin {
         RadarPlugin {
             _scan_flag: Mutex::new(false),
         }
+    }
+}
+
+fn get_lexicon_path() -> PathBuf {
+    if let Some(base_dirs) = directories::BaseDirs::new() {
+        base_dirs.data_dir().join(".os-compass").join("spam_lexicon.json")
+    } else {
+        PathBuf::from("spam_lexicon.json")
+    }
+}
+
+pub fn init_spam_lexicon() {
+    let lexicon_path = get_lexicon_path();
+    write_filter_log(&format!("[INIT] Loading lexicon from: {:?}", lexicon_path));
+    if lexicon_path.exists() {
+        load_lexicon_from_file(&lexicon_path);
+        write_filter_log(&format!("[INIT] Lexicon loaded successfully"));
+    } else {
+        write_filter_log(&format!("[INIT] Lexicon file not found at {:?}, using default", lexicon_path));
     }
 }
 
@@ -33,7 +88,7 @@ pub fn init_radar_db() -> Result<rusqlite::Connection, String> {
     };
     std::fs::create_dir_all(&os_compass_dir).ok();
     let db_path = os_compass_dir.join("plugin_radar.db");
-    println!("[radar] init_radar_db: db_path={:?}", db_path);
+    log::debug!("[radar] init_radar_db: db_path={:?}", db_path);
 
     let conn = open_db_at_path(&db_path)?;
 
@@ -109,7 +164,7 @@ pub async fn radar_scan_source(
     let mut new_items = 0i64;
     let mut errors = 0i64;
 
-    println!("[radar] Scanning source_id={}, type={}, url={}, time_range={:?}", source_id, source_type, url, time_range);
+    log::info!("[radar] Scanning source_id={}, type={}, url={}, time_range={:?}", source_id, source_type, url, time_range);
 
     let st = SourceType::from_str(source_type).unwrap_or(SourceType::Rss);
     let mut adapter = get_adapter(st);
@@ -128,32 +183,32 @@ pub async fn radar_scan_source(
                 format!("{}://{}:{}", protocol, src.proxy_host, src.proxy_port)
             };
             proxy_url = Some(full_proxy.clone());
-            println!("[radar] Using source proxy: {}", full_proxy);
+            log::info!("[radar] Using source proxy: {}", full_proxy);
         } else {
-            println!("[radar] Source proxy not enabled or empty, checking global proxy");
+            log::info!("[radar] Source proxy not enabled or empty, checking global proxy");
             let settings = get_settings();
             if !settings.proxy_host.is_empty() {
                 proxy_url = Some(settings.proxy_host.clone());
-                println!("[radar] Using global proxy: {}", proxy_url.as_ref().unwrap());
+                log::info!("[radar] Using global proxy: {}", proxy_url.as_ref().unwrap());
             }
         }
     } else {
-        println!("[radar] Source config not found, trying global proxy");
+        log::info!("[radar] Source config not found, trying global proxy");
         let settings = get_settings();
         if !settings.proxy_host.is_empty() {
             proxy_url = Some(settings.proxy_host.clone());
-            println!("[radar] Using global proxy: {}", proxy_url.as_ref().unwrap());
+            log::info!("[radar] Using global proxy: {}", proxy_url.as_ref().unwrap());
         }
     }
 
-    println!("[radar] Fetching from url: {}", url);
+    log::debug!("[radar] Fetching from url: {}", url);
     let contents = match adapter.fetch(url, proxy_url.as_deref(), time_range).await {
         Ok(c) => {
-            println!("[radar] Fetched {} items", c.len());
+            log::debug!("[radar] Fetched {} items", c.len());
             c
         }
         Err(e) => {
-            println!("[radar] Fetch error: {}", e);
+            log::error!("[radar] Fetch error: {}", e);
             PLUGIN_CONFIG_DB.update_radar_source_status(source_id, "error", Some(&e.to_string())).ok();
             errors += 1;
             return Ok((scanned, new_items, errors));
@@ -162,7 +217,7 @@ pub async fn radar_scan_source(
 
     for content in &contents {
         scanned += 1;
-        println!("[radar] Processing item {}: {}", scanned, content.title);
+        log::debug!("[radar] Processing item {}: {}", scanned, content.title);
 
         // 使用 content 的 hash 作为唯一标识，而不是 url（因为 url 可能为空或重复）
         let content_hash = compute_url_hash(&format!("{}|{}", content.title, content.content.as_ref().unwrap_or(&String::new())));
@@ -176,7 +231,7 @@ pub async fn radar_scan_source(
             .unwrap_or(false);
 
         if exists {
-            println!("[radar] Item already exists, skipping");
+            log::debug!("[radar] Item already exists, skipping");
             continue;
         }
 
@@ -189,16 +244,25 @@ pub async fn radar_scan_source(
             .unwrap_or(false);
 
         if blacklisted {
-            println!("[radar] Item is blacklisted, skipping");
+            write_filter_log(&format!("[SKIP] Item blacklisted: {}", content.title));
             continue;
         }
 
         let filter_threshold = get_filter_threshold();
+        write_filter_log(&format!("[CHECK] Item: {}, threshold: {}", content.title, filter_threshold));
         if filter_threshold < f64::MAX {
-            if filter_radar_item(&content.title, content.content.as_deref().unwrap_or(""), filter_threshold) {
-                println!("[radar] Item filtered as spam, skipping: {}", content.title);
+            let filter_result = crate::content_filter::filter_radar_item(
+                &content.title,
+                content.content.as_deref().unwrap_or(""),
+                filter_threshold,
+            );
+            write_filter_log(&format!("[FILTER] title={}, threshold={}, filtered={}", content.title, filter_threshold, filter_result));
+            if filter_result {
+                write_filter_log(&format!("[SKIP] Spam filtered: {}", content.title));
                 continue;
             }
+        } else {
+            write_filter_log(&format!("[INFO] Filter is OFF"));
         }
 
         let project_name = content.title.clone();
@@ -206,22 +270,22 @@ pub async fn radar_scan_source(
         let description = content.content.clone();
         let language = None::<String>;
 
-        println!("[radar] Inserting item: name={}, url={}", project_name, project_url);
+        write_filter_log(&format!("[INSERT] name={}", project_name));
         let result = conn.execute(
             "INSERT OR IGNORE INTO radar_items (source_id, url_hash, project_name, project_url, description, language, raw_content, source_urls, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             params![source_id, content_hash, project_name, project_url, description, language, content.content, content.url.clone(), content.published_at],
         );
 
         if result.is_ok() && conn.changes() > 0 {
-            println!("[radar] Successfully inserted new item");
+            write_filter_log(&format!("[OK] Inserted: {}", project_name));
             new_items += 1;
         } else {
-            println!("[radar] Insert failed or no changes: {:?}", result.err());
+            write_filter_log(&format!("[SKIP] Duplicate or failed: {}", project_name));
         }
     }
 
     PLUGIN_CONFIG_DB.update_radar_source_status(source_id, "success", None).ok();
-    println!("[radar] Scan completed: scanned={}, new={}, errors={}", scanned, new_items, errors);
+    log::info!("[radar] Scan completed: scanned={}, new={}, errors={}", scanned, new_items, errors);
 
     Ok((scanned, new_items, errors))
 }
@@ -231,7 +295,7 @@ pub async fn radar_scan_all(time_range: Option<&str>) -> Result<(i64, i64, i64),
 
     // 从系统库读取信息源
     let system_sources = PLUGIN_CONFIG_DB.list_radar_sources();
-    println!("[radar] Found {} sources in system DB", system_sources.len());
+    log::debug!("[radar] Found {} sources in system DB", system_sources.len());
 
     if system_sources.is_empty() {
         return Ok((0, 0, 0));
@@ -251,7 +315,7 @@ pub async fn radar_scan_all(time_range: Option<&str>) -> Result<(i64, i64, i64),
         let source_type = source.source_type.clone();
         let url = source.url.clone();
 
-        println!("[radar] Scanning source {}/{}: {}", idx + 1, system_sources.len(), source.name);
+        log::info!("[radar] Scanning source {}/{}: {}", idx + 1, system_sources.len(), source.name);
 
         match radar_scan_source(&conn, source_id, &source_type, &url, time_range).await {
             Ok((s, n, e)) => {
@@ -265,7 +329,7 @@ pub async fn radar_scan_all(time_range: Option<&str>) -> Result<(i64, i64, i64),
         }
     }
 
-    println!("[radar] Scan completed: total scanned={}, new={}, errors={}", total_scanned, total_new, total_errors);
+    log::info!("[radar] Scan completed: total scanned={}, new={}, errors={}", total_scanned, total_new, total_errors);
     Ok((total_scanned, total_new, total_errors))
 }
 
@@ -298,6 +362,7 @@ impl FeaturePlugin for RadarPlugin {
     async fn init(&self, _context: &PluginContext) -> Result<(), PluginError> {
         init_radar_db()
             .map_err(|e| PluginError::InitFailed(e))?;
+        init_spam_lexicon();
         Ok(())
     }
 

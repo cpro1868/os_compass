@@ -4,6 +4,7 @@ pub mod content_filter;
 pub mod crypto;
 pub mod crawler_service;
 pub mod db;
+pub mod embedding;
 pub mod error;
 pub mod feature_plugin;
 pub mod health;
@@ -426,6 +427,7 @@ pub fn run() {
             commands::set_extension_enabled,
             commands::get_enabled_extensions,
             commands::get_supported_platform_domains,
+            commands::get_supported_platforms,
             commands::translate,
             commands::translate_with_llm,
             commands::detect_text_language,
@@ -498,6 +500,14 @@ pub fn run() {
             commands::delete_search_source,
             commands::refresh_search_cache,
             commands::import_search_result,
+            commands::get_embedding_settings,
+            commands::save_embedding_settings,
+            commands::test_embedding_connection,
+            commands::list_embedding_models,
+            embedding::generate_embedding_for_text,
+            embedding::generate_project_embeddings,
+            embedding::rebuild_embeddings,
+            embedding::semantic_search_projects,
             commands::generate_article,
             commands::export_article,
             commands::get_article_styles,
