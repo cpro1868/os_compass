@@ -3,6 +3,7 @@ use crate::db::DATABASE;
 use crate::plugins::{self, crawler, gitee, github, ImportResult, Platform, ProjectData};
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
+use log;
 
 fn normalize_url(url: &str) -> String {
     let trimmed = url.trim().trim_end_matches('/');
@@ -478,7 +479,7 @@ async fn translate_ai_field(
 ) {
     if let Some(t) = text {
         if t.trim().is_empty() { return; }
-        println!("[TRANSLATE_AI] Starting {} (len={})", field_name, t.len());
+        log::debug!("[TRANSLATE_AI] Starting {} (len={})", field_name, t.len());
         let _ = app.emit("import:task_progress", TaskProgress {
             project_id,
             task_type: field_name.to_string(),
@@ -490,13 +491,13 @@ async fn translate_ai_field(
         let mut last_error = String::new();
         for attempt in 0..3u32 {
             if attempt > 0 {
-                println!("[TRANSLATE_AI] {} retry {} after 3s", field_name, attempt);
+                log::debug!("[TRANSLATE_AI] {} retry {} after 3s", field_name, attempt);
                 tokio::time::sleep(std::time::Duration::from_secs(3)).await;
             }
             match crate::translate::translate_text_with_llm(&t, lang).await {
                 Ok(translated) => {
                     if !translated.trim().is_empty() {
-                        println!("[TRANSLATE_AI] {} success (len={})", field_name, translated.len());
+                        log::debug!("[TRANSLATE_AI] {} success (len={})", field_name, translated.len());
                         if let Ok(db) = DATABASE.lock() {
                             if let Some(db) = db.as_ref() {
                                 let conn = db.get_connection();
@@ -514,7 +515,7 @@ async fn translate_ai_field(
                 }
                 Err(e) => {
                     last_error = e;
-                    println!("[TRANSLATE_AI] {} attempt {} error: {}", field_name, attempt + 1, last_error);
+                    log::error!("[TRANSLATE_AI] {} attempt {} error: {}", field_name, attempt + 1, last_error);
                 }
             }
         }

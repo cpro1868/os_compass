@@ -2,6 +2,7 @@ use crate::source_engine::{RawContent, SourceAdapter, SourceError, SourceType};
 use async_trait::async_trait;
 use regex::Regex;
 use std::time::Duration;
+use log;
 
 pub struct TelegramAdapter;
 
@@ -163,7 +164,7 @@ impl TelegramAdapter {
 
     async fn http_get(&self, url: &str, proxy: Option<&str>) -> Result<String, SourceError> {
         let proxy_info = proxy.unwrap_or("none");
-        println!("[telegram] http_get: url={}, proxy={}", url, proxy_info);
+        log::debug!("[telegram] http_get: url={}, proxy={}", url, proxy_info);
         
         let mut builder = reqwest::Client::builder()
             .timeout(Duration::from_secs(60))
@@ -171,7 +172,7 @@ impl TelegramAdapter {
 
         if let Some(proxy_url) = proxy {
             if !proxy_url.is_empty() {
-                println!("[telegram] Setting proxy: {}", proxy_url);
+                log::debug!("[telegram] Setting proxy: {}", proxy_url);
                 let proxy = reqwest::Proxy::all(proxy_url)
                     .map_err(|e| SourceError::ConfigError(e.to_string()))?;
                 builder = builder.proxy(proxy);
@@ -187,12 +188,12 @@ impl TelegramAdapter {
             .send()
             .await
             .map_err(|e| {
-                println!("[telegram] Request failed: {}", e);
+                log::warn!("[telegram] Request failed: {}", e);
                 SourceError::NetworkError(e.to_string())
             })?;
 
         let status = response.status();
-        println!("[telegram] Response status: {}", status);
+        log::debug!("[telegram] Response status: {}", status);
         
         if status.as_u16() == 429 {
             return Err(SourceError::NetworkError("Rate limited".to_string()));
@@ -202,11 +203,11 @@ impl TelegramAdapter {
         }
 
         let text = response.text().await.map_err(|e| {
-            println!("[telegram] Read body failed: {}", e);
+            log::warn!("[telegram] Read body failed: {}", e);
             SourceError::NetworkError(e.to_string())
         })?;
         
-        println!("[telegram] Received {} bytes", text.len());
+        log::debug!("[telegram] Received {} bytes", text.len());
         Ok(text)
     }
 }
@@ -221,7 +222,7 @@ impl SourceAdapter for TelegramAdapter {
         let base_url = Self::normalize_url(url)
             .ok_or_else(|| SourceError::ParseError("Invalid Telegram URL".to_string()))?;
 
-        println!("[telegram] Fetching: {}, time_range={:?}", base_url, time_range);
+        log::debug!("[telegram] Fetching: {}, time_range={:?}", base_url, time_range);
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         let mut all_results = Vec::new();
@@ -232,7 +233,7 @@ impl SourceAdapter for TelegramAdapter {
         loop {
             page_num += 1;
             if page_num > max_pages {
-                println!("[telegram] Max pages reached, stopping");
+                log::debug!("[telegram] Max pages reached, stopping");
                 break;
             }
             
@@ -241,20 +242,20 @@ impl SourceAdapter for TelegramAdapter {
                 None => base_url.clone(),
             };
 
-            println!("[telegram] Page {}: {}", page_num, fetch_url);
+            log::debug!("[telegram] Page {}: {}", page_num, fetch_url);
             
             let html = self.http_get(&fetch_url, proxy).await?;
             if html.len() < 1000 {
-                println!("[telegram] Page {} too short, stopping", page_num);
+                log::debug!("[telegram] Page {} too short, stopping", page_num);
                 break;
             }
 
             let first_page = page_num == 1;
             let (results, new_last_id, exceeds_range) = self.extract_messages(&html, time_range, first_page);
-            println!("[telegram] Page {} extracted {} messages, exceeds_range={}", page_num, results.len(), exceeds_range);
+            log::debug!("[telegram] Page {} extracted {} messages, exceeds_range={}", page_num, results.len(), exceeds_range);
             
             if results.is_empty() {
-                println!("[telegram] No messages in range, stopping");
+                log::debug!("[telegram] No messages in range, stopping");
                 break;
             }
 
@@ -263,12 +264,12 @@ impl SourceAdapter for TelegramAdapter {
             
             // 如果设置了时间范围，且已达到范围边界，停止
             if time_range.is_some() && exceeds_range {
-                println!("[telegram] Reached time range limit, stopping");
+                log::debug!("[telegram] Reached time range limit, stopping");
                 break;
             }
             
             if last_msg_id.is_none() {
-                println!("[telegram] No more pages, stopping");
+                log::debug!("[telegram] No more pages, stopping");
                 break;
             }
 
@@ -279,7 +280,7 @@ impl SourceAdapter for TelegramAdapter {
         let mut seen = std::collections::HashSet::new();
         all_results.retain(|r| seen.insert(r.title.clone()));
 
-        println!("[telegram] Total: {} messages", all_results.len());
+        log::debug!("[telegram] Total: {} messages", all_results.len());
         Ok(all_results)
     }
 }

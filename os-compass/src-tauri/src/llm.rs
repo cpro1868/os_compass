@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::settings;
+use log;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LlmMessage {
@@ -57,14 +58,14 @@ impl LlmClient {
     pub fn from_settings() -> Option<Self> {
         let s = settings::get_settings();
 
-        println!("[LLM] from_settings: api_key present={}, len={}", !s.llm_api_key.is_empty(), s.llm_api_key.len());
+        log::debug!("[LLM] from_settings: api_key present={}, len={}", !s.llm_api_key.is_empty(), s.llm_api_key.len());
 
         if s.llm_api_key.is_empty() {
-            println!("[LLM] API key is empty, LLM not configured");
+            log::debug!("[LLM] API key is empty, LLM not configured");
             return None;
         }
 
-        println!("[LLM] Configured: provider={}, base={}, model={}, key_len={}, proxy_enabled={}",
+        log::debug!("[LLM] Configured: provider={}, base={}, model={}, key_len={}, proxy_enabled={}",
             s.llm_provider, s.llm_api_base, s.llm_model, s.llm_api_key.len(), s.llm_proxy_enabled);
 
         let proxy_url = if s.llm_proxy_enabled {

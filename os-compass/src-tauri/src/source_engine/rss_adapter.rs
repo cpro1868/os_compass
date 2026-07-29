@@ -1,5 +1,6 @@
 use crate::source_engine::{build_client, RawContent, SourceAdapter, SourceError, SourceType};
 use async_trait::async_trait;
+use log;
 
 pub struct RssAdapter;
 
@@ -88,7 +89,7 @@ fn extract_rss_items(xml: &str) -> Vec<RawContent> {
         }
     }
 
-    println!("[rss] Parsed {} items from XML ({} chars)", results.len(), xml.len());
+    log::debug!("[rss] Parsed {} items from XML ({} chars)", results.len(), xml.len());
     results
 }
 
@@ -99,15 +100,15 @@ impl SourceAdapter for RssAdapter {
     }
 
     async fn fetch(&mut self, url: &str, proxy: Option<&str>, _time_range: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
-        println!("[rss] Fetching: {}", url);
+        log::debug!("[rss] Fetching: {}", url);
         let client = build_client(proxy)?;
         let response = client.get(url).send().await?;
-        println!("[rss] Response status: {}", response.status());
+        log::debug!("[rss] Response status: {}", response.status());
         let xml = response.text().await?;
-        println!("[rss] XML length: {} bytes", xml.len());
+        log::debug!("[rss] XML length: {} bytes", xml.len());
 
         let results = extract_rss_items(&xml);
-        println!("[rss] Extracted {} items", results.len());
+        log::debug!("[rss] Extracted {} items", results.len());
         Ok(results)
     }
 }

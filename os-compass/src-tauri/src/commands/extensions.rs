@@ -1,3 +1,4 @@
+use crate::plugins;
 use crate::system_db;
 use serde::Serialize;
 
@@ -71,4 +72,12 @@ pub fn get_enabled_extensions() -> Result<Vec<SourcePlugin>, String> {
 #[tauri::command]
 pub fn get_supported_platform_domains() -> Result<Vec<String>, String> {
     system_db::get_enabled_source_domains()
+}
+
+#[tauri::command]
+pub fn get_supported_platforms() -> Result<Vec<serde_json::Value>, String> {
+    Ok(plugins::get_supported_platforms()
+        .into_iter()
+        .map(|(domain, name)| serde_json::json!({ "domain": domain, "name": name }))
+        .collect())
 }

@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use std::sync::Mutex;
 use crate::plugins::radar::init_radar_db;
+use log;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Vault {
@@ -185,7 +186,7 @@ pub fn create_vault(app: AppHandle, name: String, base_path: String) -> Result<V
     let crypto_key = crate::crypto::generate_key();
     std::fs::write(&key_path, crate::crypto::key_to_base64(&crypto_key))
         .map_err(|e| format!("Failed to write crypto key: {}", e))?;
-    println!("[vault] Generated new crypto key for new vault: {:?}", vault_dir);
+    log::info!("[vault] Generated new crypto key for new vault: {:?}", vault_dir);
 
     let config = VaultConfig {
         path: db_path.to_string_lossy().to_string(),
@@ -194,8 +195,8 @@ pub fn create_vault(app: AppHandle, name: String, base_path: String) -> Result<V
 
     // 初始化雷达数据库（在系统目录）
     match crate::plugins::radar::init_radar_db() {
-        Ok(_) => println!("[create_vault] Radar DB initialized at system dir"),
-        Err(e) => println!("[create_vault] Failed to init radar DB: {}", e),
+        Ok(_) => log::info!("[create_vault] Radar DB initialized at system dir"),
+        Err(e) => log::error!("[create_vault] Failed to init radar DB: {}", e),
     }
 
     let mut index = load_vault_index(&app);
@@ -289,7 +290,7 @@ pub fn migrate_to_vault(app: AppHandle, vault_path: String, old_db_path: PathBuf
 
 pub fn validate_vault(path: String) -> VaultValidation {
     let db_path = PathBuf::from(&path).join("os_compass.db");
-    println!("[validate_vault] path={}, db_path={:?}, exists={}", path, db_path, db_path.exists());
+    log::debug!("[validate_vault] path={}, db_path={:?}, exists={}", path, db_path, db_path.exists());
 
     if !db_path.exists() {
         return VaultValidation {
@@ -307,7 +308,7 @@ pub fn validate_vault(path: String) -> VaultValidation {
                 [],
                 |row| row.get(0),
             ).unwrap_or(0);
-            println!("[validate_vault] table_count={}", table_count);
+            log::debug!("[validate_vault] table_count={}", table_count);
 
             if table_count == 0 {
                 return VaultValidation {
@@ -334,7 +335,7 @@ pub fn validate_vault(path: String) -> VaultValidation {
             } else {
                 0
             };
-            println!("[validate_vault] has_projects={}, project_count={}", has_projects, project_count);
+            log::debug!("[validate_vault] has_projects={}, project_count={}", has_projects, project_count);
 
             VaultValidation {
                 valid: true,
@@ -344,7 +345,7 @@ pub fn validate_vault(path: String) -> VaultValidation {
             }
         }
         Err(e) => {
-            println!("[validate_vault] Failed to open db: {}", e);
+            log::error!("[validate_vault] Failed to open db: {}", e);
             VaultValidation {
                 valid: false,
                 error: Some(format!("无法打开数据库: {}", e)),
@@ -374,7 +375,7 @@ fn write_log(msg: &str) {
         let ts = format!("{}+{:03}T{:02}:{:02}:{:02}", 1970 + days as i64, days, hours, mins, secs);
         writeln!(file, "[{}] {}", ts, msg).ok();
     }
-    println!("{}", msg);
+    log::debug!("{}", msg);
 }
 
 pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
@@ -413,7 +414,7 @@ pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
 
     // 触发插件仓库切换（调用 on_disable/init/on_enable）
     if let Err(e) = crate::plugin_manager::PLUGIN_MANAGER.switch_vault(&vault_dir) {
-        println!("[open_vault] plugin switch_vault error: {}", e);
+        log::error!("[open_vault] plugin switch_vault error: {}", e);
     }
 
     let last_vault_path = get_last_vault_path(&app);

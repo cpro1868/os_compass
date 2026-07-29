@@ -1,5 +1,6 @@
 pub mod ai;
 pub mod ai_classify_cmd;
+pub mod article_cmd;
 pub mod backup_cmd;
 pub mod clone_cmd;
 pub mod crypto_cmd;
@@ -21,6 +22,7 @@ pub mod vault_cmd;
 
 pub use ai::*;
 pub use ai_classify_cmd::*;
+pub use article_cmd::*;
 pub use backup_cmd::*;
 pub use clone_cmd::*;
 pub use crypto_cmd::*;
