@@ -97,7 +97,8 @@
     "stats": "Statistics",
     "vault": "Vault",
     "settings": "Settings",
-    "organization": "Organization"
+    "organization": "Organization",
+    "navigation": "Navigation"
   },
   "category": {
     "title": "Category Manager",
@@ -159,6 +160,7 @@
     "releases": "Releases",
     "runbook": "Runbook",
     "user": "User Info",
+    "article": "Article",
     "readme": "README",
     "projectName": "Project Name",
     "projectUrl": "Project URL",
@@ -527,7 +529,8 @@
       "translation": "Translation",
       "variables": "Variables",
       "extensions": "Extensions",
-      "plugins": "Feature Plugins"
+      "plugins": "Feature Plugins",
+      "vector": "Vector Search"
     },
     "storage": "Storage",
     "dataDir": "Data Directory",
@@ -702,6 +705,22 @@
     "pluginLevel": {
       "system": "System",
       "vault": "Vault"
+    },
+    "vector": {
+      "title": "Vector Search Configuration",
+      "desc": "Configure Embedding API to enable semantic search",
+      "enabled": "Enable Vector Search",
+      "tipTitle": "Usage Tips",
+      "tip": "Vector search uses semantic embeddings from project descriptions for natural language search. Falls back to keyword matching if not configured.",
+      "apiType": "API Type",
+      "apiUrl": "API URL",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "Enter API Key (will be encrypted)",
+      "model": "Model Name",
+      "dimension": "Vector Dimension",
+      "testConnection": "Test Connection",
+      "testSuccess": "Connection successful",
+      "testFailed": "Connection failed"
     }
   },
   "import": {
@@ -842,17 +861,33 @@
   },
   "search": {
     "title": "Intent Search",
+    "subtitle": "Local Vector + LLM Online Search",
     "placeholder": "Describe what you're looking for...",
-    "welcome": "What would you like to find?",
+    "welcome": "Hello! I'm your open source project assistant.",
+    "welcomeMiddle": " search your local project library and",
+    "welcomeEnd": " recommend related open source projects for you.",
     "hint": "Describe your requirements in natural language",
-    "searching": "Searching...",
+    "searching": "Analyzing and searching...",
     "resultsCount": "{{count}} results found",
     "matchScore": "Match: {{score}}%",
     "unknownProject": "Unknown Project",
+    "localVector": "Local Vector",
+    "llmOnline": "LLM Online",
+    "inLibrary": "In Library",
+    "aiTip": "AI assistant based on semantic understanding",
+    "send": "Send",
+    "newline": "New Line",
+    "clear": "Clear Chat",
+    "recentProjects": "Recent Projects",
+    "noRecent": "No recent projects",
+    "newSearch": "New Search",
+    "vectorSearch": "Vector Semantic Search",
+    "llmSearch": "LLM Online Search",
     "source": {
       "local": "Local",
       "cache": "Cache",
-      "web": "Web"
+      "web": "Web",
+      "llm": "LLM"
     },
     "history": "Search History",
     "noHistory": "No search history",
@@ -865,7 +900,67 @@
       "loadHistoryFailed": "Failed to load history",
       "searchFailed": "Search failed",
       "clearFailed": "Failed to clear history",
-      "importFailed": "Failed to import project"
+      "importFailed": "Failed to import project",
+      "openFailed": "Failed to open project details"
     }
+  },
+  "initWizard": {
+    "welcome": "Welcome to OS-Compass",
+    "subtitle": "Open Source Project Smart Manager · Local-First Data Management",
+    "selectVault": "Select Vault",
+    "init": "Initialize",
+    "complete": "Complete",
+    "selectExisting": "Select Existing Vault",
+    "selectExistingDesc": "Open a previously created vault",
+    "createNew": "Create New Vault",
+    "createNewDesc": "Create a new local vault",
+    "importBackup": "Import from Backup",
+    "importBackupDesc": "Restore a previously exported vault backup",
+    "noVaults": "No existing vaults",
+    "vaultName": "Vault Name",
+    "storageLocation": "Storage Location",
+    "browse": "Browse",
+    "create": "Create",
+    "createAndContinue": "Create & Continue",
+    "selectBackup": "Select Backup Directory",
+    "targetLocation": "Import Target Location",
+    "startImport": "Start Import",
+    "back": "Back",
+    "next": "Next",
+    "prev": "Previous",
+    "creating": "Creating...",
+    "importing": "Importing...",
+    "validating": "Validating...",
+    "validationSuccess": "Validation passed",
+    "validationFailed": "Validation failed",
+    "error": {
+      "nameRequired": "Please enter vault name",
+      "pathRequired": "Please select storage location",
+      "backupRequired": "Please select backup directory",
+      "targetRequired": "Please select import target location",
+      "invalidBackup": "Invalid backup file",
+      "createFailed": "Failed to create vault",
+      "importFailed": "Import failed"
+    },
+    "progress": {
+      "creatingDir": "Creating vault directory",
+      "initDb": "Initializing database",
+      "settingKey": "Setting encryption key",
+      "complete": "Initialization complete"
+    },
+    "completed": "Initialization complete!",
+    "startUsing": "Start Using OS-Compass"
+  },
+  "home": {
+    "title": "OS-Compass",
+    "subtitle": "AI-Powered Open Source Asset Manager",
+    "placeholder": "Paste open source project link...",
+    "import": "Import",
+    "importing": "Importing...",
+    "recentProjects": "Recent Projects",
+    "noProjects": "No projects yet",
+    "stars": "Stars",
+    "language": "Language",
+    "unrecognized": "Unrecognized platform"
   }
 }

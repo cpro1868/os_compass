@@ -128,7 +128,7 @@ export async function getRadarItems(
 
 export async function radarItemAction(
   itemId: number,
-  action: 'collect' | 'blacklist',
+  action: 'collect' | 'blacklist' | 'delete',
   categoryId?: number
 ): Promise<null> {
   return invoke('radar_item_action', {

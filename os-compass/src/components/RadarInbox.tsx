@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, getSupportedPlatformDomains, RadarSource, RadarItem, RadarSourceInput } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
+import { translate } from '../api';
 
 // 获取一周前的日期（格式：YYYY-MM-DD）
 const getOneWeekAgo = (): string => {
@@ -49,6 +50,9 @@ export function RadarInbox() {
   const [searchStartDate, setSearchStartDate] = useState<string>(getOneWeekAgo());
   const [searchEndDate, setSearchEndDate] = useState<string>(getToday());
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
+  const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
+  const [translatingId, setTranslatingId] = useState<number | null>(null);
+  const [translatedContent, setTranslatedContent] = useState<Record<number, string>>({});
 
   const loadSupportedDomains = useCallback(async () => {
     try {
@@ -96,10 +100,15 @@ export function RadarInbox() {
         showToast('加载数据失败：返回数据为空', 'error');
         return;
       }
-      console.log('[RadarInbox] getRadarItems returned:', result.items.length, 'items');
+      console.log('[RadarInbox] getRadarItems returned:', result.items.length, 'items, total:', result.total);
       setItems(result.items);
-      // 重置分页
-      setPagination(prev => ({ ...prev, page: 1, total: result.items.length, totalPages: Math.ceil(result.items.length / prev.pageSize) }));
+      // 使用后端返回的分页信息
+      setPagination(prev => ({ 
+        ...prev, 
+        page: 1, 
+        total: result.total, 
+        totalPages: result.total_pages 
+      }));
     } catch (e) {
       console.error('[RadarInbox] Failed to load items:', e);
       showToast('加载情报失败: ' + String(e), 'error');
@@ -135,6 +144,21 @@ export function RadarInbox() {
       return true;
     });
   }, [items, activeTab, searchKeyword, searchSourceIds, searchStartDate, searchEndDate]);
+
+  // 前端分页
+  const paginatedItems = useMemo(() => {
+    const filteredCount = filteredItems.length;
+    const totalPages = Math.max(1, Math.ceil(filteredCount / pagination.pageSize));
+    const validPage = Math.min(Math.max(1, pagination.page), totalPages);
+    const start = (validPage - 1) * pagination.pageSize;
+    const end = start + pagination.pageSize;
+    return filteredItems.slice(start, end);
+  }, [filteredItems, pagination.page, pagination.pageSize]);
+
+  // 筛选变化时重置页码
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [activeTab, searchKeyword, searchSourceIds, searchStartDate, searchEndDate]);
 
   // 移除错误的自动加载 useEffect
 
@@ -205,6 +229,45 @@ export function RadarInbox() {
       loadItems();
     } catch {
       showToast(t('radar.error.actionFailed'), 'error');
+    }
+  };
+
+  const handleDeleteItem = (itemId: number) => {
+    setDeleteItemId(itemId);
+  };
+
+  const confirmDeleteItem = async () => {
+    if (deleteItemId === null) return;
+    try {
+      await radarItemAction(deleteItemId, 'delete');
+      showToast('删除成功', 'success');
+      setDeleteItemId(null);
+      loadItems();
+    } catch {
+      showToast('删除失败', 'error');
+      setDeleteItemId(null);
+    }
+  };
+
+  const handleTranslate = async (item: RadarItem) => {
+    const textToTranslate = item.description || item.project_name || '';
+    if (!textToTranslate.trim()) {
+      showToast('没有可翻译的内容', 'info');
+      return;
+    }
+
+    setTranslatingId(item.id);
+    try {
+      const currentLang = localStorage.getItem('i18nextLng') || 'zh';
+      const targetLang = currentLang.startsWith('zh') ? 'zh-CN' : 'en';
+      const translated = await translate(textToTranslate, targetLang);
+      setTranslatedContent(prev => ({ ...prev, [item.id]: translated }));
+      showToast('翻译成功', 'success');
+    } catch (e) {
+      console.error('Translation failed:', e);
+      showToast('翻译失败', 'error');
+    } finally {
+      setTranslatingId(null);
     }
   };
 
@@ -461,13 +524,13 @@ export function RadarInbox() {
           </div>
 
           <div className="flex-1 overflow-auto p-6 space-y-3">
-            {filteredItems.length === 0 ? (
+            {paginatedItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
                 <i className="fa-solid fa-inbox text-4xl mb-4" />
                 <p>{searchKeyword || searchSourceIds || searchStartDate ? '无匹配结果' : t('radar.empty')}</p>
               </div>
             ) : (
-              filteredItems.map(item => (
+              paginatedItems.map(item => (
                 <div
                   key={item.id}
                   className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-gray-300 dark:hover:border-gray-600 transition"
@@ -483,9 +546,34 @@ export function RadarInbox() {
                             <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">{item.language}</span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
-                          {highlightLinks(item.description || t('radar.noDescription'))}
-                        </p>
+                        {translatedContent[item.id] ? (
+                          <div className="mt-1.5">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="px-2 py-0.5 text-xs bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 rounded">
+                                <i className="fa-solid fa-language mr-1" />译文
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setTranslatedContent(prev => {
+                                    const next = { ...prev };
+                                    delete next[item.id];
+                                    return next;
+                                  });
+                                }}
+                                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                              >
+                                显示原文
+                              </button>
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                              {highlightLinks(translatedContent[item.id])}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+                            {highlightLinks(item.description || t('radar.noDescription'))}
+                          </p>
+                        )}
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                           <i className="fa-regular fa-clock mr-1" />
                           {item.published_at || item.fetched_at}
@@ -500,6 +588,38 @@ export function RadarInbox() {
                           const hasImport = supportedUrls.length > 0;
                           return (
                             <>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleTranslate(item)}
+                                  disabled={translatingId === item.id}
+                                  className="p-1.5 text-gray-400 hover:text-purple-500 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition disabled:opacity-50"
+                                  title="翻译"
+                                >
+                                  {translatingId === item.id ? (
+                                    <i className="fa-solid fa-spinner fa-spin text-xs" />
+                                  ) : (
+                                    <i className="fa-solid fa-language text-xs" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const text = `${item.project_name || ''}\n${translatedContent[item.id] || item.description || ''}\n${item.project_url || ''}`;
+                                    navigator.clipboard.writeText(text);
+                                    showToast('已复制到剪贴板', 'success');
+                                  }}
+                                  className="p-1.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
+                                  title="复制"
+                                >
+                                  <i className="fa-regular fa-copy text-xs" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteItem(item.id)}
+                                  className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                                  title="删除"
+                                >
+                                  <i className="fa-solid fa-trash text-xs" />
+                                </button>
+                              </div>
                               {item.status === 'unread' && (
                                 <button
                                   onClick={() => handleAction(item.id, 'collect')}
@@ -537,7 +657,7 @@ export function RadarInbox() {
           {pagination.totalPages > 1 && (
             <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                共 {pagination.total} 条，第 {pagination.page}/{pagination.totalPages} 页
+                共 {filteredItems.length} 条，第 {pagination.page}/{Math.ceil(filteredItems.length / pagination.pageSize) || 1} 页
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -558,7 +678,7 @@ export function RadarInbox() {
                 </select>
                 <button
                   onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                  disabled={pagination.page >= pagination.totalPages}
+                  disabled={pagination.page >= Math.ceil(filteredItems.length / pagination.pageSize)}
                   className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   下一页
@@ -796,6 +916,36 @@ export function RadarInbox() {
                 className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition disabled:opacity-50"
               >
                 {clearing ? t('common.clearing') : t('radar.clearConfirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteItemId !== null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <i className="fa-solid fa-trash text-2xl text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">确认删除</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">确定要删除这条雷达记录吗？此操作不可撤销。</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteItemId(null)}
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmDeleteItem}
+                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
+              >
+                删除
               </button>
             </div>
           </div>
