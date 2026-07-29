@@ -1,5 +1,6 @@
 use crate::llm::{LlmClient, LlmMessage};
 use std::collections::HashMap;
+use log;
 
 const MAX_CHUNK_SIZE: usize = 5000;
 
@@ -61,7 +62,7 @@ pub async fn translate_text(text: &str, target_lang: &str) -> Result<String, Str
                 return translate_single_chunk(text, target_lang).await;
             }
 
-            println!("[TRANSLATE] Text length: {}, split into {} chunks", text.len(), chunk_count);
+            log::debug!("[TRANSLATE] Text length: {}, split into {} chunks", text.len(), chunk_count);
 
             let mut translated_parts: Vec<String> = Vec::with_capacity(chunk_count);
             let mut errors: Vec<String> = Vec::new();
@@ -76,7 +77,7 @@ pub async fn translate_text(text: &str, target_lang: &str) -> Result<String, Str
                     }
                 }
             }
-            println!("[TRANSLATE] Done, {} errors", errors.len());
+            log::debug!("[TRANSLATE] Done, {} errors", errors.len());
 
             Ok(translated_parts.join("\n"))
         }
@@ -95,7 +96,7 @@ pub async fn translate_text_with_llm(text: &str, target_lang: &str) -> Result<St
         return translate_with_llm(text, target_lang).await;
     }
 
-    println!("[TRANSLATE_LLM] Text length: {}, split into {} chunks", text.len(), chunk_count);
+    log::debug!("[TRANSLATE_LLM] Text length: {}, split into {} chunks", text.len(), chunk_count);
     
     let mut translated_parts: Vec<String> = Vec::with_capacity(chunk_count);
     
@@ -104,12 +105,12 @@ pub async fn translate_text_with_llm(text: &str, target_lang: &str) -> Result<St
         match translate_with_llm(chunk, target_lang).await {
             Ok(translated) => translated_parts.push(translated),
             Err(e) => {
-                println!("[TRANSLATE_LLM] Chunk {} failed: {}", i, e);
+                log::error!("[TRANSLATE_LLM] Chunk {} failed: {}", i, e);
                 translated_parts.push(chunk.clone());
             }
         }
     }
-    println!("[TRANSLATE_LLM] Done");
+    log::debug!("[TRANSLATE_LLM] Done");
 
     Ok(translated_parts.join("\n"))
 }
@@ -121,7 +122,7 @@ async fn translate_single_chunk(text: &str, target_lang: &str) -> Result<String,
         return google_result;
     }
     
-    println!("[TRANSLATE] Google translate failed, falling back to LLM");
+    log::warn!("[TRANSLATE] Google translate failed, falling back to LLM");
     translate_with_llm(text, target_lang).await
 }
 
@@ -266,10 +267,10 @@ fn clean_llm_output(text: &str) -> String {
 }
 
 async fn translate_with_llm(text: &str, target_lang: &str) -> Result<String, String> {
-    println!("[TRANSLATE_LLM] Start, text length: {}, target: {}", text.len(), target_lang);
+    log::debug!("[TRANSLATE_LLM] Start, text length: {}, target: {}", text.len(), target_lang);
     let client = LlmClient::from_settings()
         .ok_or_else(|| "LLM not configured".to_string())?;
-    println!("[TRANSLATE_LLM] LLM client created");
+    log::debug!("[TRANSLATE_LLM] LLM client created");
 
     let prompt = format!(
         r#"Translate the following text to {}. Return ONLY the translated text without any explanations, quotes, or markers.
@@ -291,9 +292,9 @@ Text:
         },
     ];
 
-    println!("[TRANSLATE_LLM] Calling LLM chat...");
+    log::debug!("[TRANSLATE_LLM] Calling LLM chat...");
     let result = client.chat(messages).await?;
-    println!("[TRANSLATE_LLM] LLM chat success, result length: {}", result.len());
+    log::debug!("[TRANSLATE_LLM] LLM chat success, result length: {}", result.len());
     Ok(clean_llm_output(&result))
 }
 

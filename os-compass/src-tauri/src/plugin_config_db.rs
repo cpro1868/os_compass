@@ -2,6 +2,7 @@ use crate::feature_plugin::PluginInfo;
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
 use std::sync::Mutex;
+use log;
 
 pub struct PluginConfigDb {
     conn: Mutex<Connection>,
@@ -148,11 +149,11 @@ impl PluginConfigDb {
         );
         match result {
             Ok(enabled) => {
-                println!("[plugin_config_db] get_enabled({}) = {}", plugin_id, enabled);
+                log::debug!("[plugin_config_db] get_enabled({}) = {}", plugin_id, enabled);
                 enabled == 1
             },
             Err(e) => {
-                println!("[plugin_config_db] get_enabled({}) error: {:?}", plugin_id, e);
+                log::warn!("[plugin_config_db] get_enabled({}) error: {:?}", plugin_id, e);
                 false
             }
         }

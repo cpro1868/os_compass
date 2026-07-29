@@ -3,6 +3,7 @@ use crate::plugin_config_db::PLUGIN_CONFIG_DB;
 use crate::settings::get_settings;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use log;
 
 pub struct PluginRegistry {
     plugins: Vec<Box<dyn FeaturePlugin>>,
@@ -113,7 +114,7 @@ impl PluginManager {
 
     pub fn is_enabled(&self, plugin_id: &str) -> Result<bool, String> {
         let enabled = PLUGIN_CONFIG_DB.get_enabled(plugin_id);
-        println!("[plugin_manager] is_enabled({}) = {}", plugin_id, enabled);
+        log::debug!("[plugin_manager] is_enabled({}) = {}", plugin_id, enabled);
         Ok(enabled)
     }
 
@@ -146,7 +147,7 @@ impl PluginManager {
     pub fn switch_vault(&self, new_vault_dir: &PathBuf) -> Result<(), String> {
         use crate::feature_plugin::FeaturePlugin;
         
-        println!("[plugin_manager] switch_vault to {:?}", new_vault_dir);
+        log::info!("[plugin_manager] switch_vault to {:?}", new_vault_dir);
         
         let app_data_dir = directories::BaseDirs::new()
             .map(|d| d.data_dir().to_path_buf())
@@ -158,19 +159,19 @@ impl PluginManager {
         for plugin in plugins {
             let plugin_id = plugin.id();
             let enabled = PLUGIN_CONFIG_DB.get_enabled(plugin_id);
-            println!("[plugin_manager] processing plugin: {}, enabled: {}", plugin_id, enabled);
+            log::debug!("[plugin_manager] processing plugin: {}, enabled: {}", plugin_id, enabled);
             
             let context = self.build_context(plugin.as_ref(), new_vault_dir, &app_data_dir);
             
             let _ = plugin.on_disable(&context);
             
             if let Err(e) = tauri::async_runtime::block_on(plugin.init(&context)) {
-                println!("[plugin_manager] plugin {} init error: {}", plugin_id, e);
+                log::error!("[plugin_manager] plugin {} init error: {}", plugin_id, e);
             }
             
             if enabled {
                 if let Err(e) = tauri::async_runtime::block_on(plugin.on_enable(&context)) {
-                    println!("[plugin_manager] plugin {} on_enable error: {}", plugin_id, e);
+                    log::error!("[plugin_manager] plugin {} on_enable error: {}", plugin_id, e);
                 }
             }
         }

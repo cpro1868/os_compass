@@ -3,6 +3,7 @@ use crate::plugin_config_db::PLUGIN_CONFIG_DB;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use log;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginManifest {
@@ -57,7 +58,7 @@ impl PluginLoader {
                             manifests.push(manifest);
                         }
                         Err(e) => {
-                            eprintln!("Failed to load plugin manifest {:?}: {}", manifest_path, e);
+                            log::error!("Failed to load plugin manifest {:?}: {}", manifest_path, e);
                         }
                     }
                 }
