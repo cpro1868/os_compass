@@ -1652,6 +1652,7 @@ function VectorSettings({}: VectorSettingsProps) {
             <option value="openai">OpenAI</option>
             <option value="deepseek">DeepSeek</option>
             <option value="ollama">Ollama（本地）</option>
+            <option value="custom">{t("settings.custom")}</option>
           </select>
         </div>
         <div>
@@ -1718,7 +1719,7 @@ function VectorSettings({}: VectorSettingsProps) {
                     type="text"
                     value={settings.embedding_model}
                     onChange={(e) => setSettings({ ...settings, embedding_model: e.target.value })}
-                    placeholder={t("settings.manualInputPlaceholder")}
+                    placeholder={t("settings.vector.modelPlaceholder")}
                     className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
                   />
                 )}
@@ -1733,7 +1734,7 @@ function VectorSettings({}: VectorSettingsProps) {
               value={settings.embedding_model}
               onChange={(e) => setSettings({ ...settings, embedding_model: e.target.value })}
               disabled={!settings.embedding_enabled}
-              placeholder="text-embedding-3-small"
+              placeholder={t("settings.vector.modelPlaceholder")}
               className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
             />
           )}
@@ -1751,13 +1752,13 @@ function VectorSettings({}: VectorSettingsProps) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">{t("settings.vector.vssPath") || "VSS 扩展路径"}</label>
+            <label className="block text-sm font-medium mb-1">{t("settings.vector.vssPath")}</label>
             <input
               type="text"
               value={settings.vss_extension_path}
               onChange={(e) => setSettings({ ...settings, vss_extension_path: e.target.value })}
               disabled={!settings.embedding_enabled}
-              placeholder={t("settings.vector.vssPathPlaceholder") || "留空使用默认路径"}
+              placeholder={t("settings.vector.vssPathPlaceholder")}
               className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
             />
           </div>

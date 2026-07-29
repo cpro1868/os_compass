@@ -642,7 +642,10 @@
       "apiKey": "API Key",
       "apiKeyPlaceholder": "输入 API Key（将加密存储）",
       "model": "模型名称",
+      "modelPlaceholder": "text-embedding-3-small",
       "dimension": "向量维度",
+      "vssPath": "VSS 扩展路径",
+      "vssPathPlaceholder": "留空使用默认路径",
       "testConnection": "测试连接",
       "testSuccess": "连接成功",
       "testFailed": "连接失败"
