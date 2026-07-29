@@ -285,37 +285,16 @@ pub fn test_embedding_connection() -> Result<bool, String> {
 }
 
 #[command]
-pub fn list_embedding_models(provider: String, api_url: String, api_key: String) -> Result<Vec<String>, String> {
+pub fn list_embedding_models(provider: String, _api_url: String, _api_key: String) -> Result<Vec<String>, String> {
     match provider.as_str() {
-        "openai" | "custom" => {
-            let client = reqwest::blocking::Client::new();
-            let url = format!("{}/models", api_url.trim_end_matches('/'));
-
-            let response = client.get(&url)
-                .header("Authorization", format!("Bearer {}", api_key))
-                .send()
-                .map_err(|e| format!("Request failed: {}", e))?;
-
-            let body = response.text().unwrap_or_default();
-
-            #[derive(serde::Deserialize)]
-            struct OpenAIResponse {
-                data: Vec<serde_json::Value>,
-            }
-
-            let result: OpenAIResponse = serde_json::from_str(&body)
-                .map_err(|e| format!("Parse error: {}", e))?;
-
-            let models: Vec<String> = result.data
-                .into_iter()
-                .filter_map(|m| {
-                    m.get("id")
-                        .and_then(|id| id.as_str())
-                        .filter(|id| id.contains("embedding"))
-                        .map(|s| s.to_string())
-                })
-                .collect();
-            Ok(models)
+        "custom" => {
+            Ok(vec![
+                "BAAI/bge-m3".to_string(),
+                "BAAI/bge-large-zh".to_string(),
+                "netease-youdao/bce-multimodalembedding-multilingual".to_string(),
+                "Pro/Qwen/Qwen2.5-MOE".to_string(),
+                "Pro/Qwen/Qwen2.5-7B".to_string(),
+            ])
         }
         "deepseek" => {
             Ok(vec![
@@ -326,9 +305,9 @@ pub fn list_embedding_models(provider: String, api_url: String, api_key: String)
         }
         "ollama" => {
             let client = reqwest::blocking::Client::new();
-            let response = client.get(&format!("{}/api/tags", api_url.trim_end_matches('/')))
-                .send()
-                .map_err(|e| e.to_string())?;
+            let url = format!("{}/api/tags", _api_url.trim_end_matches('/'));
+
+            let response = client.get(&url).send().map_err(|e| e.to_string())?;
 
             #[derive(serde::Deserialize)]
             struct OllamaResponse {
@@ -347,6 +326,31 @@ pub fn list_embedding_models(provider: String, api_url: String, api_key: String)
                 .collect();
             Ok(models)
         }
-        _ => Err("Unsupported provider".to_string())
+        _ => {
+            let client = reqwest::blocking::Client::new();
+            let url = format!("{}/models", _api_url.trim_end_matches('/'));
+
+            let response = client.get(&url)
+                .header("Authorization", format!("Bearer {}", _api_key))
+                .send()
+                .map_err(|e| e.to_string())?;
+
+            #[derive(serde::Deserialize)]
+            struct OpenAIResponse {
+                data: Vec<serde_json::Value>,
+            }
+
+            let result: OpenAIResponse = response.json().map_err(|e| e.to_string())?;
+            let models: Vec<String> = result.data
+                .into_iter()
+                .filter_map(|m| {
+                    m.get("id")
+                        .and_then(|id| id.as_str())
+                        .filter(|id| id.contains("embedding"))
+                        .map(|s| s.to_string())
+                })
+                .collect();
+            Ok(models)
+        }
     }
 }
