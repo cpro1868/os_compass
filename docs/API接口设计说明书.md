@@ -5,8 +5,8 @@
 | 编写 | 系统架构师 |
 | 审核 |  |
 | 批准 |  |
-| 日期 | 2026-07-01 |
-| 版本 | V1.7 |
+| 日期 | 2026-07-27 |
+| 版本 | V1.8 |
 
 ---
 
@@ -1557,10 +1557,12 @@ pub struct PluginContext {
 ## 3.15 意图搜索接口（二期 M13）
 
 > **二期功能标记**：以下所有接口均为二期（Phase 2）设计。
+> **更新日期**：2026-07-27
+> **更新说明**：从"三层优先级搜索"改为"本地向量搜索 + LLM 联网搜索"双轨制
 
 ### 3.15.1 intent_search
 
-执行意图搜索（三层优先级）。
+执行意图搜索（双轨搜索）。
 
 | 项目 | 说明 |
 |------|------|
@@ -1571,12 +1573,10 @@ pub struct PluginContext {
 ```typescript
 interface SearchResult {
   query: string;              // 原始查询
-  keywords: string[];         // LLM 提取的关键词
-  local_results: ProjectMatch[];   // 第一层：本地库匹配
-  cache_results: ProjectMatch[];   // 第二层：信息源缓存匹配
-  web_results: ProjectMatch[];     // 第三层：联网搜索结果
+  local_results: ProjectMatch[];   // 第一轨：本地向量搜索结果
+  web_results: ProjectMatch[];    // 第二轨：LLM 联网搜索结果
   total: number;              // 总结果数
-  conversation_id: string;    // 会话 ID（多轮对话）
+  conversation_id: string;   // 会话 ID（多轮对话）
 }
 
 interface ProjectMatch {
@@ -1587,8 +1587,8 @@ interface ProjectMatch {
   stars: number | null;
   health_score: number | null;
   match_score: number;        // 匹配度 0-100
-  source: 'local' | 'cache' | 'web';
-  source_detail?: string;     // 来源详情（如 RSS 源名称）
+  source: 'local' | 'llm';     // 结果来源
+  source_detail?: string;       // 来源详情
 }
 ```
 
@@ -1629,7 +1629,7 @@ interface SearchHistoryItem {
 | `add_search_source` | `{ name, sourceType, url, platform? }` | `SearchSource` | 添加信息源 |
 | `update_search_source` | `{ id, name?, url?, enabled? }` | `void` | 更新信息源 |
 | `delete_search_source` | `{ id }` | `void` | 删除信息源 |
-| `refresh_search_cache` | `{ sourceId? }` | `number`（刷新条目数） | 手动刷新信息源缓存 |
+| `rebuild_embeddings` | `{ projectId?: number }` | `number`（重建向量数） | 重建项目向量索引 |
 
 ```typescript
 interface SearchSource {
@@ -1874,6 +1874,7 @@ function parseErrorCode(error: unknown): string {
 | V1.5 | 2026-07-08 | 新增仓库管理接口（create_vault、list_vaults、open_vault、delete_vault、validate_vault） |
 | V1.6 | 2026-07-10 | 新增导入已有仓库接口（import_vault），含完整校验链和密钥匹配验证 |
 | V1.7 | 2026-07-11 | 新增二期 M13 接口：插件管理（list_feature_plugins、set_plugin_enabled、get/save_plugin_config、plugin_get_db_path）；意图搜索（intent_search、get/clear_search_history、搜索信息源管理、import_search_result）；情报雷达（雷达信息源管理、get_radar_items、radar_item_action、trigger_radar_scan、get_radar_unread_count、clear_radar_cache） |
+| V1.8 | 2026-07-27 | 意图搜索改为双轨搜索：refresh_search_cache 改为 rebuild_embeddings |
 
 ---
 
