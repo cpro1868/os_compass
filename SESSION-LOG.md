@@ -2,6 +2,46 @@
 
 # Session Log
 
+## 2026-07-29 03:30 - M20 批量向量化功能完成
+
+### 完成内容
+
+1. **看板页 KanbanView.tsx**
+   - 工具栏添加「向量化全部」按钮
+   - 批量操作栏添加「向量化选中」按钮
+   - 添加 vectorizing 状态显示
+
+2. **设置页面 SettingsDialog.tsx**
+   - 添加 VSS 扩展路径配置项
+   - 支持自定义 sqlite-vss 扩展路径
+
+3. **API search.ts**
+   - 添加 rebuildEmbeddings 函数
+   - 添加 generateProjectEmbedding 函数
+
+### 验证结果
+
+| 检查项 | 结果 |
+|--------|------|
+| TypeScript typecheck | ✅ 通过 |
+| Tauri build | ✅ 成功 |
+| Previous 目录 | ✅ 已更新 |
+
+### Git Commit
+
+```
+feat(M20): 添加批量向量化功能
+```
+
+### M20 完成状态
+
+| 功能 | 状态 |
+|------|------|
+| 看板页批量向量化按钮 | ✅ 完成 |
+| sqlite-vss 扩展路径设置 | ✅ 完成 |
+
+---
+
 ## 2026-07-29 02:30 - 文档提交完成
 
 ### 提交记录
