@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import type { Project, LifecycleStatus, Category } from "../types";
 import { parseLanguages } from "../types";
-import { getCategories } from "../api";
+import { getCategories, getEmbeddingSettings } from "../api";
 import { MoveCategoryDialog } from "./MoveCategoryDialog";
 import { EmptyState } from "./EmptyState";
 import { useToastStore } from "../stores/toastStore";
@@ -54,6 +54,13 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
       showToast("请先选择要向量化的项目", "info");
       return;
     }
+
+    const settings = await getEmbeddingSettings();
+    if (!settings.embedding_enabled || !settings.embedding_api_key) {
+      showToast("请先在设置中配置 Embedding API", "error");
+      return;
+    }
+
     if (!confirm(`确认向量化选中的 ${selectedIds.size} 个项目？`)) return;
 
     setVectorizing(true);
@@ -61,7 +68,7 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
       const selectedProjects = projects.filter(p => selectedIds.has(p.id));
       let success = 0;
       for (const project of selectedProjects) {
-        await invoke("generate_project_embeddings", { projectId: project.id });
+        await invoke("generate_project_embeddings", { project_id: project.id });
         success++;
       }
       showToast(`成功向量化 ${success} 个项目`, "success");
@@ -74,11 +81,17 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
   };
 
   const handleVectorizeAll = async () => {
+    const settings = await getEmbeddingSettings();
+    if (!settings.embedding_enabled || !settings.embedding_api_key) {
+      showToast("请先在设置中配置 Embedding API", "error");
+      return;
+    }
+
     if (!confirm(`确认向量化当前仓库的所有 ${projects.length} 个项目？`)) return;
 
     setVectorizing(true);
     try {
-      const count = await invoke<number>("rebuild_embeddings", { projectId: null });
+      const count = await invoke<number>("rebuild_embeddings", { project_id: null });
       showToast(`成功向量化 ${count} 个项目`, "success");
     } catch (err) {
       console.error("全量向量化失败:", err);

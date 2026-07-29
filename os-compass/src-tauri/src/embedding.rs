@@ -56,10 +56,19 @@ pub fn is_enabled() -> bool {
 pub async fn generate_embedding(text: &str) -> Result<Vec<f32>, String> {
     let (url, api_key, model) = {
         let guard = EMBEDDING_CONFIG.lock().unwrap();
-        let config = guard.as_ref().ok_or("Embedding config not loaded")?;
-        if !config.embedding_enabled || config.embedding_api_key.is_empty() {
-            return Err("Embedding not configured or disabled".to_string());
+        let config = guard.as_ref().ok_or_else(|| {
+            log::error!("[embedding] Config not loaded");
+            "Embedding config not loaded".to_string()
+        })?;
+        if !config.embedding_enabled {
+            log::error!("[embedding] Embedding is disabled");
+            return Err("Embedding is disabled".to_string());
         }
+        if config.embedding_api_key.is_empty() {
+            log::error!("[embedding] API key is empty");
+            return Err("Embedding API key is not configured".to_string());
+        }
+        log::info!("[embedding] Using API: {} with model: {}", config.embedding_api_url, config.embedding_model);
         (
             format!("{}/embeddings", config.embedding_api_url.trim_end_matches('/')),
             config.embedding_api_key.clone(),
@@ -318,14 +327,17 @@ pub async fn rebuild_embeddings(project_id: Option<i64>) -> Result<i64, String> 
         if let Some(pid) = project_id {
             vec![pid]
         } else {
+            log::info!("[embedding] Starting rebuild for all projects");
             let mut stmt = conn.prepare(
                 "SELECT id FROM projects WHERE lifecycle_status != 'DELETED'"
             ).map_err(|e| e.to_string())?;
-            
+
             let rows = stmt.query_map([], |row| row.get(0))
                 .map_err(|e| e.to_string())?;
-            
-            rows.filter_map(|r| r.ok()).collect()
+
+            let ids: Vec<i64> = rows.filter_map(|r| r.ok()).collect();
+            log::info!("[embedding] Found {} projects to vectorize", ids.len());
+            ids
         }
     };
 
@@ -344,13 +356,27 @@ pub async fn rebuild_embeddings(project_id: Option<i64>) -> Result<i64, String> 
         };
 
         if name.is_empty() {
+            log::warn!("[embedding] Project {} has empty name, skipping", pid);
             continue;
         }
 
         let text = format!("{}: {}", name, description.unwrap_or_default());
-        if let Ok(embedding) = generate_embedding(&text).await {
-            if store_embeddings(pid, &embedding).is_ok() {
-                count += 1;
+        log::info!("[embedding] Generating embedding for project {}: {}", pid, name);
+
+        match generate_embedding(&text).await {
+            Ok(embedding) => {
+                match store_embeddings(pid, &embedding) {
+                    Ok(()) => {
+                        count += 1;
+                        log::info!("[embedding] Stored embedding for project {}", pid);
+                    }
+                    Err(e) => {
+                        log::error!("[embedding] Failed to store embedding for project {}: {}", pid, e);
+                    }
+                }
+            }
+            Err(e) => {
+                log::error!("[embedding] Failed to generate embedding for project {}: {}", pid, e);
             }
         }
     }
