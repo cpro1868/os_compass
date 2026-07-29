@@ -4,16 +4,11 @@ import { intentSearch } from "../api/search";
 import { getRecentProjects } from "../api";
 import type { Project } from "../types";
 import { useToastStore } from "../stores/toastStore";
+import type { ProjectMatch } from "../api/search";
 
-interface SearchResult {
-  project_name: string | null;
-  project_url: string | null;
-  description: string | null;
-  language: string | null;
-  source: string;
-  match_score: number;
-  stars?: number;
-  forks?: number;
+interface HomeSearchResult extends ProjectMatch {
+  project_name?: string;
+  project_url?: string;
 }
 
 function getPlatformIcon(url: string | null): string {
@@ -40,7 +35,7 @@ export function HomePage() {
   const { t } = useTranslation();
   const { showToast } = useToastStore();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<HomeSearchResult[]>([]);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -64,7 +59,7 @@ export function HomePage() {
     setHasSearched(true);
     try {
       const data = await intentSearch(query);
-      setResults(data.results || []);
+      setResults([...(data.local_results || []), ...(data.web_results || [])]);
     } catch {
       showToast(t("search.error.searchFailed") || "搜索失败", "error");
       setResults([]);
@@ -125,7 +120,7 @@ export function HomePage() {
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
                   <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
-                  <p className="text-gray-500 dark:text-gray-400">{t("common.searching") || "搜索中..."}</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t("search.searching")}</p>
                 </div>
               </div>
             )}
@@ -142,12 +137,12 @@ export function HomePage() {
                 </div>
                 <div className="space-y-3">
                   {results.map((result, index) => {
-                    const platform = getPlatformIcon(result.project_url);
+                    const platform = getPlatformIcon(result.url);
                     const activity = getActivityLevel(result.stars);
                     return (
                       <div
                         key={index}
-                        onClick={() => handleResultClick(result.project_url)}
+                        onClick={() => handleResultClick(result.url)}
                         className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:border-blue-500/50 cursor-pointer transition"
                       >
                         <div className="flex items-start gap-4">
@@ -157,7 +152,7 @@ export function HomePage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                                {result.project_name || "未知项目"}
+                                {result.name || "未知项目"}
                               </h3>
                               <span className={`px-2 py-0.5 ${activity.color} bg-opacity-20 text-xs rounded text-gray-300`}>
                                 {activity.label}
@@ -237,7 +232,7 @@ export function HomePage() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={t("home.searchPlaceholder") || "例如：找一个人工智能相关的开源项目..."}
+                  placeholder={t("home.placeholder") || "粘贴开源项目链接..."}
                   className="flex-1 bg-transparent text-sm py-2 focus:outline-none placeholder-gray-400 text-gray-900 dark:text-white"
                 />
                 <button

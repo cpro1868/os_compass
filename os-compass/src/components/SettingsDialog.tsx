@@ -49,7 +49,7 @@ interface SettingsDialogProps {
   onThemeChange?: (theme: string) => void;
 }
 
-type TabId = "general" | "download" | "llm" | "translation" | "variables" | "extensions" | "plugins";
+type TabId = "general" | "download" | "llm" | "translation" | "variables" | "extensions" | "plugins" | "vector";
 
 interface FeaturePlugin {
   id: string;
@@ -205,13 +205,14 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
     { id: "variables" as TabId, label: t("settings.tabs.variables") },
     { id: "extensions" as TabId, label: t("settings.tabs.extensions") },
     { id: "plugins" as TabId, label: t("settings.tabs.plugins") },
+    { id: "vector" as TabId, label: t("settings.tabs.vector") },
   ];
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col dark:bg-gray-800">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col dark:bg-gray-800">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">{t("settings.title")}</h2>
@@ -1037,6 +1038,10 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
               </div>
             </div>
           )}
+
+          {activeTab === "vector" && (
+            <VectorSettings />
+          )}
         </div>
 
         <div className="p-6 border-t border-gray-200 flex items-center justify-between bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
@@ -1533,6 +1538,243 @@ function PluginConfigModal({ plugin, vaultDir, onClose, onSave }: PluginConfigMo
           >
             {t("settings.pluginConfig.saveConfig")}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface VectorSettingsProps {}
+
+function VectorSettings({}: VectorSettingsProps) {
+  const { t } = useTranslation();
+  const [settings, setSettings] = useState({
+    embedding_enabled: true,
+    embedding_api_type: 'openai',
+    embedding_api_url: '',
+    embedding_api_key: '',
+    embedding_model: 'text-embedding-3-small',
+    embedding_dimension: 1536,
+  });
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
+  const [modelError, setModelError] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<'success' | 'failed' | null>(null);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const data = await invoke<typeof settings>('get_embedding_settings');
+      setSettings(data);
+    } catch (e) {
+      console.error('Failed to load embedding settings:', e);
+    }
+  };
+
+  const handleFetchModels = async () => {
+    if (!settings.embedding_api_url || !settings.embedding_api_key) {
+      setModelError(t("settings.fetchModelsError"));
+      return;
+    }
+    setFetchingModels(true);
+    setModelError(null);
+    try {
+      const models = await invoke<string[]>('list_embedding_models', {
+        provider: settings.embedding_api_type,
+        apiUrl: settings.embedding_api_url,
+        apiKey: settings.embedding_api_key,
+      });
+      setAvailableModels(models);
+      if (models.length > 0) {
+        setSettings((s) => ({ ...s, embedding_model: models[0] }));
+      }
+    } catch (e) {
+      setModelError(`${t("settings.fetchModelsFailed")}: ${e}`);
+    } finally {
+      setFetchingModels(false);
+    }
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      await invoke('save_embedding_settings', { settings });
+      const result = await invoke<boolean>('test_embedding_connection');
+      setTestResult(result ? 'success' : 'failed');
+    } catch {
+      setTestResult('failed');
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+            <i className="fa-solid fa-brain text-blue-500"></i>
+          </div>
+          <div>
+            <h3 className="font-medium">{t("settings.vector.title")}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.vector.desc")}</p>
+          </div>
+        </div>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={settings.embedding_enabled}
+            onChange={(e) => setSettings({ ...settings, embedding_enabled: e.target.checked })}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-sm">{t("settings.vector.enabled")}</span>
+        </label>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">{t("settings.vector.apiType")}</label>
+          <select
+            value={settings.embedding_api_type}
+            onChange={(e) => {
+              setSettings({ ...settings, embedding_api_type: e.target.value });
+              setAvailableModels([]);
+            }}
+            disabled={!settings.embedding_enabled}
+            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
+          >
+            <option value="openai">OpenAI</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="ollama">Ollama（本地）</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">{t("settings.vector.apiUrl")}</label>
+          <input
+            type="text"
+            value={settings.embedding_api_url}
+            onChange={(e) => {
+              setSettings({ ...settings, embedding_api_url: e.target.value });
+              setAvailableModels([]);
+            }}
+            disabled={!settings.embedding_enabled}
+            placeholder="https://api.openai.com/v1"
+            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">{t("settings.vector.apiKey")}</label>
+          <input
+            type="password"
+            value={settings.embedding_api_key}
+            onChange={(e) => {
+              setSettings({ ...settings, embedding_api_key: e.target.value });
+              setAvailableModels([]);
+            }}
+            disabled={!settings.embedding_enabled}
+            placeholder="sk-..."
+            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            {t("settings.model")}
+            <button
+              type="button"
+              onClick={handleFetchModels}
+              disabled={fetchingModels || !settings.embedding_api_url || !settings.embedding_api_key}
+              className="ml-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
+            >
+              {fetchingModels ? t("settings.fetchingModels") : t("settings.fetchModels")}
+            </button>
+          </label>
+          {availableModels.length > 0 ? (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <select
+                  value={availableModels.includes(settings.embedding_model) ? settings.embedding_model : "__custom__"}
+                  onChange={(e) => {
+                    if (e.target.value === "__custom__") {
+                      setSettings({ ...settings, embedding_model: "" });
+                    } else {
+                      setSettings({ ...settings, embedding_model: e.target.value });
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+                >
+                  <option value="__custom__">{t("settings.manualInput")}</option>
+                  {availableModels.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+                {!availableModels.includes(settings.embedding_model) && (
+                  <input
+                    type="text"
+                    value={settings.embedding_model}
+                    onChange={(e) => setSettings({ ...settings, embedding_model: e.target.value })}
+                    placeholder={t("settings.manualInputPlaceholder")}
+                    className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+                  />
+                )}
+              </div>
+              <p className="text-xs text-green-600">
+                {t("settings.modelsFetched", { count: availableModels.length })}
+              </p>
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={settings.embedding_model}
+              onChange={(e) => setSettings({ ...settings, embedding_model: e.target.value })}
+              disabled={!settings.embedding_enabled}
+              placeholder="text-embedding-3-small"
+              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
+            />
+          )}
+          {modelError && <p className="text-xs text-red-500 mt-1">{modelError}</p>}
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">{t("settings.vector.dimension")}</label>
+            <input
+              type="number"
+              value={settings.embedding_dimension}
+              onChange={(e) => setSettings({ ...settings, embedding_dimension: parseInt(e.target.value) || 1536 })}
+              disabled={!settings.embedding_enabled}
+              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleTest}
+            disabled={testing || !settings.embedding_enabled || !settings.embedding_api_key}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {testing ? (
+              <i className="fa-solid fa-spinner fa-spin mr-1"></i>
+            ) : (
+              <i className="fa-solid fa-plug mr-1"></i>
+            )}
+            {t("settings.vector.testConnection")}
+          </button>
+          {testResult === 'success' && (
+            <span className="text-sm text-green-600">
+              <i className="fa-solid fa-check-circle mr-1"></i>
+              {t("settings.vector.testSuccess")}
+            </span>
+          )}
+          {testResult === 'failed' && (
+            <span className="text-sm text-red-600">
+              <i className="fa-solid fa-times-circle mr-1"></i>
+              {t("settings.vector.testFailed")}
+            </span>
+          )}
         </div>
       </div>
     </div>

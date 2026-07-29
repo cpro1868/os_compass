@@ -97,7 +97,8 @@
     "stats": "统计",
     "settings": "设置",
     "vault": "仓库管理",
-    "organization": "组织管理"
+    "organization": "组织管理",
+    "navigation": "导航"
   },
   "category": {
     "title": "分类管理",
@@ -159,6 +160,7 @@
     "releases": "版本",
     "runbook": "Runbook",
     "user": "用户信息",
+    "article": "文章生成",
     "readme": "README",
     "projectName": "项目名称",
     "projectUrl": "项目 URL",
@@ -452,7 +454,8 @@
       "translation": "翻译",
       "variables": "变量管理",
       "extensions": "扩展配置",
-      "plugins": "功能插件"
+      "plugins": "功能插件",
+      "vector": "向量搜索"
     },
     "storage": "存储设置",
     "dataDir": "数据目录",
@@ -627,6 +630,22 @@
     "pluginLevel": {
       "system": "系统级",
       "vault": "仓库级"
+    },
+    "vector": {
+      "title": "向量搜索配置",
+      "desc": "配置 Embedding API 以启用语义搜索功能",
+      "enabled": "启用向量搜索",
+      "tipTitle": "使用提示",
+      "tip": "向量搜索基于项目描述生成语义向量，实现自然语言搜索。未配置时将使用关键词匹配。",
+      "apiType": "API 类型",
+      "apiUrl": "API 地址",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "输入 API Key（将加密存储）",
+      "model": "模型名称",
+      "dimension": "向量维度",
+      "testConnection": "测试连接",
+      "testSuccess": "连接成功",
+      "testFailed": "连接失败"
     }
   },
   "vault": {
@@ -846,17 +865,33 @@
   },
   "search": {
     "title": "意图搜索",
+    "subtitle": "本地向量 + LLM 联网推荐",
     "placeholder": "用自然语言描述你想找什么...",
-    "welcome": "你想找什么？",
+    "welcome": "你好！我是你的开源项目助手。",
+    "welcomeMiddle": "搜索您的本地项目库，并通过",
+    "welcomeEnd": "为你推荐相关开源项目。",
     "hint": "用自然语言描述你的需求",
-    "searching": "搜索中...",
+    "searching": "正在分析语义并搜索...",
     "resultsCount": "找到 {{count}} 个结果",
     "matchScore": "匹配度：{{score}}%",
     "unknownProject": "未知项目",
+    "localVector": "本地向量",
+    "llmOnline": "LLM联网",
+    "inLibrary": "已入库",
+    "aiTip": "AI 助手基于语义理解搜索",
+    "send": "发送",
+    "newline": "换行",
+    "clear": "清除对话",
+    "recentProjects": "最近使用",
+    "noRecent": "暂无最近项目",
+    "newSearch": "新建搜索",
+    "vectorSearch": "向量语义匹配",
+    "llmSearch": "LLM 联网搜索",
     "source": {
       "local": "本地",
       "cache": "缓存",
-      "web": "网络"
+      "web": "网络",
+      "llm": "LLM推荐"
     },
     "history": "搜索历史",
     "noHistory": "暂无搜索历史",
@@ -869,7 +904,67 @@
       "loadHistoryFailed": "加载历史失败",
       "searchFailed": "搜索失败",
       "clearFailed": "清除失败",
-      "importFailed": "导入失败"
+      "importFailed": "导入失败",
+      "openFailed": "打开项目详情失败"
     }
+  },
+  "initWizard": {
+    "welcome": "欢迎使用 OS-Compass",
+    "subtitle": "开源项目智能管家 · 本地优先数据管理",
+    "selectVault": "选择仓库",
+    "init": "初始化",
+    "complete": "完成",
+    "selectExisting": "选择已有仓库",
+    "selectExistingDesc": "打开您之前创建的仓库",
+    "createNew": "创建新仓库",
+    "createNewDesc": "创建一个新的本地仓库",
+    "importBackup": "从备份导入",
+    "importBackupDesc": "恢复之前导出的仓库备份",
+    "noVaults": "暂无已有仓库",
+    "vaultName": "仓库名称",
+    "storageLocation": "存储位置",
+    "browse": "浏览",
+    "create": "创建",
+    "createAndContinue": "创建并继续",
+    "selectBackup": "选择备份目录",
+    "targetLocation": "导入目标位置",
+    "startImport": "开始导入",
+    "back": "返回",
+    "next": "下一步",
+    "prev": "上一步",
+    "creating": "创建中...",
+    "importing": "导入中...",
+    "validating": "验证中...",
+    "validationSuccess": "验证通过",
+    "validationFailed": "验证失败",
+    "error": {
+      "nameRequired": "请输入仓库名称",
+      "pathRequired": "请选择存储位置",
+      "backupRequired": "请选择备份目录",
+      "targetRequired": "请选择导入目标位置",
+      "invalidBackup": "无效的备份文件",
+      "createFailed": "创建仓库失败",
+      "importFailed": "导入失败"
+    },
+    "progress": {
+      "creatingDir": "创建仓库目录",
+      "initDb": "初始化数据库",
+      "settingKey": "设置加密密钥",
+      "complete": "初始化完成"
+    },
+    "completed": "初始化完成！",
+    "startUsing": "开始使用 OS-Compass"
+  },
+  "home": {
+    "title": "开源罗盘",
+    "subtitle": "AI 开源资产智能管家",
+    "placeholder": "粘贴开源项目链接...",
+    "import": "导入",
+    "importing": "导入中...",
+    "recentProjects": "最近项目",
+    "noProjects": "暂无项目",
+    "stars": "星标",
+    "language": "语言",
+    "unrecognized": "无法识别的平台"
   }
 }

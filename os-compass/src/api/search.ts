@@ -1,18 +1,23 @@
 import { invoke } from '@tauri-apps/api/core';
 
 export interface ProjectMatch {
-  project_name: string | null;
-  project_url: string | null;
-  description: string | null;
-  language: string | null;
-  source: string;
+  name: string;
+  url: string;
+  description?: string;
+  stars?: number;
+  forks?: number;
+  language?: string;
+  health_score?: number;
   match_score: number;
+  source: 'local' | 'llm';
 }
 
 export interface SearchResult {
   query: string;
-  results: ProjectMatch[];
+  local_results: ProjectMatch[];
+  web_results: ProjectMatch[];
   total: number;
+  conversation_id: string;
 }
 
 export interface SearchHistoryItem {
@@ -31,10 +36,17 @@ export interface SearchSource {
   enabled: boolean;
 }
 
-export async function intentSearch(
-  query: string,
-  conversationId?: string
-): Promise<SearchResult> {
+export interface EmbeddingSettings {
+  embedding_enabled: boolean;
+  embedding_api_type: string;
+  embedding_api_url: string;
+  embedding_api_key: string;
+  embedding_model: string;
+  embedding_dimension: number;
+  vss_extension_path: string;
+}
+
+export async function intentSearch(query: string, conversationId?: string): Promise<SearchResult> {
   return invoke<SearchResult>('intent_search', { query, conversationId });
 }
 
@@ -88,4 +100,16 @@ export async function importSearchResult(
     projectName,
     categoryId,
   });
+}
+
+export async function getEmbeddingSettings(): Promise<EmbeddingSettings> {
+  return invoke<EmbeddingSettings>('get_embedding_settings');
+}
+
+export async function saveEmbeddingSettings(settings: Partial<EmbeddingSettings>): Promise<void> {
+  return invoke('save_embedding_settings', { settings });
+}
+
+export async function testEmbeddingConnection(): Promise<boolean> {
+  return invoke<boolean>('test_embedding_connection');
 }
