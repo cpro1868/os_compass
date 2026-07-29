@@ -2,6 +2,40 @@
 
 # Session Log
 
+## 2026-07-29 02:30 - 文档提交完成
+
+### 提交记录
+
+```
+65bcab5 docs: 更新原型和需求确认文档
+f2bc091 docs: 更新各类实施计划和设计文档
+b310b2a docs: 添加 M19 其他常用网站采集扩展文档
+180157e chore: 依赖版本更新
+df31796 chore: 后端模块增强和修复
+626d427 refactor: 内容过滤和翻译模块增强
+bc27b57 feat: 搜索和雷达插件模块增强
+2ecd299 feat: SearchView 重构 + RadarInbox 增强
+534bff1 docs: 更新 M18/M19/M20 需求文档
+e44dceb fix(M18): 修复仓库切换后向量搜索失效问题
+65635b9 fix(M18): SearchView 状态显示修复
+```
+
+### 本次会话工作完成
+
+1. **M18 Task 10（P1）**：SearchView 状态显示修复
+2. **M18 Task 8（P0）**：仓库切换后向量搜索失效修复
+3. **文档提交**：所有变更已提交
+
+### 剩余未跟踪文件
+
+- ArticleGenerationPanel.tsx（新功能）
+- InitWizard.tsx（初始化向导）
+- NavigationDialog.tsx（导航对话框）
+- article.rs / article_cmd.rs（文章生成）
+- prompts/ / services/（LLM 服务）
+
+---
+
 ## 2026-07-29 01:30 - M18 Task 10 问题排查（P1）开发完成
 
 ### 完成内容
