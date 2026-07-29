@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OS-Compass - 设计系统入口</title>
+  <title>OS-Compass - 导航页</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -26,24 +26,19 @@
         <h3 class="font-bold">列表视图</h3>
         <p class="text-xs text-gray-500">高级筛选</p>
       </a>
-      <a href="project-detail.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
-        <i class="fa-solid fa-file-lines text-blue-600 text-2xl mb-2"></i>
-        <h3 class="font-bold">项目详情</h3>
-        <p class="text-xs text-gray-500">6 个标签页</p>
-      </a>
       <a href="category-manager.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
         <i class="fa-solid fa-folder-tree text-blue-600 text-2xl mb-2"></i>
         <h3 class="font-bold">分类管理</h3>
         <p class="text-xs text-gray-500">多层级树形</p>
       </a>
-    </div>
-    
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-left mb-6">
       <a href="import-form.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
         <i class="fa-solid fa-plus-circle text-green-600 text-2xl mb-2"></i>
         <h3 class="font-bold">导入项目</h3>
         <p class="text-xs text-gray-500">URL 自动解析</p>
       </a>
+    </div>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-left mb-6">
       <a href="manual-add.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
         <i class="fa-solid fa-pen text-green-600 text-2xl mb-2"></i>
         <h3 class="font-bold">手动录入</h3>
@@ -59,6 +54,11 @@
         <h3 class="font-bold">设置</h3>
         <p class="text-xs text-gray-500">通用/下载/LLM</p>
       </a>
+      <a href="plugin-manager.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-satellite-dish text-orange-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">情报雷达</h3>
+        <p class="text-xs text-gray-500">RSS 聚合采集</p>
+      </a>
     </div>
     
     <div class="grid grid-cols-2 gap-4 text-left">
@@ -67,14 +67,14 @@
         <h3 class="font-bold">仓库管理</h3>
         <p class="text-xs text-gray-500">多仓库/导入已有仓库</p>
       </a>
-      <a href="plugin-manager.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
-        <i class="fa-solid fa-plug text-orange-600 text-2xl mb-2"></i>
-        <h3 class="font-bold">插件管理</h3>
-        <p class="text-xs text-gray-500">情报雷达（二期）</p>
+      <a href="init-wizard.html" class="p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <i class="fa-solid fa-wand-magic-sparkles text-indigo-600 text-2xl mb-2"></i>
+        <h3 class="font-bold">初始化向导</h3>
+        <p class="text-xs text-gray-500">创建/选择仓库</p>
       </a>
     </div>
     
-    <p class="mt-10 text-sm text-gray-400">设计系统原型 · 使用 Tailwind CSS 构建</p>
+    <p class="mt-10 text-sm text-gray-400">导航页 · 使用 Tailwind CSS 构建</p>
   </div>
 </body>
 </html>
