@@ -8,6 +8,7 @@ use crate::vault::CURRENT_VAULT_CONFIG;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use tauri::command;
+use log;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RadarSource {
@@ -44,14 +45,14 @@ pub struct RadarItem {
 }
 
 fn check_plugin_enabled(plugin_id: &str) -> Result<(), String> {
-    println!("[radar] check_plugin_enabled: {}", plugin_id);
+    log::debug!("[radar] check_plugin_enabled: {}", plugin_id);
     let enabled = PLUGIN_MANAGER.is_enabled(plugin_id);
-    println!("[radar] is_enabled: {:?}", enabled);
+    log::debug!("[radar] is_enabled: {:?}", enabled);
     match enabled {
         Ok(true) => Ok(()),
         Ok(false) => Err(format!("Plugin '{}' is disabled", plugin_id)),
         Err(e) => {
-            println!("[radar] is_enabled error: {}", e);
+            log::warn!("[radar] is_enabled error: {}", e);
             Err(format!("Plugin '{}' error: {}", plugin_id, e))
         }
     }
@@ -66,7 +67,7 @@ pub fn debug_vault_status() -> String {
             std::env::var("APPDATA").unwrap_or_default().to_string() + "\\com.administrator.os-compass\\last-vault.txt"
         ).ok()
     );
-    println!("[debug_vault_status] {}", status);
+    log::debug!("[debug_vault_status] {}", status);
     status
 }
 
@@ -279,7 +280,7 @@ pub fn get_radar_items(
 
     let total_pages = (total as f64 / page_size as f64).ceil() as i64;
 
-    println!("[radar] get_radar_items returning {} items (page {}/{})", items.len(), page, total_pages);
+    log::debug!("[radar] get_radar_items returning {} items (page {}/{})", items.len(), page, total_pages);
     Ok(RadarItemsResult {
         items,
         total,
@@ -350,12 +351,20 @@ pub fn radar_item_action(
             ).map_err(|e| e.to_string())?;
             Ok(None)
         }
+        "delete" => {
+            conn.execute(
+                "DELETE FROM radar_items WHERE id = ?",
+                params![item_id],
+            ).map_err(|e| e.to_string())?;
+            Ok(None)
+        }
         _ => Err("Unknown action".to_string()),
     }
 }
 
 #[command]
 pub fn trigger_radar_scan(time_range: Option<String>) -> Result<serde_json::Value, String> {
+    crate::plugins::radar::init_spam_lexicon();
     let time_range_str = time_range.as_deref();
     let (scanned, new_items, errors) = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(time_range_str))?;
 
@@ -403,6 +412,6 @@ pub fn clear_radar_all() -> Result<i64, String> {
     let conn = get_radar_conn()?;
     let affected = conn.execute("DELETE FROM radar_items", [])
         .map_err(|e| e.to_string())?;
-    println!("[radar] Cleared {} items", affected);
+    log::debug!("[radar] Cleared {} items", affected);
     Ok(affected as i64)
 }

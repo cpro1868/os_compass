@@ -75,14 +75,63 @@ pub enum Platform {
 }
 
 pub fn identify_platform(url: &str) -> Platform {
-    let url_lower = url.to_lowercase();
-    if url_lower.contains("github.com") {
-        Platform::GitHub
-    } else if url_lower.contains("gitee.com") {
-        Platform::Gitee
-    } else {
-        Platform::Unknown
+    match crate::system_db::get_enabled_source_domains() {
+        Ok(domains) => {
+            let url_lower = url.to_lowercase();
+            for domain in domains {
+                if url_lower.contains(&domain.to_lowercase()) {
+                    if domain.contains("github") {
+                        return Platform::GitHub;
+                    } else if domain.contains("gitee") {
+                        return Platform::Gitee;
+                    }
+                }
+            }
+            Platform::Unknown
+        }
+        Err(_) => {
+            let url_lower = url.to_lowercase();
+            if url_lower.contains("github.com") {
+                Platform::GitHub
+            } else if url_lower.contains("gitee.com") {
+                Platform::Gitee
+            } else {
+                Platform::Unknown
+            }
+        }
     }
+}
+
+pub fn get_supported_platforms() -> Vec<(String, String)> {
+    let mut platforms = Vec::new();
+    
+    if let Ok(domains) = crate::system_db::get_enabled_source_domains() {
+        for domain in domains {
+            let name: String = if domain.contains("github") {
+                "GitHub".to_string()
+            } else if domain.contains("gitee") {
+                "Gitee".to_string()
+            } else if domain.contains("gitlab") {
+                "GitLab".to_string()
+            } else if domain.contains("npm") {
+                "NPM".to_string()
+            } else if domain.contains("pypi") || domain.contains("python") {
+                "PyPI".to_string()
+            } else if domain.contains("crates") {
+                "Crates.io".to_string()
+            } else {
+                domain.clone()
+            };
+            platforms.push((domain, name));
+        }
+    }
+    
+    if platforms.is_empty() {
+        platforms.push(("github.com".to_string(), "GitHub".to_string()));
+        platforms.push(("gitee.com".to_string(), "Gitee".to_string()));
+    }
+    
+    platforms
 }
 
 pub fn extract_source_id(url: &str, platform: Platform) -> Option<String> {
