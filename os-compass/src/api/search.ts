@@ -121,7 +121,3 @@ export async function rebuildEmbeddings(projectId?: number): Promise<number> {
 export async function generateProjectEmbedding(projectId: number): Promise<number> {
   return invoke<number>('generate_project_embeddings', { projectId });
 }
-
-export async function debugDbInfo(): Promise<string> {
-  return invoke<string>('debug_db_info');
-}
