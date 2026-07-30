@@ -324,6 +324,27 @@ pub async fn generate_project_embeddings(project_id: i64) -> Result<usize, Strin
 }
 
 #[command]
+pub async fn debug_db_info() -> Result<String, String> {
+    let db_guard = DATABASE.lock().unwrap();
+    let db = db_guard.as_ref().ok_or("Database not initialized")?;
+    let conn = db.get_connection();
+    
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM projects WHERE lifecycle_status != 'DELETED'",
+        [],
+        |row| row.get(0)
+    ).map_err(|e| e.to_string())?;
+    
+    let total: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM projects",
+        [],
+        |row| row.get(0)
+    ).map_err(|e| e.to_string())?;
+    
+    Ok(format!("projects (non-deleted): {}, total: {}", count, total))
+}
+
+#[command]
 pub async fn rebuild_embeddings(project_id: Option<i64>) -> Result<i64, String> {
     let project_ids = {
         let db_guard = DATABASE.lock().unwrap();

@@ -507,6 +507,7 @@ pub fn run() {
             embedding::generate_embedding_for_text,
             embedding::generate_project_embeddings,
             embedding::rebuild_embeddings,
+            embedding::debug_db_info,
             embedding::semantic_search_projects,
             commands::generate_article,
             commands::export_article,
