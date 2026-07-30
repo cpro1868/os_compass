@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import type { Project, LifecycleStatus, Category } from "../types";
 import { parseLanguages } from "../types";
-import { getCategories, getEmbeddingSettings, debugDbInfo } from "../api";
+import { getCategories, getEmbeddingSettings } from "../api";
 import { MoveCategoryDialog } from "./MoveCategoryDialog";
 import { EmptyState } from "./EmptyState";
 import { useToastStore } from "../stores/toastStore";
@@ -77,15 +77,6 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
       showToast("向量化失败：" + String(err), "error");
     } finally {
       setVectorizing(false);
-    }
-  };
-
-  const handleTestDb = async () => {
-    try {
-      const info = await debugDbInfo();
-      showToast("数据库状态: " + info, "info");
-    } catch (err) {
-      showToast("调试失败: " + String(err), "error");
     }
   };
 
@@ -331,14 +322,6 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
               <i className="fa-solid fa-brain text-purple-600"></i>
             )}
             <span className="text-purple-700 dark:text-purple-400">{vectorizing ? "向量化中..." : "向量化全部"}</span>
-          </button>
-          <button
-            onClick={handleTestDb}
-            className="px-3 py-1.5 text-sm border border-gray-200 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 rounded-lg flex items-center gap-1"
-            title="调试：检查数据库状态"
-          >
-            <i className="fa-solid fa-database text-gray-500"></i>
-            <span className="text-gray-600 dark:text-gray-400">DB状态</span>
           </button>
           <div className="relative">
             <button

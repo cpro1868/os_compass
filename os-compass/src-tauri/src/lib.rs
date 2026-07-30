@@ -161,6 +161,13 @@ pub fn run() {
                 }
             }
 
+            // 初始化 embedding 模块（从系统库读取配置）
+            if let Err(e) = embedding::init_module() {
+                log::error!("[embedding] Failed to initialize: {}", e);
+            } else {
+                log::info!("[embedding] Module initialized successfully");
+            }
+
             // 仓库库：Local 下的 com.administrator.os-compass
             let vault_root = app.path().app_local_data_dir().expect("Failed to get local data dir");
             log::info!("Vault root directory: {:?}", vault_root);
@@ -507,7 +514,6 @@ pub fn run() {
             embedding::generate_embedding_for_text,
             embedding::generate_project_embeddings,
             embedding::rebuild_embeddings,
-            embedding::debug_db_info,
             embedding::semantic_search_projects,
             commands::generate_article,
             commands::export_article,
