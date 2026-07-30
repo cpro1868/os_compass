@@ -76,7 +76,7 @@ pub async fn generate_embedding(text: &str) -> Result<Vec<f32>, String> {
         }
         log::info!("[embedding] Using API: {} with model: {}", config.embedding_api_url, config.embedding_model);
         (
-            format!("{}/embeddings", config.embedding_api_url.trim_end_matches('/')),
+            format!("{}/v1/embeddings", config.embedding_api_url.trim_end_matches('/')),
             config.embedding_api_key.clone(),
             config.embedding_model.clone(),
         )
