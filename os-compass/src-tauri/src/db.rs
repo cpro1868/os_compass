@@ -50,6 +50,16 @@ impl Database {
                 );
                 CREATE INDEX IF NOT EXISTS idx_user_info_project ON project_user_info(project_id);
             "#),
+            ("project_embeddings", r#"
+                CREATE TABLE IF NOT EXISTS project_embeddings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id INTEGER NOT NULL UNIQUE,
+                    embedding BLOB NOT NULL,
+                    dimension INTEGER NOT NULL DEFAULT 1536,
+                    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+                );
+                CREATE INDEX IF NOT EXISTS idx_embeddings_project ON project_embeddings(project_id);
+            "#),
         ];
 
         for (table_name, create_sql) in &missing_tables {
@@ -160,6 +170,15 @@ CREATE TABLE IF NOT EXISTS project_notes (
 );
 
 -- NOTE: system_variables and app_settings moved to system_settings.db (V2.0)
+
+CREATE TABLE IF NOT EXISTS project_embeddings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL UNIQUE,
+    embedding BLOB NOT NULL,
+    dimension INTEGER NOT NULL DEFAULT 1536,
+    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_embeddings_project ON project_embeddings(project_id);
 
 CREATE TABLE IF NOT EXISTS readme_variants (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
