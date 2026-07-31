@@ -75,8 +75,14 @@ pub async fn generate_embedding(text: &str) -> Result<Vec<f32>, String> {
             return Err("Embedding API key is not configured".to_string());
         }
         log::info!("[embedding] Using API: {} with model: {}", config.embedding_api_url, config.embedding_model);
+        let base_url = config.embedding_api_url.trim_end_matches('/');
+        let url = if base_url.ends_with("/v1") {
+            format!("{}/embeddings", base_url)
+        } else {
+            format!("{}/v1/embeddings", base_url)
+        };
         (
-            format!("{}/v1/embeddings", config.embedding_api_url.trim_end_matches('/')),
+            url,
             config.embedding_api_key.clone(),
             config.embedding_model.clone(),
         )
