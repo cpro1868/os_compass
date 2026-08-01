@@ -499,6 +499,7 @@ pub fn run() {
             commands::clear_radar_cache,
             commands::clear_radar_all,
             commands::intent_search,
+            commands::analyze_user_intent,
             commands::get_search_history,
             commands::clear_search_history,
             commands::list_search_sources,

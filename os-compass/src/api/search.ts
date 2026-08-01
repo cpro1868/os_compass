@@ -20,6 +20,29 @@ export interface SearchResult {
   conversation_id: string;
 }
 
+export interface IntentAnalysis {
+  intent: 'clear' | 'unclear';
+  intent_type?: string;
+  keywords?: string[];
+  questions?: string[];
+  options?: string[];
+}
+
+export interface SmartRecommendation {
+  categories: string[];
+  tags: string[];
+  suggestions: string[];
+}
+
+export interface SearchResult {
+  query: string;
+  local_results: ProjectMatch[];
+  web_results: ProjectMatch[];
+  total: number;
+  conversation_id: string;
+  recommendation?: SmartRecommendation;
+}
+
 export interface SearchHistoryItem {
   id: number;
   query: string;
@@ -48,6 +71,10 @@ export interface EmbeddingSettings {
 
 export async function intentSearch(query: string, conversationId?: string): Promise<SearchResult> {
   return invoke<SearchResult>('intent_search', { query, conversationId });
+}
+
+export async function analyzeIntent(userInput: string): Promise<IntentAnalysis> {
+  return invoke<IntentAnalysis>('analyze_user_intent', { userInput });
 }
 
 export async function getSearchHistory(limit?: number): Promise<SearchHistoryItem[]> {

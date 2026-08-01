@@ -1,6 +1,6 @@
 use crate::db::DATABASE;
 use crate::embedding::{EmbeddingConfig, update_config as update_embedding_config};
-use crate::plugins::search::{three_layer_search, SearchResult, ProjectMatch};
+use crate::plugins::search::{three_layer_search, SearchResult, ProjectMatch, IntentAnalysis, analyze_intent};
 use crate::vault::CURRENT_VAULT_CONFIG;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
@@ -45,6 +45,11 @@ pub fn intent_search(query: String, _conversation_id: Option<String>) -> Result<
     };
 
     tauri::async_runtime::block_on(three_layer_search(&vault_dir, &query))
+}
+
+#[command]
+pub async fn analyze_user_intent(user_input: String) -> Result<IntentAnalysis, String> {
+    analyze_intent(&user_input).await
 }
 
 #[command]
@@ -285,69 +290,85 @@ pub fn test_embedding_connection() -> Result<bool, String> {
 }
 
 #[command]
-pub fn list_embedding_models(provider: String, _api_url: String, _api_key: String) -> Result<Vec<String>, String> {
+pub fn list_embedding_models(provider: String, api_url: String, api_key: String) -> Result<Vec<String>, String> {
+    let client = reqwest::blocking::Client::new();
+    let base_url = api_url.trim_end_matches('/');
+
     match provider.as_str() {
         "custom" => {
-            Ok(vec![
-                "BAAI/bge-m3".to_string(),
-                "BAAI/bge-large-zh".to_string(),
-                "netease-youdao/bce-multimodalembedding-multilingual".to_string(),
-                "Pro/Qwen/Qwen2.5-MOE".to_string(),
-                "Pro/Qwen/Qwen2.5-7B".to_string(),
-            ])
+            let url = if base_url.contains("/v1") {
+                format!("{}/models", base_url)
+            } else {
+                format!("{}/v1/models", base_url)
+            };
+
+            let response = client.get(&url)
+                .header("Authorization", format!("Bearer {}", api_key))
+                .send()
+                .map_err(|e| format!("请求失败: {}", e))?;
+
+            let body = response.text().map_err(|e| format!("读取响应失败: {}", e))?;
+
+            #[derive(serde::Deserialize)]
+            struct ModelItem {
+                id: String,
+                object: Option<String>,
+                #[serde(rename = "type")]
+                model_type: Option<String>,
+            }
+            #[derive(serde::Deserialize)]
+            struct ModelsResponse {
+                data: Vec<ModelItem>,
+            }
+
+            let result: ModelsResponse = serde_json::from_str(&body)
+                .map_err(|e| format!("解析失败: {} | 响应: {}", e, &body[..body.len().min(200)]))?;
+
+            let models: Vec<String> = result.data
+                .into_iter()
+                .filter(|m| {
+                    let id = m.id.to_lowercase();
+                    id.contains("embedding") || id.contains("reranker") || id.contains("bge")
+                })
+                .map(|m| m.id)
+                .collect();
+            Ok(models)
         }
         "deepseek" => {
             Ok(vec![
                 "text-embedding-3".to_string(),
                 "text-embedding-3-small".to_string(),
-                "text-embedding-2".to_string(),
             ])
         }
-        "ollama" => {
-            let client = reqwest::blocking::Client::new();
-            let url = format!("{}/api/tags", _api_url.trim_end_matches('/'));
-
-            let response = client.get(&url).send().map_err(|e| e.to_string())?;
-
-            #[derive(serde::Deserialize)]
-            struct OllamaResponse {
-                models: Vec<OllamaModel>,
-            }
-            #[derive(serde::Deserialize)]
-            struct OllamaModel {
-                name: String,
-            }
-
-            let result: OllamaResponse = response.json().map_err(|e| e.to_string())?;
-            let models: Vec<String> = result.models
-                .into_iter()
-                .filter(|m| m.name.contains("embedding"))
-                .map(|m| m.name)
-                .collect();
-            Ok(models)
-        }
         _ => {
-            let client = reqwest::blocking::Client::new();
-            let url = format!("{}/models", _api_url.trim_end_matches('/'));
+            let base_url = api_url.trim_end_matches('/');
+            let url = if base_url.contains("/v1") {
+                format!("{}/models", base_url)
+            } else {
+                format!("{}/v1/models", base_url)
+            };
 
             let response = client.get(&url)
-                .header("Authorization", format!("Bearer {}", _api_key))
+                .header("Authorization", format!("Bearer {}", api_key))
                 .send()
                 .map_err(|e| e.to_string())?;
 
+            let body = response.text().map_err(|e| e.to_string())?;
+
             #[derive(serde::Deserialize)]
-            struct OpenAIResponse {
+            struct ModelsResponse {
                 data: Vec<serde_json::Value>,
             }
 
-            let result: OpenAIResponse = response.json().map_err(|e| e.to_string())?;
+            let result: ModelsResponse = serde_json::from_str(&body)
+                .map_err(|e| e.to_string())?;
+
             let models: Vec<String> = result.data
                 .into_iter()
-                .filter_map(|m| {
-                    m.get("id")
-                        .and_then(|id| id.as_str())
-                        .filter(|id| id.contains("embedding"))
-                        .map(|s| s.to_string())
+                .filter_map(|m| m.get("id").and_then(|id| id.as_str()).map(|s| s.to_string()))
+                .filter(|id| {
+                    let lower = id.to_lowercase();
+                    lower.contains("embedding") || lower.contains("embed") || lower.contains("bge")
                 })
                 .collect();
             Ok(models)
