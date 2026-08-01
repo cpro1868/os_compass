@@ -88,12 +88,19 @@ pub async fn generate_embedding(text: &str) -> Result<Vec<f32>, String> {
         )
     };
     
-    let client = Client::new();
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("Client build failed: {}", e))?;
+        
+    log::info!("[embedding] HTTP client built with 30s timeout");
+    
     let request_body = serde_json::json!({
         "input": text,
         "model": model,
     });
 
+    log::info!("[embedding] Sending embedding request...");
     let response = client.post(&url)
         .header("Authorization", format!("Bearer {}", api_key))
         .header("Content-Type", "application/json")
@@ -145,16 +152,25 @@ pub fn store_embeddings(project_id: i64, embeddings: &[f32]) -> Result<(), Strin
 }
 
 pub async fn semantic_search(query: &str, limit: usize) -> Result<Vec<(i64, f32)>, String> {
+    log::info!("[semantic_search] 开始语义搜索，query: {}, limit: {}", query, limit);
+    
     if !is_enabled() {
+        log::error!("[semantic_search] Embedding 未启用");
         return Err("Embedding not configured or disabled".to_string());
     }
+    log::info!("[semantic_search] Embedding 已启用");
 
     if let Err(e) = ensure_vss_loaded() {
-        log::warn!("[embedding] VSS not available, falling back: {}", e);
+        log::warn!("[semantic_search] VSS 未加载: {}", e);
+    } else {
+        log::info!("[semantic_search] VSS 已加载");
     }
 
+    log::info!("[semantic_search] 开始生成查询向量...");
     let query_embedding = generate_embedding(query).await?;
+    log::info!("[semantic_search] 查询向量生成成功，长度: {}", query_embedding.len());
     
+    log::info!("[semantic_search] 开始数据库查询...");
     let db_guard = DATABASE.lock().unwrap();
     let db = db_guard.as_ref().ok_or("Database not initialized")?;
     let conn = db.get_connection();
