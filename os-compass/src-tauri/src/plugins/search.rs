@@ -121,19 +121,28 @@ pub async fn three_layer_search(
     vault_dir: &std::path::Path,
     query: &str,
 ) -> Result<SearchResult, String> {
+    log::info!("[three_layer_search] ====== 开始三层搜索 ======");
+    log::info!("[three_layer_search] 查询词: {}", query);
+    log::info!("[three_layer_search] vault_dir: {:?}", vault_dir);
+    
     let search_conn = init_search_db(vault_dir)?;
     let settings = get_settings();
+    log::info!("[three_layer_search] 数据库连接成功");
 
     let db_guard = crate::db::DATABASE.lock().unwrap();
     let db = db_guard.as_ref().ok_or("Database not initialized")?;
     let main_conn = db.get_connection();
+    log::info!("[three_layer_search] 主数据库连接成功");
 
     let local_search = async {
+        log::info!("[three_layer_search] 开始本地搜索...");
         let mut local_results: Vec<ProjectMatch> = Vec::new();
 
         if crate::embedding::is_enabled() {
+            log::info!("[three_layer_search] 向量搜索已启用，执行向量搜索");
             match crate::embedding::semantic_search(query, 10).await {
                 Ok(matches) => {
+                    log::info!("[three_layer_search] 向量搜索返回 {} 个结果", matches.len());
                     for (project_id, distance) in matches {
                         if let Ok((name, url, description, language, stars, forks)) = main_conn.query_row(
                             "SELECT name, url, description, languages, stars, forks FROM projects WHERE id = ?",
@@ -258,7 +267,12 @@ pub async fn three_layer_search(
         params![query, total],
     ).ok();
 
+    log::info!("[three_layer_search] 生成本地推荐");
     let recommendation = generate_smart_recommendation(&local_results, &web_results, query);
+    
+    log::info!("[three_layer_search] ====== 搜索完成 ======");
+    log::info!("[three_layer_search] 总结果数: {}", total);
+    log::info!("[three_layer_search] 本地结果: {}, 联网结果: {}", local_results.len(), web_results.len());
 
     Ok(SearchResult {
         query: (*query).to_string(),
@@ -332,22 +346,40 @@ fn generate_smart_recommendation(
 }
 
 pub async fn analyze_intent(user_input: &str) -> Result<IntentAnalysis, String> {
+    log::info!("[analyze_intent] 开始分析意图，输入: {}", user_input);
+    
     let client = LlmClient::from_settings()
-        .ok_or_else(|| "LLM not configured".to_string())?;
+        .ok_or_else(|| {
+            log::error!("[analyze_intent] LLM 未配置");
+            "LLM not configured".to_string()
+        })?;
 
+    log::info!("[analyze_intent] LLM 客户端已创建");
+    
     let prompt = build_intent_analysis_prompt(user_input);
+    log::debug!("[analyze_intent] 构建的 Prompt: {}", prompt);
 
     let messages = vec![LlmMessage {
         role: "user".to_string(),
         content: prompt,
     }];
 
+    log::info!("[analyze_intent] 调用 LLM chat API...");
     let response = client.chat(messages).await
-        .map_err(|e| format!("LLM request failed: {}", e))?;
+        .map_err(|e| {
+            log::error!("[analyze_intent] LLM 调用失败: {}", e);
+            format!("LLM request failed: {}", e)
+        })?;
 
+    log::info!("[analyze_intent] LLM 返回原始响应: {}", response);
+    
     let parsed: IntentAnalysis = serde_json::from_str(&response)
-        .map_err(|e| format!("Failed to parse LLM response: {}\nResponse: {}", e, response))?;
+        .map_err(|e| {
+            log::error!("[analyze_intent] JSON 解析失败: {}", e);
+            format!("Failed to parse LLM response: {}\nResponse: {}", e, response)
+        })?;
 
+    log::info!("[analyze_intent] 解析成功: {:?}", parsed);
     Ok(parsed)
 }
 
