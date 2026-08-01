@@ -192,13 +192,8 @@ export function SearchView() {
         try {
           intent = await withTimeout(analyzeIntent(query), 30000);
           setIntentToCache(cacheKey, intent);
-        } catch (e) {
-          const errorMsg = e instanceof Error ? e.message : String(e);
-          if (errorMsg.includes('LLM not configured') || errorMsg.includes('timeout')) {
-            intent = { intent: 'clear', keywords: [query] };
-          } else {
-            throw e;
-          }
+        } catch {
+          intent = { intent: 'clear', keywords: [query] };
         }
       }
 
