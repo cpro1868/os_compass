@@ -135,8 +135,6 @@ export function SearchView() {
   const handleSubmit = async () => {
     if (!query.trim() || isLoading) return;
 
-    showToast('开始搜索...', 'info');
-
     const userMessage: MessageItem = {
       id: Date.now().toString(),
       role: 'user',
@@ -168,7 +166,6 @@ export function SearchView() {
     }
 
     const updatePhase = (phase: SearchPhase, content: string) => {
-      showToast(content, 'info');
       startTransition(() => {
         setSearchPhase(phase);
         if (loadingIdRef.current) {
@@ -189,7 +186,6 @@ export function SearchView() {
           intent = await withTimeout(analyzeIntent(query), 30000);
           setIntentToCache(cacheKey, intent);
         } catch {
-          updatePhase('analyzing', '意图分析失败，降级为直接搜索');
           intent = { intent: 'clear', keywords: [query] };
         }
       }
@@ -213,7 +209,6 @@ export function SearchView() {
             result = await withTimeout(intentSearch(searchQuery, currentConvId), 60000);
             setSearchToCache(searchCacheKey, result);
           } catch {
-            updatePhase('searching', '搜索超时，返回空结果');
             result = { query: searchQuery, local_results: [], web_results: [], total: 0, conversation_id: '' };
           }
         }
@@ -222,7 +217,7 @@ export function SearchView() {
           setConversationId(result.conversation_id);
         }
 
-        updatePhase('idle', `搜索完成，找到 ${result.total} 个相关项目`);
+        updatePhase('idle', `根据您的需求，我找到了 ${result.total} 个相关项目。`);
         if (loadingIdRef.current) {
           setMessages(prev => prev.map(msg =>
             msg.id === loadingIdRef.current 
@@ -233,7 +228,7 @@ export function SearchView() {
         loadHistory();
       }
     } catch {
-      updatePhase('idle', '搜索失败，请稍后重试');
+      updatePhase('idle', '抱歉，搜索失败了，请稍后重试。');
       showToast(t('search.error.searchFailed') || '搜索失败', 'error');
     } finally {
       setIsLoading(false);
