@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
-import { intentSearch, getSearchHistory } from '../api/search';
+import { intentSearch, getSearchHistory, analyzeIntent } from '../api/search';
 import { getRecentProjects } from '../api';
 import { useToastStore } from '../stores/toastStore';
-import type { SearchResult, SearchHistoryItem, ProjectMatch } from '../api/search';
+import type { SearchResult, SearchHistoryItem, ProjectMatch, IntentAnalysis } from '../api/search';
 import type { Project } from '../types';
 
 const STATUS_CONFIG: Record<string, { emoji: string; label: string }> = {
@@ -22,13 +22,65 @@ export function SearchView() {
     role: 'user' | 'assistant';
     content: string;
     results?: SearchResult;
+    clarification?: IntentAnalysis;
   }>>([]);
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const intentCache = useRef<Map<string, { data: IntentAnalysis; expiresAt: number }>>(new Map());
+  const searchCache = useRef<Map<string, { data: SearchResult; expiresAt: number }>>(new Map());
+
+  const generateCacheKey = (text: string): string => {
+    const normalized = text.toLowerCase().trim();
+    let hash = 0;
+    for (let i = 0; i < normalized.length; i++) {
+      const char = normalized.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash.toString(16);
+  };
+
+  const getIntentFromCache = (key: string): IntentAnalysis | null => {
+    const cached = intentCache.current.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+    if (cached) {
+      intentCache.current.delete(key);
+    }
+    return null;
+  };
+
+  const setIntentToCache = (key: string, data: IntentAnalysis): void => {
+    intentCache.current.set(key, {
+      data,
+      expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+    });
+  };
+
+  const getSearchFromCache = (key: string): SearchResult | null => {
+    const cached = searchCache.current.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+    if (cached) {
+      searchCache.current.delete(key);
+    }
+    return null;
+  };
+
+  const setSearchToCache = (key: string, data: SearchResult): void => {
+    searchCache.current.set(key, {
+      data,
+      expiresAt: Date.now() + 30 * 60 * 1000,
+    });
+  };
 
   const loadHistory = useCallback(async () => {
     try {
@@ -60,6 +112,19 @@ export function SearchView() {
     }
   }, [messages]);
 
+  useEffect(() => {
+    const handleVaultChanged = () => {
+      setMessages([]);
+      setConversationId(null);
+      intentCache.current.clear();
+      searchCache.current.clear();
+      loadHistory();
+      loadRecentProjects();
+    };
+    window.addEventListener('vault-changed', handleVaultChanged);
+    return () => window.removeEventListener('vault-changed', handleVaultChanged);
+  }, [loadHistory, loadRecentProjects]);
+
   const handleSubmit = async () => {
     if (!query.trim() || isLoading) return;
 
@@ -73,18 +138,78 @@ export function SearchView() {
     setQuery('');
     setIsLoading(true);
 
+    const RETRY_CONFIG = {
+      maxAttempts: 2,
+      retryDelay: 1000,
+      retryableErrors: ['timeout', 'rate_limit', 'server_error', 'network', 'fetch'],
+    };
+
+    const retryable = (error: string) => {
+      const lowerError = error.toLowerCase();
+      return RETRY_CONFIG.retryableErrors.some(e => lowerError.includes(e));
+    };
+
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const executeWithRetry = async function (fn: () => Promise<unknown>): Promise<unknown> {
+      let lastError: Error | null = null;
+      for (let attempt = 0; attempt <= RETRY_CONFIG.maxAttempts; attempt++) {
+        try {
+          return await fn();
+        } catch (e) {
+          lastError = e as Error;
+          if (attempt < RETRY_CONFIG.maxAttempts && retryable(lastError.message)) {
+            await sleep(RETRY_CONFIG.retryDelay * (attempt + 1));
+            continue;
+          }
+          throw lastError;
+        }
+      }
+      throw lastError;
+    };
+
     try {
-      const result = await intentSearch(query);
+      const cacheKey = generateCacheKey(query);
+      let intent = getIntentFromCache(cacheKey);
 
-      const assistantMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant' as const,
-        content: `根据您的需求，我找到了 ${result.total} 个相关项目。`,
-        results: result,
-      };
+      if (!intent) {
+        intent = await executeWithRetry(() => analyzeIntent(query)) as Awaited<ReturnType<typeof analyzeIntent>>;
+        setIntentToCache(cacheKey, intent);
+      }
 
-      setMessages(prev => [...prev, assistantMessage]);
-      loadHistory();
+      if (intent.intent === 'unclear' && intent.questions) {
+        const clarificationMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant' as const,
+          content: intent.questions.join('\n'),
+          clarification: intent,
+        };
+        setMessages(prev => [...prev, clarificationMessage]);
+      } else {
+        const searchQuery = intent.keywords?.join(' ') || query;
+        const searchCacheKey = generateCacheKey(searchQuery);
+        let result = getSearchFromCache(searchCacheKey);
+
+        if (!result) {
+          const currentConvId = conversationId || undefined;
+          result = await executeWithRetry(() => intentSearch(searchQuery, currentConvId)) as Awaited<ReturnType<typeof intentSearch>>;
+          setSearchToCache(searchCacheKey, result);
+        }
+
+        if (!conversationId && result.conversation_id) {
+          setConversationId(result.conversation_id);
+        }
+
+        const assistantMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant' as const,
+          content: `根据您的需求，我找到了 ${result.total} 个相关项目。`,
+          results: result,
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+        loadHistory();
+      }
     } catch {
       const errorMessage = {
         id: (Date.now() + 1).toString(),
@@ -107,6 +232,7 @@ export function SearchView() {
 
   const handleClear = () => {
     setMessages([]);
+    setConversationId(null);
     loadHistory();
   };
 
@@ -309,7 +435,89 @@ export function SearchView() {
                           <ProjectCard key={idx} item={item} />
                         ))}
                       </div>
+                      {msg.results.recommendation && (
+                        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                          <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                            <i className="fa-solid fa-wand-magic-sparkles text-blue-500"></i>
+                            {t('search.smartRecommendation') || '智能建议'}
+                          </h4>
+                          {msg.results.recommendation.categories.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('search.relatedCategories') || '相关分类'}</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {msg.results.recommendation.categories.map((cat, idx) => (
+                                  <span key={idx} className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs rounded-md">
+                                    {cat}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {msg.results.recommendation.tags.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('search.relatedTags') || '关联标签'}</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {msg.results.recommendation.tags.map((tag, idx) => (
+                                  <span key={idx} className="px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded-md">
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {msg.results.recommendation.suggestions.length > 0 && (
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('search.expandedSearch') || '扩展搜索'}</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {msg.results.recommendation.suggestions.map((suggestion, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={() => {
+                                      setQuery(suggestion);
+                                      setTimeout(handleSubmit, 0);
+                                    }}
+                                    className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs rounded-md hover:bg-purple-200 dark:hover:bg-purple-900/50 transition"
+                                  >
+                                    {suggestion}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </>
+                  )}
+                  {msg.clarification && (
+                    <div className="mt-4 space-y-3">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{t('search.clarification.prompt') || '请选择或补充您的需求：'}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {msg.clarification.options?.map((option, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              setQuery(option);
+                              setTimeout(handleSubmit, 0);
+                            }}
+                            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-gray-200 dark:border-gray-600 hover:border-blue-500 rounded-lg transition flex items-center gap-1.5"
+                          >
+                            <i className="fa-solid fa-hand-pointer text-blue-500"></i>
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder={t('search.clarification.placeholder') || '补充您的具体需求...'}
+                        className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:border-blue-500"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                            setQuery((e.target as HTMLInputElement).value);
+                            setTimeout(handleSubmit, 0);
+                          }
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
               </div>

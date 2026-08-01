@@ -23,7 +23,7 @@ directories = "5"
 rusqlite = { version = "0.32", features = ["bundled", "load_extension"] }
 lazy_static = "1.4"
 reqwest = { version = "0.12", features = ["json", "rustls-tls", "socks", "blocking"], default-features = false }
-tokio = { version = "1", features = ["rt-multi-thread"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 aes-gcm = "0.10"
 rand = "0.8"
 base64 = "0.22"
