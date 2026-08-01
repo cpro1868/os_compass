@@ -135,8 +135,7 @@ export function SearchView() {
   const handleSubmit = async () => {
     if (!query.trim() || isLoading) return;
 
-    console.log('[Search] ====== 开始搜索 ======');
-    console.log('[Search] 查询内容:', query);
+    showToast('开始搜索...', 'info');
 
     const userMessage: MessageItem = {
       id: Date.now().toString(),
@@ -154,42 +153,27 @@ export function SearchView() {
       phase: 'analyzing',
     };
 
-    console.log('[Search] 添加用户消息到状态');
     setMessages(prev => [...prev, userMessage, loadingMessage]);
     setQuery('');
     setIsLoading(true);
     setSearchPhase('analyzing');
 
     function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-      console.log(`[Search] withTimeout: 设置 ${timeoutMs}ms 超时`);
       return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-          console.log('[Search] ⏰ withTimeout: 请求超时!');
-          reject(new Error('timeout'));
-        }, timeoutMs);
+        const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
         promise
-          .then(result => {
-            clearTimeout(timer);
-            console.log('[Search] ✅ withTimeout: 请求成功返回');
-            resolve(result);
-          })
-          .catch(err => {
-            clearTimeout(timer);
-            console.log('[Search] ❌ withTimeout: 请求失败:', err?.message || err);
-            reject(err);
-          });
+          .then(result => { clearTimeout(timer); resolve(result); })
+          .catch(err => { clearTimeout(timer); reject(err); });
       });
     }
 
     const updatePhase = (phase: SearchPhase, content: string) => {
-      console.log('[Search] updatePhase:', phase, '-', content);
+      showToast(content, 'info');
       startTransition(() => {
         setSearchPhase(phase);
         if (loadingIdRef.current) {
           setMessages(prev => prev.map(msg =>
-            msg.id === loadingIdRef.current
-              ? { ...msg, phase, content }
-              : msg
+            msg.id === loadingIdRef.current ? { ...msg, phase, content } : msg
           ));
         }
       });
@@ -197,55 +181,39 @@ export function SearchView() {
 
     try {
       const cacheKey = generateCacheKey(query);
-      console.log('[Search] 缓存Key:', cacheKey);
-      
       let intent = getIntentFromCache(cacheKey);
-      console.log('[Search] 缓存命中?', !!intent);
 
       if (!intent) {
-        console.log('[Search] 缓存未命中，调用 analyzeIntent API...');
         try {
+          updatePhase('analyzing', '正在分析语义...');
           intent = await withTimeout(analyzeIntent(query), 30000);
-          console.log('[Search] analyzeIntent 返回:', JSON.stringify(intent));
           setIntentToCache(cacheKey, intent);
-        } catch (e: unknown) {
-          console.log('[Search] analyzeIntent 异常:', e);
-          console.log('[Search] 降级为直接搜索');
+        } catch {
+          updatePhase('analyzing', '意图分析失败，降级为直接搜索');
           intent = { intent: 'clear', keywords: [query] };
         }
       }
 
-      console.log('[Search] 最终意图:', JSON.stringify(intent));
-
       if (intent.intent === 'unclear' && intent.questions) {
-        console.log('[Search] 意图不明确，显示追问');
         updatePhase('idle', intent.questions.join('\n'));
         if (loadingIdRef.current) {
           setMessages(prev => prev.map(msg =>
-            msg.id === loadingIdRef.current
-              ? { ...msg, clarification: intent }
-              : msg
+            msg.id === loadingIdRef.current ? { ...msg, clarification: intent } : msg
           ));
         }
       } else {
         const searchQuery = intent.keywords?.join(' ') || query;
-        console.log('[Search] 最终搜索词:', searchQuery);
-        
         const searchCacheKey = generateCacheKey(searchQuery);
         let result = getSearchFromCache(searchCacheKey);
-        console.log('[Search] 搜索缓存命中?', !!result);
 
         if (!result) {
           try {
             updatePhase('searching', '正在搜索本地项目和联网查询...');
-            console.log('[Search] 调用 intentSearch API...');
             const currentConvId = conversationId || undefined;
             result = await withTimeout(intentSearch(searchQuery, currentConvId), 60000);
-            console.log('[Search] intentSearch 返回结果数:', result?.total);
             setSearchToCache(searchCacheKey, result);
-          } catch (e: unknown) {
-            console.log('[Search] intentSearch 异常:', e);
-            console.log('[Search] 降级为空结果');
+          } catch {
+            updatePhase('searching', '搜索超时，返回空结果');
             result = { query: searchQuery, local_results: [], web_results: [], total: 0, conversation_id: '' };
           }
         }
@@ -254,23 +222,20 @@ export function SearchView() {
           setConversationId(result.conversation_id);
         }
 
-        console.log('[Search] 更新消息显示结果');
-        updatePhase('idle', `根据您的需求，我找到了 ${result.total} 个相关项目。`);
+        updatePhase('idle', `搜索完成，找到 ${result.total} 个相关项目`);
         if (loadingIdRef.current) {
           setMessages(prev => prev.map(msg =>
-            msg.id === loadingIdRef.current
+            msg.id === loadingIdRef.current 
               ? { ...msg, content: `根据您的需求，我找到了 ${result.total} 个相关项目。`, results: result }
               : msg
           ));
         }
         loadHistory();
       }
-    } catch (e: unknown) {
-      console.log('[Search] 最终异常:', e);
-      updatePhase('idle', '抱歉，搜索失败了，请稍后重试。');
+    } catch {
+      updatePhase('idle', '搜索失败，请稍后重试');
       showToast(t('search.error.searchFailed') || '搜索失败', 'error');
     } finally {
-      console.log('[Search] ====== 搜索完成 ======');
       setIsLoading(false);
       setSearchPhase('idle');
       loadingIdRef.current = null;
