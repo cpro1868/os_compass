@@ -138,43 +138,38 @@ export function SearchView() {
     setQuery('');
     setIsLoading(true);
 
-    const RETRY_CONFIG = {
-      maxAttempts: 2,
-      retryDelay: 1000,
-      retryableErrors: ['timeout', 'rate_limit', 'server_error', 'network', 'fetch'],
-    };
-
-    const retryable = (error: string) => {
-      const lowerError = error.toLowerCase();
-      return RETRY_CONFIG.retryableErrors.some(e => lowerError.includes(e));
-    };
-
-    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-    const executeWithRetry = async function (fn: () => Promise<unknown>): Promise<unknown> {
-      let lastError: Error | null = null;
-      for (let attempt = 0; attempt <= RETRY_CONFIG.maxAttempts; attempt++) {
-        try {
-          return await fn();
-        } catch (e) {
-          lastError = e as Error;
-          if (attempt < RETRY_CONFIG.maxAttempts && retryable(lastError.message)) {
-            await sleep(RETRY_CONFIG.retryDelay * (attempt + 1));
-            continue;
-          }
-          throw lastError;
-        }
-      }
-      throw lastError;
-    };
+    function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
+        promise.then((result) => {
+          clearTimeout(timer);
+          resolve(result);
+        }).catch((err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+      });
+    }
 
     try {
       const cacheKey = generateCacheKey(query);
       let intent = getIntentFromCache(cacheKey);
 
       if (!intent) {
-        intent = await executeWithRetry(() => analyzeIntent(query)) as Awaited<ReturnType<typeof analyzeIntent>>;
-        setIntentToCache(cacheKey, intent);
+        try {
+          intent = await withTimeout(analyzeIntent(query), 30000);
+          setIntentToCache(cacheKey, intent);
+        } catch (e) {
+          const errorMsg = e instanceof Error ? e.message : String(e);
+          if (errorMsg.includes('LLM not configured') || errorMsg.includes('timeout')) {
+            intent = {
+              intent: 'clear' as const,
+              keywords: [query],
+            };
+          } else {
+            throw e;
+          }
+        }
       }
 
       if (intent.intent === 'unclear' && intent.questions) {
@@ -191,9 +186,24 @@ export function SearchView() {
         let result = getSearchFromCache(searchCacheKey);
 
         if (!result) {
-          const currentConvId = conversationId || undefined;
-          result = await executeWithRetry(() => intentSearch(searchQuery, currentConvId)) as Awaited<ReturnType<typeof intentSearch>>;
-          setSearchToCache(searchCacheKey, result);
+          try {
+            const currentConvId = conversationId || undefined;
+            result = await withTimeout(intentSearch(searchQuery, currentConvId), 60000);
+            setSearchToCache(searchCacheKey, result);
+          } catch (e) {
+            const errorMsg = e instanceof Error ? e.message : String(e);
+            if (errorMsg.includes('timeout')) {
+              result = {
+                query: searchQuery,
+                local_results: [],
+                web_results: [],
+                total: 0,
+                conversation_id: '',
+              };
+            } else {
+              throw e;
+            }
+          }
         }
 
         if (!conversationId && result.conversation_id) {
