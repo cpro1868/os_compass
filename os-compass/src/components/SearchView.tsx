@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, startTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import { intentSearch, getSearchHistory, analyzeIntent } from '../api/search';
@@ -7,6 +7,8 @@ import { useToastStore } from '../stores/toastStore';
 import type { SearchResult, SearchHistoryItem, ProjectMatch, IntentAnalysis } from '../api/search';
 import type { Project } from '../types';
 
+type SearchPhase = 'idle' | 'analyzing' | 'searching';
+
 const STATUS_CONFIG: Record<string, { emoji: string; label: string }> = {
   TO_EXPLORE: { emoji: "💡", label: "待探索" },
   DIVING: { emoji: "🔬", label: "深度研究中" },
@@ -14,18 +16,22 @@ const STATUS_CONFIG: Record<string, { emoji: string; label: string }> = {
   ABANDONED: { emoji: "🗑️", label: "弃用/避坑" },
 };
 
+interface MessageItem {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  results?: SearchResult;
+  clarification?: IntentAnalysis;
+  phase?: SearchPhase;
+}
+
 export function SearchView() {
   const { t } = useTranslation();
   const { showToast } = useToastStore();
-  const [messages, setMessages] = useState<Array<{
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    results?: SearchResult;
-    clarification?: IntentAnalysis;
-  }>>([]);
+  const [messages, setMessages] = useState<MessageItem[]>([]);
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [, setSearchPhase] = useState<SearchPhase>('idle');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
@@ -34,6 +40,7 @@ export function SearchView() {
 
   const intentCache = useRef<Map<string, { data: IntentAnalysis; expiresAt: number }>>(new Map());
   const searchCache = useRef<Map<string, { data: SearchResult; expiresAt: number }>>(new Map());
+  const loadingIdRef = useRef<string | null>(null);
 
   const generateCacheKey = (text: string): string => {
     const normalized = text.toLowerCase().trim();
@@ -128,28 +135,54 @@ export function SearchView() {
   const handleSubmit = async () => {
     if (!query.trim() || isLoading) return;
 
-    const userMessage = {
+    const userMessage: MessageItem = {
       id: Date.now().toString(),
-      role: 'user' as const,
+      role: 'user',
       content: query,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const loadingId = (Date.now() + 1).toString();
+    loadingIdRef.current = loadingId;
+
+    const loadingMessage: MessageItem = {
+      id: loadingId,
+      role: 'assistant',
+      content: '正在分析语义...',
+      phase: 'analyzing',
+    };
+
+    setMessages(prev => [...prev, userMessage, loadingMessage]);
     setQuery('');
     setIsLoading(true);
+    setSearchPhase('analyzing');
 
     function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
       return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
-        promise.then((result) => {
-          clearTimeout(timer);
-          resolve(result);
-        }).catch((err) => {
-          clearTimeout(timer);
-          reject(err);
-        });
+        const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
+        promise
+          .then(result => {
+            clearTimeout(timer);
+            resolve(result);
+          })
+          .catch(err => {
+            clearTimeout(timer);
+            reject(err);
+          });
       });
     }
+
+    const updatePhase = (phase: SearchPhase, content: string) => {
+      startTransition(() => {
+        setSearchPhase(phase);
+        if (loadingIdRef.current) {
+          setMessages(prev => prev.map(msg =>
+            msg.id === loadingIdRef.current
+              ? { ...msg, phase, content }
+              : msg
+          ));
+        }
+      });
+    };
 
     try {
       const cacheKey = generateCacheKey(query);
@@ -162,10 +195,7 @@ export function SearchView() {
         } catch (e) {
           const errorMsg = e instanceof Error ? e.message : String(e);
           if (errorMsg.includes('LLM not configured') || errorMsg.includes('timeout')) {
-            intent = {
-              intent: 'clear' as const,
-              keywords: [query],
-            };
+            intent = { intent: 'clear', keywords: [query] };
           } else {
             throw e;
           }
@@ -173,13 +203,14 @@ export function SearchView() {
       }
 
       if (intent.intent === 'unclear' && intent.questions) {
-        const clarificationMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant' as const,
-          content: intent.questions.join('\n'),
-          clarification: intent,
-        };
-        setMessages(prev => [...prev, clarificationMessage]);
+        updatePhase('idle', intent.questions.join('\n'));
+        if (loadingIdRef.current) {
+          setMessages(prev => prev.map(msg =>
+            msg.id === loadingIdRef.current
+              ? { ...msg, clarification: intent }
+              : msg
+          ));
+        }
       } else {
         const searchQuery = intent.keywords?.join(' ') || query;
         const searchCacheKey = generateCacheKey(searchQuery);
@@ -187,19 +218,14 @@ export function SearchView() {
 
         if (!result) {
           try {
+            updatePhase('searching', '正在搜索本地项目和联网查询...');
             const currentConvId = conversationId || undefined;
             result = await withTimeout(intentSearch(searchQuery, currentConvId), 60000);
             setSearchToCache(searchCacheKey, result);
           } catch (e) {
             const errorMsg = e instanceof Error ? e.message : String(e);
             if (errorMsg.includes('timeout')) {
-              result = {
-                query: searchQuery,
-                local_results: [],
-                web_results: [],
-                total: 0,
-                conversation_id: '',
-              };
+              result = { query: searchQuery, local_results: [], web_results: [], total: 0, conversation_id: '' };
             } else {
               throw e;
             }
@@ -210,26 +236,23 @@ export function SearchView() {
           setConversationId(result.conversation_id);
         }
 
-        const assistantMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant' as const,
-          content: `根据您的需求，我找到了 ${result.total} 个相关项目。`,
-          results: result,
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
+        updatePhase('idle', `根据您的需求，我找到了 ${result.total} 个相关项目。`);
+        if (loadingIdRef.current) {
+          setMessages(prev => prev.map(msg =>
+            msg.id === loadingIdRef.current
+              ? { ...msg, content: `根据您的需求，我找到了 ${result.total} 个相关项目。`, results: result }
+              : msg
+          ));
+        }
         loadHistory();
       }
     } catch {
-      const errorMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant' as const,
-        content: '抱歉，搜索失败了，请稍后重试。',
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      updatePhase('idle', '抱歉，搜索失败了，请稍后重试。');
       showToast(t('search.error.searchFailed') || '搜索失败', 'error');
     } finally {
       setIsLoading(false);
+      setSearchPhase('idle');
+      loadingIdRef.current = null;
     }
   };
 
@@ -336,14 +359,14 @@ export function SearchView() {
     );
   };
 
-  const TypingIndicator = () => (
+  const TypingIndicator = (props: { phase?: SearchPhase }) => (
     <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400 text-sm">
       <div className="flex gap-1">
         <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></span>
         <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '100ms' }}></span>
         <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }}></span>
       </div>
-      <span>{t('search.searching') || '正在分析语义并搜索...'}</span>
+      <span>{props.phase === 'analyzing' ? '正在分析语义...' : props.phase === 'searching' ? '正在搜索...' : t('search.searching') || '正在搜索...'}</span>
     </div>
   );
 
@@ -421,129 +444,124 @@ export function SearchView() {
                     ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm p-4'
                     : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-sm p-4'
                 }>
-                  <p className={msg.role === 'user' ? '' : 'text-gray-700 dark:text-gray-300 leading-relaxed'}>
-                    {msg.content}
-                  </p>
-                  {msg.results && (
+                  {msg.phase ? (
+                    <TypingIndicator phase={msg.phase} />
+                  ) : (
                     <>
-                      <div className="flex flex-wrap gap-3 my-4">
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg text-xs">
-                          <i className="fa-solid fa-database text-blue-500"></i>
-                          <span className="text-blue-600 dark:text-blue-400">
-                            {t('search.localVector') || '本地向量'}: {msg.results.local_results?.length || 0}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-100 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-lg text-xs">
-                          <i className="fa-solid fa-globe text-purple-500"></i>
-                          <span className="text-purple-600 dark:text-purple-400">
-                            {t('search.llmOnline') || 'LLM联网'}: {msg.results.web_results?.length || 0}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        {[...(msg.results.local_results || []), ...(msg.results.web_results || [])].map((item, idx) => (
-                          <ProjectCard key={idx} item={item} />
-                        ))}
-                      </div>
-                      {msg.results.recommendation && (
-                        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                          <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                            <i className="fa-solid fa-wand-magic-sparkles text-blue-500"></i>
-                            {t('search.smartRecommendation') || '智能建议'}
-                          </h4>
-                          {msg.results.recommendation.categories.length > 0 && (
-                            <div className="mb-3">
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('search.relatedCategories') || '相关分类'}</p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {msg.results.recommendation.categories.map((cat, idx) => (
-                                  <span key={idx} className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs rounded-md">
-                                    {cat}
-                                  </span>
-                                ))}
-                              </div>
+                      <p className={msg.role === 'user' ? '' : 'text-gray-700 dark:text-gray-300 leading-relaxed'}>
+                        {msg.content}
+                      </p>
+                      {msg.results && (
+                        <>
+                          <div className="flex flex-wrap gap-3 my-4">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg text-xs">
+                              <i className="fa-solid fa-database text-blue-500"></i>
+                              <span className="text-blue-600 dark:text-blue-400">
+                                {t('search.localVector') || '本地向量'}: {msg.results.local_results?.length || 0}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-100 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-lg text-xs">
+                              <i className="fa-solid fa-globe text-purple-500"></i>
+                              <span className="text-purple-600 dark:text-purple-400">
+                                {t('search.llmOnline') || 'LLM联网'}: {msg.results.web_results?.length || 0}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="space-y-3">
+                            {[...(msg.results.local_results || []), ...(msg.results.web_results || [])].map((item, idx) => (
+                              <ProjectCard key={idx} item={item} />
+                            ))}
+                          </div>
+                          {msg.results.recommendation && (
+                            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                              <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                                <i className="fa-solid fa-wand-magic-sparkles text-blue-500"></i>
+                                {t('search.smartRecommendation') || '智能建议'}
+                              </h4>
+                              {msg.results.recommendation.categories.length > 0 && (
+                                <div className="mb-3">
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('search.relatedCategories') || '相关分类'}</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {msg.results.recommendation.categories.map((cat, idx) => (
+                                      <span key={idx} className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs rounded-md">
+                                        {cat}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {msg.results.recommendation.tags.length > 0 && (
+                                <div className="mb-3">
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('search.relatedTags') || '关联标签'}</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {msg.results.recommendation.tags.map((tag, idx) => (
+                                      <span key={idx} className="px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded-md">
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {msg.results.recommendation.suggestions.length > 0 && (
+                                <div>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('search.expandedSearch') || '扩展搜索'}</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {msg.results.recommendation.suggestions.map((suggestion, idx) => (
+                                      <button
+                                        key={idx}
+                                        onClick={() => {
+                                          setQuery(suggestion);
+                                          setTimeout(handleSubmit, 0);
+                                        }}
+                                        className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs rounded-md hover:bg-purple-200 dark:hover:bg-purple-900/50 transition"
+                                      >
+                                        {suggestion}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
-                          {msg.results.recommendation.tags.length > 0 && (
-                            <div className="mb-3">
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('search.relatedTags') || '关联标签'}</p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {msg.results.recommendation.tags.map((tag, idx) => (
-                                  <span key={idx} className="px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded-md">
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {msg.results.recommendation.suggestions.length > 0 && (
-                            <div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('search.expandedSearch') || '扩展搜索'}</p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {msg.results.recommendation.suggestions.map((suggestion, idx) => (
-                                  <button
-                                    key={idx}
-                                    onClick={() => {
-                                      setQuery(suggestion);
-                                      setTimeout(handleSubmit, 0);
-                                    }}
-                                    className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs rounded-md hover:bg-purple-200 dark:hover:bg-purple-900/50 transition"
-                                  >
-                                    {suggestion}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                        </>
+                      )}
+                      {msg.clarification && (
+                        <div className="mt-4 space-y-3">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{t('search.clarification.prompt') || '请选择或补充您的需求：'}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {msg.clarification.options?.map((option, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  setQuery(option);
+                                  setTimeout(handleSubmit, 0);
+                                }}
+                                className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-gray-200 dark:border-gray-600 hover:border-blue-500 rounded-lg transition flex items-center gap-1.5"
+                              >
+                                <i className="fa-solid fa-hand-pointer text-blue-500"></i>
+                                {option}
+                              </button>
+                            ))}
+                          </div>
+                          <input
+                            type="text"
+                            placeholder={t('search.clarification.placeholder') || '补充您的具体需求...'}
+                            className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:border-blue-500"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                                setQuery((e.target as HTMLInputElement).value);
+                                setTimeout(handleSubmit, 0);
+                              }
+                            }}
+                          />
                         </div>
                       )}
                     </>
-                  )}
-                  {msg.clarification && (
-                    <div className="mt-4 space-y-3">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{t('search.clarification.prompt') || '请选择或补充您的需求：'}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {msg.clarification.options?.map((option, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => {
-                              setQuery(option);
-                              setTimeout(handleSubmit, 0);
-                            }}
-                            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-gray-200 dark:border-gray-600 hover:border-blue-500 rounded-lg transition flex items-center gap-1.5"
-                          >
-                            <i className="fa-solid fa-hand-pointer text-blue-500"></i>
-                            {option}
-                          </button>
-                        ))}
-                      </div>
-                      <input
-                        type="text"
-                        placeholder={t('search.clarification.placeholder') || '补充您的具体需求...'}
-                        className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:border-blue-500"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                            setQuery((e.target as HTMLInputElement).value);
-                            setTimeout(handleSubmit, 0);
-                          }
-                        }}
-                      />
-                    </div>
                   )}
                 </div>
               </div>
             </div>
           ))}
-
-          {isLoading && (
-            <div className="flex gap-4 max-w-3xl mx-auto">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center shadow-lg">
-                <i className="fa-solid fa-compass text-white"></i>
-              </div>
-              <div className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-sm p-4">
-                <TypingIndicator />
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
