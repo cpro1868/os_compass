@@ -1,6 +1,5 @@
 use crate::db::DATABASE;
 use crate::plugins::search::ProjectMatch;
-use directories::BaseDirs;
 use log;
 use reqwest::Client;
 use rusqlite::params;
@@ -9,7 +8,7 @@ use std::sync::Mutex;
 use tauri::command;
 
 static EMBEDDING_CONFIG: Mutex<Option<EmbeddingConfig>> = Mutex::new(None);
-static VSS_LOADED: Mutex<bool> = Mutex::new(false);
+static VEC_LOADED: Mutex<bool> = Mutex::new(false);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddingConfig {
@@ -19,7 +18,7 @@ pub struct EmbeddingConfig {
     pub embedding_api_key: String,
     pub embedding_model: String,
     pub embedding_dimension: i32,
-    pub vss_extension_path: String,
+    pub vec_extension_path: String,
 }
 
 impl Default for EmbeddingConfig {
@@ -31,7 +30,7 @@ impl Default for EmbeddingConfig {
             embedding_api_key: String::new(),
             embedding_model: "text-embedding-3-small".to_string(),
             embedding_dimension: 1536,
-            vss_extension_path: String::new(),
+            vec_extension_path: String::new(),
         }
     }
 }
@@ -138,16 +137,41 @@ pub fn store_embeddings(project_id: i64, embeddings: &[f32]) -> Result<(), Strin
     let db = db_guard.as_ref().ok_or("Database not initialized")?;
     let conn = db.get_connection();
 
-    let embedding_blob: Vec<u8> = embeddings.iter()
-        .flat_map(|v| v.to_le_bytes())
-        .collect();
+    ensure_vec_table_exists_internal(&conn)?;
+
+    let embedding_json = serde_json::to_string(embeddings)
+        .map_err(|e| format!("Serialize embedding failed: {}", e))?;
 
     conn.execute(
         "INSERT OR REPLACE INTO project_embeddings (project_id, embedding) VALUES (?, ?)",
-        params![project_id, embedding_blob],
+        params![project_id, embedding_json],
     ).map_err(|e| e.to_string())?;
 
     log::debug!("[embedding] Stored embedding for project {}", project_id);
+    Ok(())
+}
+
+fn ensure_vec_table_exists_internal(conn: &rusqlite::Connection) -> Result<(), String> {
+    let table_exists: i32 = conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='project_embeddings'",
+        [],
+        |row| row.get(0),
+    ).unwrap_or(0);
+
+    if table_exists == 0 {
+        log::info!("[embedding] Creating vec0 virtual table for embeddings...");
+        conn.execute_batch(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS project_embeddings USING vec0(
+                project_id INTEGER PRIMARY KEY,
+                embedding FLOAT[1536]
+            );"
+        ).map_err(|e| {
+            log::error!("[embedding] Failed to create vec0 table: {}", e);
+            format!("Failed to create vec0 table: {}", e)
+        })?;
+        log::info!("[embedding] vec0 virtual table created successfully");
+    }
+
     Ok(())
 }
 
@@ -160,10 +184,10 @@ pub async fn semantic_search(query: &str, limit: usize) -> Result<Vec<(i64, f32)
     }
     log::info!("[semantic_search] Embedding 已启用");
 
-    if let Err(e) = ensure_vss_loaded() {
-        log::warn!("[semantic_search] VSS 未加载: {}", e);
+    if let Err(e) = ensure_vec_loaded() {
+        log::warn!("[semantic_search] sqlite-vec 未加载: {}", e);
     } else {
-        log::info!("[semantic_search] VSS 已加载");
+        log::info!("[semantic_search] sqlite-vec 已加载");
     }
 
     log::info!("[semantic_search] 开始生成查询向量...");
@@ -175,18 +199,18 @@ pub async fn semantic_search(query: &str, limit: usize) -> Result<Vec<(i64, f32)
     let db = db_guard.as_ref().ok_or("Database not initialized")?;
     let conn = db.get_connection();
 
-    let embedding_blob: Vec<u8> = query_embedding.iter()
-        .flat_map(|v| v.to_le_bytes())
-        .collect();
+    let query_json = serde_json::to_string(&query_embedding)
+        .map_err(|e| format!("Serialize query embedding failed: {}", e))?;
 
     let mut stmt = conn.prepare(
-        "SELECT project_id, vss_search_params(?, 5) as distance
+        "SELECT project_id, distance
          FROM project_embeddings
-         ORDER BY distance
-         LIMIT ?"
+         WHERE embedding MATCH ?
+         AND k = ?
+         ORDER BY distance"
     ).map_err(|e| e.to_string())?;
 
-    let results = stmt.query_map(params![embedding_blob, limit as i64], |row| {
+    let results = stmt.query_map(params![query_json, limit as i64], |row| {
         Ok((row.get(0)?, row.get(1)?))
     }).map_err(|e| e.to_string())?;
 
@@ -197,6 +221,7 @@ pub async fn semantic_search(query: &str, limit: usize) -> Result<Vec<(i64, f32)
         }
     }
 
+    log::info!("[semantic_search] 向量搜索返回 {} 个结果", matches.len());
     Ok(matches)
 }
 
@@ -209,7 +234,7 @@ fn load_embedding_settings() -> Result<EmbeddingConfig, String> {
 
     let result: Result<EmbeddingConfig, _> = conn.query_row(
         "SELECT embedding_enabled, embedding_api_type, embedding_api_url, embedding_api_key, 
-         embedding_model, embedding_dimension, vss_extension_path 
+         embedding_model, embedding_dimension, vec_extension_path 
          FROM embedding_settings WHERE id = 1",
         [],
         |row| {
@@ -220,7 +245,7 @@ fn load_embedding_settings() -> Result<EmbeddingConfig, String> {
                 embedding_api_key: row.get(3)?,
                 embedding_model: row.get(4)?,
                 embedding_dimension: row.get(5)?,
-                vss_extension_path: row.get(6)?,
+                vec_extension_path: row.get(6)?,
             })
         },
     );
@@ -235,7 +260,7 @@ fn load_embedding_settings() -> Result<EmbeddingConfig, String> {
                 embedding_api_key TEXT DEFAULT '',
                 embedding_model TEXT DEFAULT 'text-embedding-3-small',
                 embedding_dimension INTEGER DEFAULT 1536,
-                vss_extension_path TEXT DEFAULT ''
+                vec_extension_path TEXT DEFAULT ''
             );
             INSERT OR IGNORE INTO embedding_settings (id) VALUES (1);"
         ).ok();
@@ -243,79 +268,55 @@ fn load_embedding_settings() -> Result<EmbeddingConfig, String> {
     })
 }
 
-pub fn load_vss_extension(conn: &rusqlite::Connection) -> Result<(), String> {
-    let base_dirs = BaseDirs::new().ok_or("Cannot find base directories")?;
-    let app_data = base_dirs.data_dir().join(".os-compass");
+pub fn init_vec_extension() -> Result<(), String> {
+    use sqlite_vec::sqlite3_vec_init;
     
-    let default_path = app_data.join("vss0.dll");
-    let extension_path = std::env::var("VSS_EXTENSION_PATH")
-        .unwrap_or_else(|_| default_path.to_string_lossy().to_string());
-
-    if !std::path::Path::new(&extension_path).exists() {
-        log::warn!("[embedding] VSS extension not found at: {}", extension_path);
-        return Err(format!("VSS extension not found: {}", extension_path));
-    }
-
     unsafe {
-        conn.load_extension(&extension_path, None)
-            .map_err(|e| format!("Failed to load VSS extension: {}", e))?;
+        rusqlite::ffi::sqlite3_auto_extension(
+            Some(std::mem::transmute(sqlite3_vec_init as *const ()))
+        );
     }
-
-    log::info!("[embedding] VSS extension loaded from: {}", extension_path);
+    
+    log::info!("[embedding] sqlite-vec extension registered");
     Ok(())
 }
 
-pub fn ensure_vss_loaded() -> Result<(), String> {
-    let mut loaded = VSS_LOADED.lock().unwrap();
+pub fn preload_vec_once() -> Result<(), String> {
+    let mut loaded = VEC_LOADED.lock().unwrap();
     if *loaded {
+        log::info!("[embedding] sqlite-vec already loaded, skipping");
         return Ok(());
     }
     drop(loaded);
 
-    let db_guard = DATABASE.lock().unwrap();
-    let db = db_guard.as_ref().ok_or("Database not initialized")?;
-    let conn = db.get_connection();
-    let conn_ref: &rusqlite::Connection = &*conn;
-
-    match load_vss_extension_internal(conn_ref) {
+    match init_vec_extension() {
         Ok(()) => {
-            let mut loaded = VSS_LOADED.lock().unwrap();
+            let mut loaded = VEC_LOADED.lock().unwrap();
             *loaded = true;
-            log::info!("[embedding] VSS extension ready");
+            log::info!("[embedding] sqlite-vec extension ready");
             Ok(())
         }
         Err(e) => {
-            log::warn!("[embedding] VSS extension not available: {}", e);
+            log::warn!("[embedding] sqlite-vec extension failed: {}", e);
             Err(e)
         }
     }
 }
 
-fn load_vss_extension_internal(conn: &rusqlite::Connection) -> Result<(), String> {
-    let base_dirs = BaseDirs::new().ok_or("Cannot find base directories")?;
-    let app_data = base_dirs.data_dir().join(".os-compass");
-
-    let default_path = app_data.join("vss0.dll");
-    let extension_path = std::env::var("VSS_EXTENSION_PATH")
-        .unwrap_or_else(|_| default_path.to_string_lossy().to_string());
-
-    if !std::path::Path::new(&extension_path).exists() {
-        return Err(format!("VSS extension not found: {}", extension_path));
+pub fn ensure_vec_loaded() -> Result<(), String> {
+    let loaded = VEC_LOADED.lock().unwrap();
+    if *loaded {
+        return Ok(());
     }
+    drop(loaded);
 
-    unsafe {
-        conn.load_extension(&extension_path, None)
-            .map_err(|e| format!("Failed to load VSS extension: {}", e))?;
-    }
-
-    log::info!("[embedding] VSS extension loaded from: {}", extension_path);
-    Ok(())
+    preload_vec_once()
 }
 
-pub fn reset_vss_state() {
-    if let Ok(mut loaded) = VSS_LOADED.lock() {
+pub fn reset_vec_state() {
+    if let Ok(mut loaded) = VEC_LOADED.lock() {
         *loaded = false;
-        log::info!("[embedding] VSS state reset for database switch");
+        log::info!("[embedding] sqlite-vec state reset for database switch");
     }
 }
 

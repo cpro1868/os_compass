@@ -9,6 +9,29 @@ use async_trait::async_trait;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::PathBuf;
+
+fn get_debug_log_path() -> PathBuf {
+    if let Some(base_dirs) = directories::BaseDirs::new() {
+        base_dirs.data_dir().join(".os-compass").join("debug.log")
+    } else {
+        PathBuf::from("debug.log")
+    }
+}
+
+fn write_debug_log(msg: &str) {
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(get_debug_log_path())
+    {
+        let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+        let _ = writeln!(file, "[{}] {}", timestamp, msg);
+    }
+    eprintln!("{}", msg);
+}
 
 pub struct SearchPlugin;
 
@@ -121,28 +144,30 @@ pub async fn three_layer_search(
     vault_dir: &std::path::Path,
     query: &str,
 ) -> Result<SearchResult, String> {
-    log::info!("[three_layer_search] ====== 开始三层搜索 ======");
-    log::info!("[three_layer_search] 查询词: {}", query);
-    log::info!("[three_layer_search] vault_dir: {:?}", vault_dir);
-    
-    let search_conn = init_search_db(vault_dir)?;
-    let settings = get_settings();
-    log::info!("[three_layer_search] 数据库连接成功");
+    write_debug_log(&format!("[DEBUG] three_layer_search: 开始，query={}, vault_dir={:?}", query, vault_dir));
 
+    let search_conn = init_search_db(vault_dir)?;
+    write_debug_log("[DEBUG] three_layer_search: search_conn 初始化完成");
+    let settings = get_settings();
+    write_debug_log("[DEBUG] three_layer_search: settings 加载完成");
+
+    write_debug_log("[DEBUG] three_layer_search: 尝试获取 DATABASE 锁...");
     let db_guard = crate::db::DATABASE.lock().unwrap();
+    write_debug_log("[DEBUG] three_layer_search: DATABASE 锁获取成功");
     let db = db_guard.as_ref().ok_or("Database not initialized")?;
     let main_conn = db.get_connection();
-    log::info!("[three_layer_search] 主数据库连接成功");
+    write_debug_log("[DEBUG] three_layer_search: main_conn 初始化完成");
 
     let local_search = async {
-        log::info!("[three_layer_search] 开始本地搜索...");
+        write_debug_log("[DEBUG] local_search: 开始...");
         let mut local_results: Vec<ProjectMatch> = Vec::new();
+        let mut used_keyword_search = false;
 
         if crate::embedding::is_enabled() {
-            log::info!("[three_layer_search] 向量搜索已启用，执行向量搜索");
+            write_debug_log("[DEBUG] local_search: embedding 已启用，调用 semantic_search...");
             match crate::embedding::semantic_search(query, 10).await {
                 Ok(matches) => {
-                    log::info!("[three_layer_search] 向量搜索返回 {} 个结果", matches.len());
+                    write_debug_log(&format!("[DEBUG] three_layer_search: 向量搜索返回 {} 个结果", matches.len()));
                     for (project_id, distance) in matches {
                         if let Ok((name, url, description, language, stars, forks)) = main_conn.query_row(
                             "SELECT name, url, description, languages, stars, forks FROM projects WHERE id = ?",
@@ -169,14 +194,23 @@ pub async fn three_layer_search(
                             });
                         }
                     }
+                    if !local_results.is_empty() {
+                        write_debug_log(&format!("[DEBUG] local_search: 向量搜索成功，返回 {} 个结果", local_results.len()));
+                    }
                 }
                 Err(e) => {
-                    log::warn!("[search] Vector search failed, falling back to keyword: {}", e);
+                    write_debug_log(&format!("[DEBUG] local_search: 向量搜索失败: {}，将降级到关键词搜索", e));
+                    log::warn!("向量搜索失败，降级到关键词搜索: {}", e);
+                    used_keyword_search = true;
                 }
             }
+        } else {
+            write_debug_log("[DEBUG] local_search: embedding 未启用，直接使用关键词搜索");
+            used_keyword_search = true;
         }
 
-        if local_results.is_empty() {
+        if local_results.is_empty() || used_keyword_search {
+            write_debug_log("[DEBUG] local_search: 执行关键词搜索...");
             let search_pattern = format!("%{}%", query.to_lowercase());
             let prepare_result = main_conn
                 .prepare("SELECT id, name, url, description, languages, stars, forks FROM projects WHERE lifecycle_status != 'DELETED' AND (name LIKE ? OR description LIKE ? OR languages LIKE ?)");
@@ -346,40 +380,39 @@ fn generate_smart_recommendation(
 }
 
 pub async fn analyze_intent(user_input: &str) -> Result<IntentAnalysis, String> {
-    log::info!("[analyze_intent] 开始分析意图，输入: {}", user_input);
-    
+    write_debug_log(&format!("[DEBUG] analyze_intent: 开始分析意图，输入: {}", user_input));
+
     let client = LlmClient::from_settings()
         .ok_or_else(|| {
-            log::error!("[analyze_intent] LLM 未配置");
+            write_debug_log("[DEBUG] analyze_intent: LLM 未配置");
             "LLM not configured".to_string()
         })?;
 
-    log::info!("[analyze_intent] LLM 客户端已创建");
-    
+    write_debug_log("[DEBUG] analyze_intent: LLM 客户端已创建");
+
     let prompt = build_intent_analysis_prompt(user_input);
-    log::debug!("[analyze_intent] 构建的 Prompt: {}", prompt);
+    write_debug_log("[DEBUG] analyze_intent: Prompt 构建完成，调用 LLM...");
 
     let messages = vec![LlmMessage {
         role: "user".to_string(),
         content: prompt,
     }];
 
-    log::info!("[analyze_intent] 调用 LLM chat API...");
     let response = client.chat(messages).await
         .map_err(|e| {
-            log::error!("[analyze_intent] LLM 调用失败: {}", e);
+            write_debug_log(&format!("[DEBUG] analyze_intent: LLM 调用失败: {}", e));
             format!("LLM request failed: {}", e)
         })?;
 
-    log::info!("[analyze_intent] LLM 返回原始响应: {}", response);
-    
+    write_debug_log(&format!("[DEBUG] analyze_intent: LLM 返回: {}", response));
+
     let parsed: IntentAnalysis = serde_json::from_str(&response)
         .map_err(|e| {
-            log::error!("[analyze_intent] JSON 解析失败: {}", e);
+            write_debug_log(&format!("[DEBUG] analyze_intent: JSON 解析失败: {}", e));
             format!("Failed to parse LLM response: {}\nResponse: {}", e, response)
         })?;
 
-    log::info!("[analyze_intent] 解析成功: {:?}", parsed);
+    write_debug_log(&format!("[DEBUG] analyze_intent: 解析成功: {:?}", parsed));
     Ok(parsed)
 }
 
