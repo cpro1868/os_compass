@@ -87,13 +87,21 @@ pub fn run() {
         }))
         .plugin(
             tauri_plugin_log::Builder::new()
-                .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::LogDir { file_name: Some("os-compass".into()) },
-                ))
+                .targets([
+                    tauri_plugin_log::Target::new(
+                        tauri_plugin_log::TargetKind::LogDir { file_name: Some("os-compass".into()) },
+                    ),
+                    tauri_plugin_log::Target::new(
+                        tauri_plugin_log::TargetKind::Stderr,
+                    ),
+                ])
                 .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                .level(log::LevelFilter::Info)
                 .build(),
         )
         .setup(|app| {
+            eprintln!("[INIT] OS-Compass 启动中...");
+
             use tauri::menu::{MenuBuilder, MenuItemBuilder};
             use tauri::tray::TrayIconBuilder;
 
@@ -368,6 +376,14 @@ pub fn run() {
 
             // 检查 system_variables 中无法用当前密钥解密的旧密文（仅警告，不清空）
             crate::commands::variables::cleanup_undecryptable_secrets();
+
+            // 预加载 sqlite-vec 扩展（在数据库初始化完成后）
+            eprintln!("[INIT] 预加载 sqlite-vec 扩展...");
+            if let Err(e) = crate::embedding::preload_vec_once() {
+                eprintln!("[INIT] sqlite-vec 预加载失败（不影响基础功能）: {}", e);
+            } else {
+                eprintln!("[INIT] sqlite-vec 预加载成功");
+            }
 
             log::info!("Database, settings, and crypto initialized");
             Ok(())

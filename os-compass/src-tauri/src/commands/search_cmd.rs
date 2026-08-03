@@ -38,13 +38,19 @@ fn get_search_conn() -> Result<rusqlite::Connection, String> {
 
 #[command]
 pub fn intent_search(query: String, _conversation_id: Option<String>) -> Result<SearchResult, String> {
+    eprintln!("[DEBUG] intent_search: 开始处理查询 '{}'", query);
     let vault_dir = {
         let config = CURRENT_VAULT_CONFIG.lock().unwrap();
+        eprintln!("[DEBUG] intent_search: 获取 vault config 成功");
         let path = config.as_ref().ok_or("No vault opened")?;
+        eprintln!("[DEBUG] intent_search: vault path: {:?}", path.path);
         std::path::PathBuf::from(&path.path)
     };
 
-    tauri::async_runtime::block_on(three_layer_search(&vault_dir, &query))
+    eprintln!("[DEBUG] intent_search: 调用 three_layer_search...");
+    let result = tauri::async_runtime::block_on(three_layer_search(&vault_dir, &query));
+    eprintln!("[DEBUG] intent_search: three_layer_search 完成，结果: {:?}", result.is_ok());
+    result
 }
 
 #[command]
@@ -249,7 +255,7 @@ pub fn get_embedding_settings() -> Result<EmbeddingSettings, String> {
             embedding_api_key: row.get(3)?,
             embedding_model: row.get(4)?,
             embedding_dimension: row.get(5)?,
-            vss_extension_path: row.get(6)?,
+            vec_extension_path: row.get(6)?,
         })
     }).map_err(|e| e.to_string())
 }
@@ -259,7 +265,7 @@ pub fn save_embedding_settings(settings: EmbeddingSettings) -> Result<(), String
     let conn = get_system_db()?;
 
     conn.execute(
-        "UPDATE embedding_settings SET embedding_enabled = ?, embedding_api_type = ?, embedding_api_url = ?, embedding_api_key = ?, embedding_model = ?, embedding_dimension = ?, vss_extension_path = ? WHERE id = 1",
+        "UPDATE embedding_settings SET embedding_enabled = ?, embedding_api_type = ?, embedding_api_url = ?, embedding_api_key = ?, embedding_model = ?, embedding_dimension = ?, vec_extension_path = ? WHERE id = 1",
         params![
             if settings.embedding_enabled { 1 } else { 0 },
             settings.embedding_api_type,
@@ -267,7 +273,7 @@ pub fn save_embedding_settings(settings: EmbeddingSettings) -> Result<(), String
             settings.embedding_api_key,
             settings.embedding_model,
             settings.embedding_dimension,
-            settings.vss_extension_path,
+            settings.vec_extension_path,
         ],
     ).map_err(|e| e.to_string())?;
 
@@ -278,7 +284,7 @@ pub fn save_embedding_settings(settings: EmbeddingSettings) -> Result<(), String
         embedding_api_key: settings.embedding_api_key,
         embedding_model: settings.embedding_model,
         embedding_dimension: settings.embedding_dimension,
-        vss_extension_path: settings.vss_extension_path,
+        vec_extension_path: settings.vec_extension_path,
     });
 
     Ok(())
