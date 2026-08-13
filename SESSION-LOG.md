@@ -2,6 +2,43 @@
 
 # Session Log
 
+## 2026-08-08 15:00 - P0 问题记录：意图搜索 off_topic 流程不工作
+
+### 问题描述
+
+| 项目 | 内容 |
+|------|------|
+| 问题编号 | ISSUE-001 |
+| 优先级 | P0 |
+| 模块 | 意图搜索 (Intent Search) |
+| 持续时间 | ~5天 |
+| 状态 | 未解决 |
+
+**现象**：输入"你好"后，后端返回 off_topic，但 UI 始终显示"正在分析语义..."，guidance 消息未显示。
+
+### 代码修改记录
+
+| 日期 | 修改内容 | 结果 |
+|------|---------|------|
+| 第1天 | 修复 TypeScript 类型 `intent: string` | 测试通过 |
+| 第2天 | 添加日志 `log_debug_message` | 确认前端收到 |
+| 第3天 | 修改渲染条件 `{msg.phase === 'analyzing'\|\|...}` | 测试通过 |
+| 第4天 | 添加 `updatePhase` + `return` | 测试通过 |
+| 第5天 | 单元测试+集成测试 61个全部通过 | **仍不工作** |
+
+### 为什么这么久没解决？
+
+1. **测试能力不足**：桌面应用不能直接查看 console.log
+2. **验证不充分**：依赖用户手动测试
+3. **方向可能错误**：可能一直在修改正确的代码
+4. **缺乏系统性分析**：没有完整的流程图
+
+### 文档记录
+
+- `docs/P0问题记录_意图搜索off_topic流程不工作.md`
+
+---
+
 ## 2026-07-29 03:30 - M20 批量向量化功能完成
 
 ### 完成内容
@@ -1527,3 +1564,46 @@ M18 智能意图搜索（20h 工时）
 - 最近使用侧栏
 
 - 状态：M17 设计完成，待开发
+
+---
+
+## 2026-08-02 19:45 - M17/M18 VSS DLL 路径问题修复
+
+### 问题描述
+意图搜索功能卡死，无法正常工作
+
+### 根因分析
+
+| # | 问题 | 根因 |
+|---|------|------|
+| 1 | VSS DLL 路径错误 | 使用 `BaseDirs::data_dir()` 返回 LOCALAPPDATA，但系统库应在 APPDATA |
+| 2 | 死锁问题 | `three_layer_search` 持有 DATABASE 锁时调用 `ensure_vss_loaded()` 又尝试获取同一锁 |
+
+### 关键结论确认
+
+**系统库目录**：`C:\Users\Administrator\AppData\Roaming\.os-compass`
+- plugins.db
+- vss0.dll（sqlite-vss 扩展，全局共享）
+
+**仓库库目录**：`C:\Users\Administrator\AppData\Local\com.administrator.os-compass\vaults\default`
+- os_compass.db（包含 project_embeddings 向量表）
+
+**数据存放规则**：
+| 数据类型 | 存放位置 | 说明 |
+|----------|----------|------|
+| sqlite-vss 扩展 (vss0.dll) | 系统库 | 全局共享，所有仓库共用 |
+| 向量数据 (project_embeddings 表) | 仓库库 | 每个仓库独立，互不影响 |
+
+### 修复内容
+
+1. **修改 preload_vss_once()** - 启动时预加载 VSS（数据库初始化后）
+2. **修改 ensure_vss_loaded()** - 跳过加载，仅检查缓存（避免死锁）
+3. **添加详细日志** - 写入 `C:\Users\Administrator\AppData\Roaming\.os-compass\debug.log`
+
+### 待完成
+
+1. 修改 VSS DLL 路径为正确的系统库路径（APPDATA）
+2. 下载 vss0.dll 并放入系统库目录
+3. 更新 tauri.conf.json 打包配置
+
+### 状态：修复中，待验证
