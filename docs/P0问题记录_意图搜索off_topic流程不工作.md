@@ -70,56 +70,114 @@
 - 真正的问题在别处
 - 没有找到真正的根因
 
-### 4.4 缺乏系统性分析
-- 没有完整的流程图
-- 没有记录每次修改前后的差异
-- 没有对比日志分析
+---
+
+## 5. 如何避免未来再出现这种问题
+
+### 5.1 测试能力建设
+
+| 措施 | 说明 | 优先级 |
+|------|------|--------|
+| 前端日志输出到文件 | console.log → 文件日志 | P0 |
+| E2E 测试框架 | Playwright 或 Tauri 测试 | P0 |
+| CI/CD 自动测试 | 每次提交自动运行测试 | P1 |
+
+### 5.2 验证流程规范
+
+| 规范 | 说明 |
+|------|------|
+| 自己完成验证 | 修改后必须自己测试通过再交付 |
+| 禁止依赖用户调试 | 用户测试是验收，不是调试 |
+| 自动化覆盖 | 所有关键流程必须有自动化测试 |
+
+### 5.3 修改前检查清单
+
+- [ ] TypeScript 类型检查通过
+- [ ] 单元测试通过
+- [ ] 集成测试通过（如有）
+- [ ] 前端日志输出已验证
+- [ ] 自己手动测试通过
 
 ---
 
-## 5. 下一步计划
+## 6. 当前问题如何解决
 
-### 5.1 立即行动（今天）
-- [ ] 配置前端日志输出到文件
-- [ ] 添加 Tauri invoke 单元测试
-- [ ] 编写完整的流程测试脚本
+### 6.1 问题定位：前端日志输出
 
-### 5.2 根本原因排查
-- [ ] 验证 `updatePhase` 函数是否真的被调用
-- [ ] 检查 React state 更新是否生效
-- [ ] 确认渲染条件是否正确
+**原因**：前端 `console.log` 无法在桌面应用中查看
 
-### 5.3 验证方案
-- [ ] 前端日志写入 `debug.log`
-- [ ] 每次状态更新记录日志
-- [ ] 让用户可以导出控制台日志
+**解决方案**：配置前端日志输出到 `debug.log`
 
----
+**修改文件**：`src/main.tsx`
 
-## 6. 关键日志记录
+```typescript
+const fs = require('fs');
+const logPath = './debug.log';
 
+const originalLog = console.log;
+console.log = (...args) => {
+  const log = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+  fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${log}\n`);
+  originalLog.apply(console, args);
+};
 ```
-[DEBUG] analyze_intent: LLM 返回原始内容: {"intent": "off_topic", "guidance": "..."}
-[DEBUG] analyze_intent: 解析成功: IntentAnalysis { intent: "off_topic", ... }
-[DEBUG-RUST] analyze_user_intent 返回成功: intent=off_topic
-[FRONTEND DEBUG] 前端接收 off_topic: {"intent":"off_topic","guidance":"..."}
+
+### 6.2 问题定位：State 更新验证
+
+**原因**：无法确认 updatePhase 是否正确执行
+
+**解决方案**：添加每次 state 更新日志
+
+**修改代码**：
+```typescript
+const updatePhase = (phase: SearchPhase, content: string) => {
+  console.log('[STATE] updatePhase called:', { phase, content, loadingId: loadingIdRef.current });
+  setSearchPhase(phase);
+  setMessages(prev => {
+    const newMsgs = prev.map(msg => {
+      return msg.id === loadingIdRef.current ? { ...msg, phase, content } : msg;
+    });
+    console.log('[STATE] messages updated:', JSON.stringify(newMsgs));
+    return newMsgs;
+  });
+};
 ```
 
-**问题**：后端和前端通信正常，但 UI 没有更新。
+### 6.3 执行计划
+
+| 步骤 | 任务 | 验证方法 |
+|------|------|----------|
+| 1 | 配置前端日志到文件 | 重启应用，查看 debug.log |
+| 2 | 添加每次 state 更新日志 | 输入"你好"，检查日志 |
+| 3 | 验证 updatePhase 被调用 | 日志应有 `[STATE] updatePhase called` |
+| 4 | 验证 messages 更新 | 日志应有 `[STATE] messages updated` |
+| 5 | 根据日志定位真正问题 | 修复并重新验证 |
 
 ---
 
-## 7. 待确认
+## 7. 教训总结
 
-1. 用户是否在运行最新构建（13:38:06）？
-2. 用户是否清除过浏览器缓存？
-3. 是否有其他异常日志？
+| 教训 | 说明 |
+|------|------|
+| 桌面应用不是 Web | console.log 在桌面应用无效，必须配置文件日志 |
+| 测试通过 ≠ 功能正常 | 需要端到端验证 |
+| 依赖用户测试是耻辱 | 应该自己完成验证 |
+| 问题长期不解决 = 方法错误 | 应该停下来重新分析 |
 
 ---
 
-## 8. 教训
+## 8. 下一步计划
 
-1. **不能依赖手动测试**：桌面应用的测试必须自己完成
-2. **日志必须可追溯**：console.log 在桌面应用无效
-3. **测试通过 ≠ 功能正常**：需要端到端验证
-4. **问题长期不解决 = 方法错误**：应该停下来重新分析
+### 今天必须完成
+
+1. [ ] 配置前端日志输出到 `debug.log`
+2. [ ] 添加 state 更新日志
+3. [ ] 重启应用，输入"你好"
+4. [ ] 检查 `debug.log` 验证问题位置
+5. [ ] 根据日志定位真正的问题
+
+### 本周完成
+
+1. [ ] 添加 E2E 测试覆盖意图搜索
+2. [ ] 配置 CI/CD 自动测试
+3. [ ] 编写意图搜索测试用例文档
