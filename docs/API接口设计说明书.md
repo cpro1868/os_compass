@@ -1877,6 +1877,142 @@ function parseErrorCode(error: unknown): string {
 | V1.6 | 2026-07-10 | 新增导入已有仓库接口（import_vault），含完整校验链和密钥匹配验证 |
 | V1.7 | 2026-07-11 | 新增二期 M13 接口：插件管理（list_feature_plugins、set_plugin_enabled、get/save_plugin_config、plugin_get_db_path）；意图搜索（intent_search、get/clear_search_history、搜索信息源管理、import_search_result）；情报雷达（雷达信息源管理、get_radar_items、radar_item_action、trigger_radar_scan、get_radar_unread_count、clear_radar_cache） |
 | V1.8 | 2026-07-27 | 意图搜索改为双轨搜索：refresh_search_cache 改为 rebuild_embeddings |
+| V1.9 | 2026-08-14 | 新增 M19 接口：广告屏蔽（ad_patterns CRUD）、定时采集（radar_schedule）、平台扩展（platform_packages）
+
+---
+
+## 3.17 M19 广告屏蔽接口
+
+> **M19 广告学习功能**：用户标记广告 → LLM 判定 → 屏蔽列表
+
+### 3.17.1 广告屏蔽列表管理
+
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `list_ad_patterns` | `{ type?: string }` | `Vec<AdPattern>` | 列出屏蔽规则 |
+| `add_ad_pattern` | `{ type, value, confidence? }` | `AdPattern` | 添加屏蔽规则 |
+| `update_ad_pattern` | `{ id, confidence? }` | `void` | 更新置信度 |
+| `delete_ad_pattern` | `{ id }` | `void` | 删除屏蔽规则 |
+| `check_ad_pattern` | `{ text }` | `bool` | 检查是否匹配屏蔽规则 |
+
+```typescript
+interface AdPattern {
+  id: number;
+  pattern_type: 'keyword' | 'domain' | 'regex';
+  pattern_value: string;
+  confidence: number;
+  source: 'manual' | 'llm_learned';
+  hit_count: number;
+  created_at: string;
+}
+```
+
+### 3.17.2 广告白名单
+
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `add_ad_whitelist` | `{ url }` | `void` | 添加到白名单 |
+| `remove_ad_whitelist` | `{ url }` | `void` | 从白名单移除 |
+
+---
+
+## 3.18 M19 定时采集接口
+
+> **M19 定时采集功能**：后台定时采集 + 系统通知
+
+### 3.18.1 定时任务管理
+
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `get_radar_schedule` | 无 | `RadarSchedule` | 获取定时配置 |
+| `update_radar_schedule` | `{ enabled?, intervalSeconds? }` | `void` | 更新定时配置 |
+| `trigger_radar_scan_now` | 无 | `number` | 手动触发立即采集 |
+
+```typescript
+interface RadarSchedule {
+  enabled: boolean;
+  interval_seconds: number;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  new_items_count: number;
+}
+```
+
+### 3.18.2 通知管理
+
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `list_notifications` | `{ unreadOnly?: boolean }` | `Vec<Notification>` | 列出通知 |
+| `mark_notification_read` | `{ id }` | `void` | 标记已读 |
+| `clear_notifications` | 无 | `void` | 清除所有通知 |
+
+```typescript
+interface Notification {
+  id: number;
+  title: string;
+  body: string | null;
+  item_count: number;
+  read: boolean;
+  created_at: string;
+}
+```
+
+---
+
+## 3.19 M19 平台扩展接口
+
+> **M19 平台扩展**：NPM/PyPI/Crates.io 项目导入
+
+### 3.19.1 平台适配器
+
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `get_platforms` | 无 | `Vec<Platform>` | 列出支持平台 |
+| `fetch_platform_package` | `{ url }` | `PlatformPackage` | 拉取平台包信息 |
+| `import_platform_package` | `{ url, categoryId? }` | `Project` | 导入平台包到项目库 |
+
+```typescript
+interface Platform {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+interface PlatformPackage {
+  name: string;
+  version: string;
+  description: string | null;
+  homepage: string | null;
+  repository_url: string | null;
+  license: string | null;
+  downloads: number | null;
+  recent_downloads: number | null;
+  health_score: number | null;
+  health_grade: string | null;
+  raw_data: object;
+}
+```
+
+### 3.19.2 平台健康度
+
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `get_platform_health_breakdown` | `{ platform, packageName }` | `HealthBreakdown` | 获取评分明细 |
+
+```typescript
+interface HealthBreakdown {
+  total: number;
+  grade: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Bad';
+  dimensions: ScoreDimension[];
+}
+
+interface ScoreDimension {
+  name: string;
+  score: number;
+  weight: number;
+  detail: string;
+}
+```
 
 ---
 
