@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import ReactMarkdown from "react-markdown";
 import { intentSearch } from "../api/search";
 import { getRecentProjects } from "../api";
 import type { Project } from "../types";
@@ -36,6 +37,7 @@ export function HomePage() {
   const { showToast } = useToastStore();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<HomeSearchResult[]>([]);
+  const [llmText, setLlmText] = useState<string | undefined>();
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -59,10 +61,12 @@ export function HomePage() {
     setHasSearched(true);
     try {
       const data = await intentSearch(query);
-      setResults([...(data.local_results || []), ...(data.web_results || [])]);
+      setResults(data.local_results || []);
+      setLlmText(data.llm_text);
     } catch {
       showToast(t("search.error.searchFailed") || "搜索失败", "error");
       setResults([]);
+      setLlmText(undefined);
     } finally {
       setLoading(false);
     }
@@ -190,6 +194,13 @@ export function HomePage() {
                     );
                   })}
                 </div>
+                {llmText && (
+                  <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>{llmText}</ReactMarkdown>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

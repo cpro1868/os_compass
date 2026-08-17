@@ -12,12 +12,10 @@ export interface ProjectMatch {
   source: 'local' | 'llm';
 }
 
-export interface SearchResult {
-  query: string;
-  local_results: ProjectMatch[];
-  web_results: ProjectMatch[];
-  total: number;
-  conversation_id: string;
+export interface SmartRecommendation {
+  categories: string[];
+  tags: string[];
+  suggestions: string[];
 }
 
 export interface IntentAnalysis {
@@ -28,12 +26,6 @@ export interface IntentAnalysis {
   options?: string[];
 }
 
-export interface SmartRecommendation {
-  categories: string[];
-  tags: string[];
-  suggestions: string[];
-}
-
 export interface SearchResult {
   query: string;
   local_results: ProjectMatch[];
@@ -41,6 +33,7 @@ export interface SearchResult {
   total: number;
   conversation_id: string;
   recommendation?: SmartRecommendation;
+  llm_text?: string;
 }
 
 export interface SearchHistoryItem {

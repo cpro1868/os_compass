@@ -70,6 +70,8 @@ pub struct SearchResult {
     pub conversation_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recommendation: Option<SmartRecommendation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub llm_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -304,6 +306,9 @@ pub async fn three_layer_search(
     log::info!("[three_layer_search] 生成本地推荐");
     let recommendation = generate_smart_recommendation(&local_results, &web_results, query);
     
+    log::info!("[three_layer_search] 生成 LLM 分析文本");
+    let llm_text = generate_llm_summary(&local_results, &web_results, query);
+    
     log::info!("[three_layer_search] ====== 搜索完成 ======");
     log::info!("[three_layer_search] 总结果数: {}", total);
     log::info!("[three_layer_search] 本地结果: {}, 联网结果: {}", local_results.len(), web_results.len());
@@ -315,6 +320,7 @@ pub async fn three_layer_search(
         total,
         conversation_id,
         recommendation: Some(recommendation),
+        llm_text: Some(llm_text),
     })
 }
 
@@ -377,6 +383,83 @@ fn generate_smart_recommendation(
         tags: tags_vec,
         suggestions: suggestions_vec,
     }
+}
+
+fn generate_llm_summary(
+    local_results: &[ProjectMatch],
+    web_results: &[ProjectMatch],
+    query: &str,
+) -> String {
+    let total_count = local_results.len() + web_results.len();
+    
+    if total_count == 0 {
+        return format!(
+            "针对「{}」的搜索未找到相关项目。\n\n建议：\n- 尝试使用更通用的关键词\n- 检查拼写是否正确\n- 尝试使用英文关键词",
+            query
+        );
+    }
+    
+    let local_count = local_results.len();
+    let web_count = web_results.len();
+    
+    let mut languages: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut top_projects: Vec<&ProjectMatch> = Vec::new();
+    
+    for result in local_results.iter().chain(web_results.iter()) {
+        if let Some(lang) = &result.language {
+            if !lang.is_empty() {
+                *languages.entry(lang.clone()).or_insert(0) += 1;
+            }
+        }
+        if top_projects.len() < 3 {
+            top_projects.push(result);
+        }
+    }
+    
+    let top_languages: Vec<String> = languages.iter()
+        .map(|(k, v)| format!("{} ({} projects)", k, v))
+        .take(3)
+        .collect();
+    
+    let mut summary = format!(
+        "## 搜索结果概览\n\n针对「{}」的搜索共找到 **{}** 个相关项目：\n\n",
+        query, total_count
+    );
+    
+    if local_count > 0 {
+        summary.push_str(&format!("- **本地项目**：{} 个\n", local_count));
+    }
+    if web_count > 0 {
+        summary.push_str(&format!("- **网络推荐**：{} 个\n", web_count));
+    }
+    
+    if !top_languages.is_empty() {
+        summary.push_str(&format!("\n### 主要语言\n{}\n", top_languages.join(" | ")));
+    }
+    
+    if !top_projects.is_empty() {
+        summary.push_str("\n### 推荐项目\n\n");
+        for (i, proj) in top_projects.iter().enumerate() {
+            let stars_str = proj.stars.map(|s| format!("⭐ {}", s)).unwrap_or_default();
+            summary.push_str(&format!(
+                "{}. **[{}]({})** {}\n",
+                i + 1,
+                proj.name,
+                proj.url,
+                stars_str
+            ));
+            if let Some(desc) = &proj.description {
+                let desc_short = if desc.len() > 100 { format!("{}...", &desc[..100]) } else { desc.clone() };
+                summary.push_str(&format!("   > {}\n", desc_short));
+            }
+        }
+    }
+    
+    summary.push_str(&format!(
+        "\n---\n\n💡 **提示**：点击项目名称可查看详情，或使用分类标签筛选结果。"
+    ));
+    
+    summary
 }
 
 pub async fn analyze_intent(user_input: &str) -> Result<IntentAnalysis, String> {

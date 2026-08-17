@@ -29,6 +29,15 @@ pub async fn refresh_project_readme(project_id: i64) -> Result<RefreshReadmeResu
             let token = crate::commands::variables::get_variable_value_internal("gitee_token");
             crate::plugins::gitee::fetch_gitee_project(&url, token.as_deref()).await
         }
+        plugins::Platform::NPM => {
+            crate::plugins::npm::fetch_npm_project(&url, None).await
+        }
+        plugins::Platform::PyPI => {
+            return Err("PyPI support coming soon".to_string());
+        }
+        plugins::Platform::Crates => {
+            return Err("Crates.io support coming soon".to_string());
+        }
         plugins::Platform::Unknown => {
             return Err("不支持的平台，无法刷新 README".to_string());
         }
