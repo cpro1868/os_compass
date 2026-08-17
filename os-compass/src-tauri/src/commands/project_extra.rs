@@ -2,6 +2,7 @@ use crate::db::DATABASE;
 use std::collections::HashMap;
 use crate::models::{ReadmeVariant, Translation};
 use crate::plugins;
+use crate::plugins::{npm, pypi, crates};
 use log;
 
 #[tauri::command]
@@ -30,13 +31,13 @@ pub async fn refresh_project_readme(project_id: i64) -> Result<RefreshReadmeResu
             crate::plugins::gitee::fetch_gitee_project(&url, token.as_deref()).await
         }
         plugins::Platform::NPM => {
-            crate::plugins::npm::fetch_npm_project(&url, None).await
+            npm::fetch_npm_project(&url, None).await
         }
         plugins::Platform::PyPI => {
-            return Err("PyPI support coming soon".to_string());
+            pypi::fetch_pypi_project(&url, None).await
         }
         plugins::Platform::Crates => {
-            return Err("Crates.io support coming soon".to_string());
+            crates::fetch_crates_project(&url, None).await
         }
         plugins::Platform::Unknown => {
             return Err("不支持的平台，无法刷新 README".to_string());

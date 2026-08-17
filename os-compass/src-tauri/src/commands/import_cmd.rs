@@ -1,6 +1,6 @@
 use crate::crawler_service;
 use crate::db::DATABASE;
-use crate::plugins::{self, crawler, gitee, github, npm, ImportResult, Platform, ProjectData};
+use crate::plugins::{self, crawler, gitee, github, npm, pypi, crates, ImportResult, Platform, ProjectData};
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use log;
@@ -151,22 +151,10 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
             npm::fetch_npm_project(url, None).await
         }
         Platform::PyPI => {
-            ImportResult {
-                success: false,
-                project_id: None,
-                error: Some("PyPI support coming soon".to_string()),
-                project_data: None,
-                readme_variants: None,
-            }
+            pypi::fetch_pypi_project(url, None).await
         }
         Platform::Crates => {
-            ImportResult {
-                success: false,
-                project_id: None,
-                error: Some("Crates.io support coming soon".to_string()),
-                project_data: None,
-                readme_variants: None,
-            }
+            crates::fetch_crates_project(url, None).await
         }
         Platform::Unknown => {
             start_crawler_and_fetch(url).await
@@ -312,22 +300,10 @@ pub async fn preview_import(url: String) -> ImportResult {
             npm::fetch_npm_project(url, None).await
         }
         Platform::PyPI => {
-            ImportResult {
-                success: false,
-                project_id: None,
-                error: Some("PyPI support coming soon".to_string()),
-                project_data: None,
-                readme_variants: None,
-            }
+            pypi::fetch_pypi_project(url, None).await
         }
         Platform::Crates => {
-            ImportResult {
-                success: false,
-                project_id: None,
-                error: Some("Crates.io support coming soon".to_string()),
-                project_data: None,
-                readme_variants: None,
-            }
+            crates::fetch_crates_project(url, None).await
         }
         Platform::Unknown => {
             start_crawler_and_fetch(url).await

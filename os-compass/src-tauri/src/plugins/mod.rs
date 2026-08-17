@@ -1,6 +1,8 @@
 pub mod github;
 pub mod gitee;
 pub mod npm;
+pub mod pypi;
+pub mod crates;
 pub mod crawler;
 pub mod radar;
 pub mod search;
