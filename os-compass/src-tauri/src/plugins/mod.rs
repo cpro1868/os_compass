@@ -1,5 +1,6 @@
 pub mod github;
 pub mod gitee;
+pub mod npm;
 pub mod crawler;
 pub mod radar;
 pub mod search;
@@ -71,6 +72,9 @@ impl Default for ImportResult {
 pub enum Platform {
     GitHub,
     Gitee,
+    NPM,
+    PyPI,
+    Crates,
     Unknown,
 }
 
@@ -84,6 +88,12 @@ pub fn identify_platform(url: &str) -> Platform {
                         return Platform::GitHub;
                     } else if domain.contains("gitee") {
                         return Platform::Gitee;
+                    } else if domain.contains("npm") {
+                        return Platform::NPM;
+                    } else if domain.contains("pypi") {
+                        return Platform::PyPI;
+                    } else if domain.contains("crates") {
+                        return Platform::Crates;
                     }
                 }
             }
@@ -95,6 +105,12 @@ pub fn identify_platform(url: &str) -> Platform {
                 Platform::GitHub
             } else if url_lower.contains("gitee.com") {
                 Platform::Gitee
+            } else if url_lower.contains("npmjs.com") || url_lower.contains("registry.npmjs") {
+                Platform::NPM
+            } else if url_lower.contains("pypi.org") {
+                Platform::PyPI
+            } else if url_lower.contains("crates.io") {
+                Platform::Crates
             } else {
                 Platform::Unknown
             }
@@ -151,6 +167,61 @@ pub fn extract_source_id(url: &str, platform: Platform) -> Option<String> {
             } else {
                 None
             }
+        }
+        Platform::NPM => {
+            let url_lower = url.to_lowercase();
+            if url_lower.contains("npmjs.com") || url_lower.contains("registry.npmjs") {
+                if let Some(idx) = url_lower.rfind("package/") {
+                    let name = &url[idx + 8..];
+                    let name = name.trim_end_matches('/');
+                    if !name.is_empty() && !name.contains('/') {
+                        return Some(name.to_string());
+                    }
+                }
+                let parts: Vec<&str> = url.split('/').collect();
+                if let Some(name) = parts.last() {
+                    let name = name.trim_end_matches('/');
+                    if !name.is_empty() {
+                        return Some(name.to_string());
+                    }
+                }
+            }
+            if !url.contains('/') {
+                return Some(url.trim().to_string());
+            }
+            None
+        }
+        Platform::PyPI => {
+            let url_lower = url.to_lowercase();
+            if url_lower.contains("pypi.org") {
+                if let Some(idx) = url_lower.rfind("project/") {
+                    let name = &url[idx + 8..];
+                    let name = name.trim_end_matches('/');
+                    if !name.is_empty() {
+                        return Some(name.to_string());
+                    }
+                }
+            }
+            if !url.contains('/') {
+                return Some(url.trim().to_string());
+            }
+            None
+        }
+        Platform::Crates => {
+            let url_lower = url.to_lowercase();
+            if url_lower.contains("crates.io") {
+                if let Some(idx) = url_lower.rfind("crates/") {
+                    let name = &url[idx + 7..];
+                    let name = name.trim_end_matches('/');
+                    if !name.is_empty() {
+                        return Some(name.to_string());
+                    }
+                }
+            }
+            if !url.contains('/') {
+                return Some(url.trim().to_string());
+            }
+            None
         }
         Platform::Unknown => None,
     }

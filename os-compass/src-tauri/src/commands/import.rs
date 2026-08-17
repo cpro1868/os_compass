@@ -52,6 +52,27 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
         Platform::Gitee => {
             gitee::fetch_gitee_project(url, input.gitee_token.as_deref()).await
         }
+        Platform::NPM => {
+            npm::fetch_npm_project(url, None).await
+        }
+        Platform::PyPI => {
+            ImportResult {
+                success: false,
+                project_id: None,
+                error: Some("PyPI support coming soon".to_string()),
+                project_data: None,
+                readme_variants: None,
+            }
+        }
+        Platform::Crates => {
+            ImportResult {
+                success: false,
+                project_id: None,
+                error: Some("Crates.io support coming soon".to_string()),
+                project_data: None,
+                readme_variants: None,
+            }
+        }
         Platform::Unknown => {
             match crawler_service::start_crawler_service() {
                 Ok(_) => {
@@ -186,6 +207,27 @@ pub async fn preview_import(url: String) -> ImportResult {
         }
         Platform::Gitee => {
             gitee::fetch_gitee_project(url, None).await
+        }
+        Platform::NPM => {
+            npm::fetch_npm_project(url, None).await
+        }
+        Platform::PyPI => {
+            ImportResult {
+                success: false,
+                project_id: None,
+                error: Some("PyPI support coming soon".to_string()),
+                project_data: None,
+                readme_variants: None,
+            }
+        }
+        Platform::Crates => {
+            ImportResult {
+                success: false,
+                project_id: None,
+                error: Some("Crates.io support coming soon".to_string()),
+                project_data: None,
+                readme_variants: None,
+            }
         }
         Platform::Unknown => {
             crawler::fetch_with_crawler(url).await
