@@ -1907,6 +1907,26 @@ interface AdPattern {
 }
 ```
 
+### 3.17.3 调用示例
+
+```typescript
+// 列出所有屏蔽规则
+const patterns = await invoke<Vec<AdPattern>>('list_ad_patterns', { type: 'keyword' });
+
+// 添加关键词屏蔽
+const newPattern = await invoke<AdPattern>('add_ad_pattern', {
+  type: 'keyword',
+  value: '限时优惠',
+  confidence: 80
+});
+
+// 检查文本是否匹配
+const isAd = await invoke<boolean>('check_ad_pattern', { text: '限时优惠来袭' });
+
+// 标记误判加入白名单
+await invoke('add_ad_whitelist', { url: 'https://example.com/article' });
+```
+
 ### 3.17.2 广告白名单
 
 | 命令 | 参数 | 返回 | 说明 |
@@ -1936,6 +1956,28 @@ interface RadarSchedule {
   next_run_at: string | null;
   new_items_count: number;
 }
+```
+
+### 3.18.3 调用示例
+
+```typescript
+// 获取定时采集配置
+const schedule = await invoke<RadarSchedule>('get_radar_schedule');
+
+// 开启定时采集，间隔30分钟
+await invoke('update_radar_schedule', {
+  enabled: true,
+  intervalSeconds: 1800
+});
+
+// 手动触发立即采集
+const newCount = await invoke<number>('trigger_radar_scan_now');
+
+// 列出未读通知
+const notifications = await invoke<Vec<Notification>>('list_notifications', { unreadOnly: true });
+
+// 标记通知已读
+await invoke('mark_notification_read', { id: notification.id });
 ```
 
 ### 3.18.2 通知管理
@@ -1991,6 +2033,49 @@ interface PlatformPackage {
   health_grade: string | null;
   raw_data: object;
 }
+```
+
+### 3.19.3 调用示例
+
+```typescript
+// 列出支持的平台
+const platforms = await invoke<Vec<Platform>>('get_platforms');
+// [{ id: 'npm', name: 'NPM', icon: 'npm' }, ...]
+
+// 拉取 NPM 包信息（支持 URL 或包名）
+const pkg = await invoke<PlatformPackage>('fetch_platform_package', {
+  url: 'react'  // 或 'https://www.npmjs.com/package/react'
+});
+// {
+//   name: 'react',
+//   version: '18.2.0',
+//   description: 'The library for web and native user interfaces.',
+//   downloads: 15000000,
+//   health_score: 85.5,
+//   health_grade: 'Good',
+//   ...
+// }
+
+// 获取健康度评分明细
+const breakdown = await invoke<HealthBreakdown>('get_platform_health_breakdown', {
+  platform: 'npm',
+  packageName: 'react'
+});
+// {
+//   total: 85.5,
+//   grade: 'Good',
+//   dimensions: [
+//     { name: '下载量', score: 100, weight: 30, detail: '...' },
+//     { name: '维护状态', score: 80, weight: 20, detail: '...' },
+//     ...
+//   ]
+// }
+
+// 导入到项目库
+const project = await invoke<Project>('import_platform_package', {
+  url: 'react',
+  categoryId: 1  // 可选：指定分类
+});
 ```
 
 ### 3.19.2 平台健康度
