@@ -1889,13 +1889,26 @@ function parseErrorCode(error: unknown): string {
 
 | 命令 | 参数 | 返回 | 说明 |
 |------|------|------|------|
-| `list_ad_patterns` | `{ type?: string }` | `Vec<AdPattern>` | 列出屏蔽规则 |
+| `mark_as_ad` | `{ itemId, title, summary, sourceUrl }` | `AdMarkResult` | 标记广告（核心接口） |
+| `list_ad_patterns` | `{ type?, enabled? }` | `Vec<AdPattern>` | 列出屏蔽规则 |
 | `add_ad_pattern` | `{ type, value, confidence? }` | `AdPattern` | 添加屏蔽规则 |
-| `update_ad_pattern` | `{ id, confidence? }` | `void` | 更新置信度 |
-| `delete_ad_pattern` | `{ id }` | `void` | 删除屏蔽规则 |
-| `check_ad_pattern` | `{ text }` | `bool` | 检查是否匹配屏蔽规则 |
+| `update_ad_pattern` | `{ id, enabled?, confidence? }` | `void` | 更新规则 |
+| `delete_ad_pattern` | `{ id }` | `void` | 删除规则 |
+| `check_ad_pattern` | `{ title, summary, sourceUrl }` | `AdCheckResult` | 检查是否匹配 |
 
 ```typescript
+interface AdMarkResult {
+  success: boolean;
+  patternId?: number;
+  llmJudgment: {
+    isAd: boolean;
+    confidence: number;
+    adKeywords: string[];
+    reasoning: string;
+  };
+  message: string;
+}
+
 interface AdPattern {
   id: number;
   pattern_type: 'keyword' | 'domain' | 'regex';
@@ -1903,28 +1916,62 @@ interface AdPattern {
   confidence: number;
   source: 'manual' | 'llm_learned';
   hit_count: number;
+  enabled: boolean;
   created_at: string;
+}
+
+interface AdCheckResult {
+  isBlocked: boolean;
+  matchedPatterns: Array<{
+    id: number;
+    type: string;
+    value: string;
+    confidence: number;
+  }>;
 }
 ```
 
-### 3.17.3 调用示例
+### 3.17.2 调用示例
 
 ```typescript
-// 列出所有屏蔽规则
-const patterns = await invoke<Vec<AdPattern>>('list_ad_patterns', { type: 'keyword' });
+import { invoke } from '@tauri-apps/api/core';
 
-// 添加关键词屏蔽
-const newPattern = await invoke<AdPattern>('add_ad_pattern', {
+// 标记广告（核心功能）
+const result = await invoke<AdMarkResult>('mark_as_ad', {
+  itemId: 'item_123',
+  title: '限时优惠！立即购买',
+  summary: '全网最低价，错过不再有...',
+  sourceUrl: 'https://example.com/promo'
+});
+// 返回：{ success: true, patternId: 5, llmJudgment: {...}, message: '已添加到屏蔽列表' }
+
+// 列出所有屏蔽规则
+const patterns = await invoke<AdPattern[]>('list_ad_patterns', { type: 'keyword' });
+
+// 添加手动规则
+await invoke<AdPattern>('add_ad_pattern', {
   type: 'keyword',
-  value: '限时优惠',
-  confidence: 80
+  value: '低价促销',
+  confidence: 70,
+  source: 'manual'
 });
 
-// 检查文本是否匹配
-const isAd = await invoke<boolean>('check_ad_pattern', { text: '限时优惠来袭' });
+// 检查内容是否匹配
+const checkResult = await invoke<AdCheckResult>('check_ad_pattern', {
+  title: '限时优惠来袭',
+  summary: '全场五折...',
+  sourceUrl: 'https://example.com'
+});
+// 返回：{ isBlocked: true, matchedPatterns: [{ id: 5, type: 'keyword', value: '低价促销', confidence: 70 }] }
+
+// 更新规则置信度
+await invoke('update_ad_pattern', { id: 5, confidence: 85 });
+
+// 删除规则
+await invoke('delete_ad_pattern', { id: 5 });
 
 // 标记误判加入白名单
-await invoke('add_ad_whitelist', { url: 'https://example.com/article' });
+await invoke('add_ad_whitelist', { url: 'https://example.com/legit-article' });
 ```
 
 ### 3.17.2 广告白名单
