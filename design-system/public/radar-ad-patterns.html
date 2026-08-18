@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 广告屏蔽设置</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .scroll-area::-webkit-scrollbar { width: 6px; }
+    .scroll-area::-webkit-scrollbar-track { background: transparent; }
+    .scroll-area::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+    .scroll-area::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .toast-enter { animation: slideUp 0.3s ease-out; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen overflow-hidden">
+  <div class="flex flex-col h-full">
+
+    <!-- 顶部栏 -->
+    <header class="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-red-600 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-ban text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-semibold text-lg leading-tight">广告屏蔽设置</h1>
+          <p class="text-xs text-gray-400">M19 广告学习 · 管理屏蔽规则和白名单</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="showToast('导出功能', 'info')"
+          class="px-3 py-2 text-sm text-gray-400 hover:text-white border border-gray-600 rounded-lg transition">
+          <i class="fa-solid fa-download mr-1"></i>导出
+        </button>
+        <button onclick="showToast('导入功能', 'info')"
+          class="px-3 py-2 text-sm text-gray-400 hover:text-white border border-gray-600 rounded-lg transition">
+          <i class="fa-solid fa-upload mr-1"></i>导入
+        </button>
+        <button onclick="showAddRuleModal()"
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition">
+          <i class="fa-solid fa-plus mr-1"></i>添加规则
+        </button>
+      </div>
+    </header>
+
+    <!-- 主内容 -->
+    <div class="flex flex-1 min-h-0">
+
+      <!-- 左侧：规则列表 -->
+      <main class="flex-1 flex flex-col p-6 overflow-auto">
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+          <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div class="flex items-center gap-2 text-gray-400 text-sm mb-1">
+              <i class="fa-solid fa-font"></i>关键词规则
+            </div>
+            <p class="text-2xl font-bold">12</p>
+          </div>
+          <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div class="flex items-center gap-2 text-gray-400 text-sm mb-1">
+              <i class="fa-solid fa-globe"></i>域名规则
+            </div>
+            <p class="text-2xl font-bold">5</p>
+          </div>
+          <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div class="flex items-center gap-2 text-gray-400 text-sm mb-1">
+              <i class="fa-solid fa-align-left"></i>正则规则
+            </div>
+            <p class="text-2xl font-bold">3</p>
+          </div>
+          <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div class="flex items-center gap-2 text-gray-400 text-sm mb-1">
+              <i class="fa-solid fa-check-circle"></i>白名单
+            </div>
+            <p class="text-2xl font-bold">2</p>
+          </div>
+        </div>
+
+        <!-- Tab 切换 -->
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-1">
+            <button onclick="switchTab('keyword')" id="tab-keyword"
+              class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg font-medium">
+              <i class="fa-solid fa-font mr-1"></i>关键词 (12)
+            </button>
+            <button onclick="switchTab('domain')" id="tab-domain"
+              class="px-4 py-2 text-sm text-gray-400 hover:bg-gray-700 rounded-lg transition">
+              <i class="fa-solid fa-globe mr-1"></i>域名 (5)
+            </button>
+            <button onclick="switchTab('regex')" id="tab-regex"
+              class="px-4 py-2 text-sm text-gray-400 hover:bg-gray-700 rounded-lg transition">
+              <i class="fa-solid fa-align-left mr-1"></i>正则 (3)
+            </button>
+            <button onclick="switchTab('whitelist')" id="tab-whitelist"
+              class="px-4 py-2 text-sm text-gray-400 hover:bg-gray-700 rounded-lg transition">
+              <i class="fa-solid fa-check-circle mr-1"></i>白名单 (2)
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="relative">
+              <input type="text" placeholder="搜索规则..."
+                class="px-4 py-2 pl-10 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:border-blue-500 w-64">
+              <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- 规则列表 -->
+        <div id="ruleList" class="space-y-2">
+
+          <!-- 关键词规则 -->
+          <div class="flex items-center justify-between p-4 bg-gray-800 rounded-xl border border-gray-700 hover:border-gray-600 transition">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 bg-red-900/30 rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-font text-red-400"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <p class="font-medium">限时优惠</p>
+                  <span class="px-2 py-0.5 text-xs bg-red-900/30 text-red-400 rounded">高置信度</span>
+                </div>
+                <div class="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                  <span><i class="fa-solid fa-percentage mr-1"></i>置信度 85%</span>
+                  <span><i class="fa-solid fa-robot mr-1"></i>LLM学习</span>
+                  <span><i class="fa-solid fa-fire mr-1"></i>命中 23 次</span>
+                  <span><i class="fa-regular fa-clock mr-1"></i>2026-08-15</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+              <button onclick="editRule(1)" class="p-2 text-gray-400 hover:text-gray-200 transition">
+                <i class="fa-solid fa-edit"></i>
+              </button>
+              <button onclick="deleteRule(1)" class="p-2 text-gray-400 hover:text-red-400 transition">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-gray-800 rounded-xl border border-gray-700 hover:border-gray-600 transition">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 bg-orange-900/30 rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-font text-orange-400"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <p class="font-medium">立即注册</p>
+                  <span class="px-2 py-0.5 text-xs bg-orange-900/30 text-orange-400 rounded">中置信度</span>
+                </div>
+                <div class="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                  <span><i class="fa-solid fa-percentage mr-1"></i>置信度 72%</span>
+                  <span><i class="fa-solid fa-robot mr-1"></i>LLM学习</span>
+                  <span><i class="fa-solid fa-fire mr-1"></i>命中 15 次</span>
+                  <span><i class="fa-regular fa-clock mr-1"></i>2026-08-14</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+              <button onclick="editRule(2)" class="p-2 text-gray-400 hover:text-gray-200 transition">
+                <i class="fa-solid fa-edit"></i>
+              </button>
+              <button onclick="deleteRule(2)" class="p-2 text-gray-400 hover:text-red-400 transition">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-gray-800 rounded-xl border border-gray-700 hover:border-gray-600 transition">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 bg-yellow-900/30 rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-font text-yellow-400"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <p class="font-medium">低价促销</p>
+                  <span class="px-2 py-0.5 text-xs bg-yellow-900/30 text-yellow-400 rounded">手动添加</span>
+                </div>
+                <div class="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                  <span><i class="fa-solid fa-percentage mr-1"></i>置信度 60%</span>
+                  <span><i class="fa-solid fa-hand mr-1"></i>手动</span>
+                  <span><i class="fa-solid fa-fire mr-1"></i>命中 5 次</span>
+                  <span><i class="fa-regular fa-clock mr-1"></i>2026-08-10</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+              <button onclick="editRule(3)" class="p-2 text-gray-400 hover:text-gray-200 transition">
+                <i class="fa-solid fa-edit"></i>
+              </button>
+              <button onclick="deleteRule(3)" class="p-2 text-gray-400 hover:text-red-400 transition">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </main>
+
+      <!-- 右侧：统计面板 -->
+      <aside class="w-80 bg-gray-800 border-l border-gray-700 p-4 overflow-auto">
+        <h2 class="font-semibold mb-4">学习统计</h2>
+
+        <!-- 今日学习 -->
+        <div class="bg-gray-900 rounded-xl p-4 mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm text-gray-400">今日标记</span>
+            <span class="text-lg font-bold text-blue-400">8</span>
+          </div>
+          <div class="w-full bg-gray-700 rounded-full h-2">
+            <div class="bg-blue-600 h-2 rounded-full" style="width: 40%"></div>
+          </div>
+        </div>
+
+        <!-- 规则命中率 -->
+        <div class="bg-gray-900 rounded-xl p-4 mb-4">
+          <h3 class="text-sm text-gray-400 mb-3">命中率趋势</h3>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm">本周屏蔽</span>
+              <span class="font-medium">156 条</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm">上周屏蔽</span>
+              <span class="font-medium text-gray-500">142 条</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-green-400">↑ 9.8%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 高频广告来源 -->
+        <div class="bg-gray-900 rounded-xl p-4 mb-4">
+          <h3 class="text-sm text-gray-400 mb-3">高频广告来源</h3>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm truncate">toutiao.com</span>
+              <span class="text-sm text-gray-500">45 次</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm truncate">baidu.com</span>
+              <span class="text-sm text-gray-500">32 次</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm truncate">weibo.com</span>
+              <span class="text-sm text-gray-500">28 次</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- LLM 学习效果 -->
+        <div class="bg-gray-900 rounded-xl p-4">
+          <h3 class="text-sm text-gray-400 mb-3">LLM 学习效果</h3>
+          <div class="text-center py-4">
+            <div class="text-3xl font-bold text-green-400">92%</div>
+            <p class="text-xs text-gray-500 mt-1">用户反馈准确率</p>
+          </div>
+          <div class="grid grid-cols-2 gap-2 mt-4 text-center text-xs">
+            <div class="bg-gray-800 rounded-lg p-2">
+              <div class="font-medium">98</div>
+              <div class="text-gray-500">正确屏蔽</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-2">
+              <div class="font-medium">8</div>
+              <div class="text-gray-500">误判</div>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+  </div>
+
+  <!-- Toast 提示 -->
+  <div id="toast" class="fixed bottom-6 right-6 hidden">
+    <div class="bg-gray-700 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 toast-enter">
+      <i id="toastIcon" class="fa-solid fa-check text-green-400"></i>
+      <span id="toastMessage">操作成功</span>
+    </div>
+  </div>
+
+  <script>
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      const toastIcon = document.getElementById('toastIcon');
+
+      toastMessage.textContent = message;
+      toastIcon.className = type === 'success' ? 'fa-solid fa-check text-green-400' :
+                           type === 'error' ? 'fa-solid fa-times text-red-400' :
+                           'fa-solid fa-info text-blue-400';
+
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    function switchTab(tab) {
+      showToast('切换到 ' + tab + ' 标签', 'info');
+    }
+
+    function showAddRuleModal() {
+      showToast('添加规则弹窗功能待实现', 'info');
+    }
+
+    function editRule(id) {
+      showToast('编辑规则 ' + id, 'info');
+    }
+
+    function deleteRule(id) {
+      if (confirm('确定要删除这条规则吗？')) {
+        showToast('规则已删除', 'success');
+      }
+    }
+  </script>
+</body>
+</html>

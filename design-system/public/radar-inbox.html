@@ -200,10 +200,17 @@
                   class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-1.5">
                   <i class="fa-solid fa-download text-xs"></i>导入
                 </button>
-                <button onclick="ignoreItem(this)"
-                  class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition flex items-center gap-1.5">
-                  <i class="fa-regular fa-thumbs-down text-xs"></i>不感兴趣
-                </button>
+                <div class="flex items-center gap-1">
+                  <button onclick="markAsAd(this)"
+                    class="px-2 py-1 text-sm text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded-lg transition flex items-center gap-1"
+                    title="标记为广告，系统将学习并自动屏蔽相似内容">
+                    <i class="fa-solid fa-ban text-xs"></i>标记广告
+                  </button>
+                  <button onclick="ignoreItem(this)"
+                    class="px-2 py-1 text-sm text-gray-400 hover:text-gray-200 transition flex items-center gap-1">
+                    <i class="fa-regular fa-thumbs-down text-xs"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -232,10 +239,17 @@
                   class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-1.5">
                   <i class="fa-solid fa-download text-xs"></i>导入
                 </button>
-                <button onclick="ignoreItem(this)"
-                  class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition flex items-center gap-1.5">
-                  <i class="fa-regular fa-thumbs-down text-xs"></i>不感兴趣
-                </button>
+                <div class="flex items-center gap-1">
+                  <button onclick="markAsAd(this)"
+                    class="px-2 py-1 text-sm text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded-lg transition flex items-center gap-1"
+                    title="标记为广告，系统将学习并自动屏蔽相似内容">
+                    <i class="fa-solid fa-ban text-xs"></i>标记广告
+                  </button>
+                  <button onclick="ignoreItem(this)"
+                    class="px-2 py-1 text-sm text-gray-400 hover:text-gray-200 transition flex items-center gap-1">
+                    <i class="fa-regular fa-thumbs-down text-xs"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1113,6 +1127,101 @@
       showToast('清空功能待实现', 'info');
     }
 
+    // ==========================================
+    // 广告学习功能
+    // ==========================================
+
+    // 标记广告
+    function markAsAd(btn) {
+      const card = btn.closest('.radar-item');
+      const title = card.querySelector('h3').textContent;
+      const source = card.querySelector('.bg-orange-900\\/40, .bg-blue-900\\/40, .bg-purple-900\\/40, .bg-sky-900\\/40')?.textContent || '未知来源';
+      const time = card.querySelector('.text-gray-500.text-xs')?.textContent || '';
+
+      // 显示确认弹窗
+      const modal = document.getElementById('markAdModal');
+      const modalTitle = document.getElementById('markAdTitle');
+      const modalSource = document.getElementById('markAdSource');
+      const modalTime = document.getElementById('markAdTime');
+
+      modalTitle.textContent = title;
+      modalSource.textContent = source;
+      modalTime.textContent = time;
+      modal.classList.remove('hidden');
+    }
+
+    // 取消标记广告
+    function cancelMarkAd() {
+      document.getElementById('markAdModal').classList.add('hidden');
+    }
+
+    // 确认标记广告
+    async function confirmMarkAd() {
+      const btn = document.getElementById('confirmMarkAdBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>分析中...';
+
+      // 模拟 LLM 分析
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // 模拟 LLM 返回结果
+      const patterns = [
+        { type: 'keyword', value: '极速', confidence: 85 },
+        { type: 'keyword', value: '替代方案', confidence: 72 }
+      ];
+
+      document.getElementById('markAdModal').classList.add('hidden');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check text-xs"></i>确认标记';
+
+      // 显示成功提示
+      showToast('已添加到屏蔽列表，系统将自动学习并屏蔽相似内容', 'success');
+
+      // 更新统计
+      updateBlockedCount();
+    }
+
+    // 误判反馈
+    function reportFalsePositive() {
+      const modal = document.getElementById('markAdModal');
+      const title = document.getElementById('markAdTitle').textContent;
+
+      modal.classList.add('hidden');
+      showToast('已加入白名单，感谢反馈', 'info');
+    }
+
+    // 更新已屏蔽数量
+    function updateBlockedCount() {
+      const blockedCount = document.getElementById('blockedCount');
+      if (blockedCount) {
+        const current = parseInt(blockedCount.textContent) || 0;
+        blockedCount.textContent = current + 1;
+      }
+    }
+
+    // 打开屏蔽列表管理
+    function openAdPatternsManager() {
+      showToast('屏蔽列表管理功能待实现', 'info');
+    }
+
+    // 显示屏蔽列表弹窗
+    function showAdPatternsModal() {
+      const modal = document.getElementById('adPatternsModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+      } else {
+        showToast('屏蔽列表管理功能待实现', 'info');
+      }
+    }
+
+    // 关闭屏蔽列表弹窗
+    function closeAdPatternsModal() {
+      const modal = document.getElementById('adPatternsModal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
+    }
+
     // 点击外部关闭下拉
     document.addEventListener('click', (e) => {
       const dropdown = document.getElementById('sourceDropdown');
@@ -1121,6 +1230,179 @@
         dropdown.classList.remove('active');
       }
     });
+  </script>
+
+  <!-- 标记广告确认弹窗 -->
+  <div id="markAdModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl border border-gray-700">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 bg-red-900/40 rounded-lg flex items-center justify-center">
+          <i class="fa-solid fa-ban text-red-400"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold">标记广告</h2>
+          <p class="text-sm text-gray-400">系统将学习并自动屏蔽相似内容</p>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 rounded-lg p-4 mb-4">
+        <div class="flex items-center gap-2 mb-2">
+          <h3 id="markAdTitle" class="font-medium">astral-sh/uv</h3>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-500">
+          <span id="markAdSource">来自 GitHub Trending</span>
+          <span>·</span>
+          <span id="markAdTime">3小时前</span>
+        </div>
+      </div>
+
+      <div class="bg-blue-900/20 border border-blue-800/30 rounded-lg p-3 mb-4">
+        <p class="text-sm text-blue-300">
+          <i class="fa-solid fa-info-circle mr-1"></i>
+          系统将使用 AI 分析内容特征，自动提取关键词/域名添加到屏蔽列表。
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="reportFalsePositive()"
+          class="flex-1 px-4 py-2 text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition">
+          这是误判（加入白名单）
+        </button>
+        <button onclick="cancelMarkAd()"
+          class="px-4 py-2 text-sm text-gray-400 hover:text-white border border-gray-600 rounded-lg transition">
+          取消
+        </button>
+        <button id="confirmMarkAdBtn" onclick="confirmMarkAd()"
+          class="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition flex items-center gap-2">
+          <i class="fa-solid fa-check text-xs"></i>确认标记
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 屏蔽列表管理弹窗 -->
+  <div id="adPatternsModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-gray-800 rounded-xl w-full max-w-3xl mx-4 shadow-2xl border border-gray-700 max-h-[80vh] flex flex-col">
+      <div class="flex items-center justify-between p-4 border-b border-gray-700">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-red-900/40 rounded-lg flex items-center justify-center">
+            <i class="fa-solid fa-ban text-red-400 text-sm"></i>
+          </div>
+          <div>
+            <h2 class="font-semibold">广告屏蔽设置</h2>
+            <p class="text-xs text-gray-400">管理屏蔽规则和白名单</p>
+          </div>
+        </div>
+        <button onclick="closeAdPatternsModal()" class="p-2 text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-auto p-4">
+        <!-- Tab 切换 -->
+        <div class="flex items-center gap-1 mb-4">
+          <button onclick="switchPatternsTab('rules')" data-tab="rules" class="patterns-tab px-4 py-2 text-sm bg-gray-700 rounded-lg font-medium">
+            屏蔽规则
+          </button>
+          <button onclick="switchPatternsTab('whitelist')" data-tab="whitelist" class="patterns-tab px-4 py-2 text-sm text-gray-400 hover:bg-gray-700 rounded-lg">
+            白名单
+          </button>
+        </div>
+
+        <!-- 屏蔽规则列表 -->
+        <div id="rulesContent">
+          <div class="space-y-2">
+            <!-- 规则项 -->
+            <div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+              <div class="flex items-center gap-3">
+                <i class="fa-solid fa-font text-gray-500"></i>
+                <div>
+                  <p class="font-medium text-sm">限时优惠</p>
+                  <p class="text-xs text-gray-500">置信度 85% · LLM学习 · 命中 23 次</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="p-2 text-gray-400 hover:text-gray-200"><i class="fa-solid fa-edit text-sm"></i></button>
+                <button class="p-2 text-gray-400 hover:text-red-400"><i class="fa-solid fa-trash text-sm"></i></button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+              <div class="flex items-center gap-3">
+                <i class="fa-solid fa-globe text-gray-500"></i>
+                <div>
+                  <p class="font-medium text-sm">ad.example.com</p>
+                  <p class="text-xs text-gray-500">置信度 95% · 域名 · 命中 45 次</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="p-2 text-gray-400 hover:text-gray-200"><i class="fa-solid fa-edit text-sm"></i></button>
+                <button class="p-2 text-gray-400 hover:text-red-400"><i class="fa-solid fa-trash text-sm"></i></button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+              <div class="flex items-center gap-3">
+                <i class="fa-solid fa-align-left text-gray-500"></i>
+                <div>
+                  <p class="font-medium text-sm">广告.*推广</p>
+                  <p class="text-xs text-gray-500">置信度 70% · 手动 · 命中 12 次</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="p-2 text-gray-400 hover:text-gray-200"><i class="fa-solid fa-edit text-sm"></i></button>
+                <button class="p-2 text-gray-400 hover:text-red-400"><i class="fa-solid fa-trash text-sm"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 白名单列表 -->
+        <div id="whitelistContent" class="hidden">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+              <div class="flex items-center gap-3">
+                <i class="fa-solid fa-check-circle text-green-500"></i>
+                <div>
+                  <p class="font-medium text-sm">https://legitimate-site.com/article</p>
+                  <p class="text-xs text-gray-500">添加于 2026-08-15</p>
+                </div>
+              </div>
+              <button class="p-2 text-gray-400 hover:text-red-400">
+                <i class="fa-solid fa-trash text-sm"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between p-4 border-t border-gray-700">
+        <button onclick="showToast('导出功能待实现', 'info')" class="px-4 py-2 text-sm text-gray-400 hover:text-white border border-gray-600 rounded-lg transition">
+          <i class="fa-solid fa-download mr-2"></i>导出规则
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="showToast('导入功能待实现', 'info')" class="px-4 py-2 text-sm text-gray-400 hover:text-white border border-gray-600 rounded-lg transition">
+            <i class="fa-solid fa-upload mr-2"></i>导入规则
+          </button>
+          <button onclick="closeAdPatternsModal()" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+            完成
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab 切换
+    function switchPatternsTab(tab) {
+      document.querySelectorAll('.patterns-tab').forEach(btn => {
+        btn.classList.remove('bg-gray-700', 'font-medium');
+        btn.classList.add('text-gray-400');
+      });
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('bg-gray-700', 'font-medium');
+      document.querySelector(`[data-tab="${tab}"]`).classList.remove('text-gray-400');
+
+      document.getElementById('rulesContent').classList.toggle('hidden', tab !== 'rules');
+      document.getElementById('whitelistContent').classList.toggle('hidden', tab !== 'whitelist');
+    }
   </script>
 </body>
 </html>
