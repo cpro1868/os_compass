@@ -259,6 +259,80 @@ pub fn check_ad_pattern(
     })
 }
 
+pub fn check_ad_pattern_internal(title: &str, summary: &str, source_url: &str) -> AdCheckResult {
+    if url_in_whitelist_internal(source_url) {
+        return AdCheckResult {
+            is_blocked: false,
+            matched_patterns: vec![],
+        };
+    }
+
+    let db_guard = match SYSTEM_DB.lock() {
+        Ok(guard) => guard,
+        Err(_) => return AdCheckResult { is_blocked: false, matched_patterns: vec![] },
+    };
+    let db = match db_guard.as_ref() {
+        Some(db) => db,
+        None => return AdCheckResult { is_blocked: false, matched_patterns: vec![] },
+    };
+    let conn = db.get_connection();
+
+    let mut stmt = match conn.prepare("SELECT id, pattern_type, pattern_value, confidence FROM ad_patterns WHERE enabled = 1 AND confidence >= 50") {
+        Ok(stmt) => stmt,
+        Err(_) => return AdCheckResult { is_blocked: false, matched_patterns: vec![] },
+    };
+
+    let text = format!("{} {}", title, summary).to_lowercase();
+    let mut matched = Vec::new();
+
+    let rows: Vec<(i64, String, String, i32)> = match stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))) {
+        Ok(rows) => rows.filter_map(|r| r.ok()).collect(),
+        Err(_) => return AdCheckResult { is_blocked: false, matched_patterns: vec![] },
+    };
+
+    for (id, ptype, pvalue, conf) in rows {
+        let matches = match ptype.as_str() {
+            "keyword" => text.contains(&pvalue.to_lowercase()),
+            "domain" => source_url.contains(&pvalue),
+            "regex" => regex::Regex::new(&pvalue)
+                .map(|r| r.is_match(&text))
+                .unwrap_or(false),
+            _ => false,
+        };
+
+        if matches {
+            matched.push(MatchedPattern {
+                id,
+                pattern_type: ptype,
+                value: pvalue,
+                confidence: conf,
+            });
+        }
+    }
+
+    AdCheckResult {
+        is_blocked: !matched.is_empty(),
+        matched_patterns: matched,
+    }
+}
+
+pub fn increment_pattern_hit(pattern_id: i64) {
+    let db_guard = match SYSTEM_DB.lock() {
+        Ok(guard) => guard,
+        Err(_) => return,
+    };
+    let db = match db_guard.as_ref() {
+        Some(db) => db,
+        None => return,
+    };
+    let conn = db.get_connection();
+
+    let _ = conn.execute(
+        "UPDATE ad_patterns SET hit_count = hit_count + 1, consecutive_hits = consecutive_hits + 1, last_hit_at = datetime('now', 'localtime') WHERE id = ?1",
+        params![pattern_id],
+    );
+}
+
 #[command]
 pub fn add_ad_whitelist(url: String, note: Option<String>) -> Result<(), String> {
     let db_guard = SYSTEM_DB.lock().map_err(|e| e.to_string())?;
