@@ -23,11 +23,11 @@ export interface AdWhitelist {
 
 export interface AdMarkResult {
   success: boolean;
-  patternId?: number;
-  llmJudgment?: {
-    isAd: boolean;
+  pattern_id?: number;
+  llm_judgment?: {
+    is_ad: boolean;
     confidence: number;
-    adKeywords: string[];
+    ad_keywords: string[];
     reasoning: string;
   };
   message: string;
