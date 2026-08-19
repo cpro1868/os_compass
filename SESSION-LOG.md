@@ -1628,6 +1628,59 @@ M18 智能意图搜索（20h 工时）
 - a0b3cbc: feat(M19): NPM 适配器实现 + TS 类型修复
 - 3751f68: feat(M19): PyPI + Crates.io 适配器实现
 
+---
+
+## 2026-08-19 11:15 - M19.2 广告学习功能开发
+
+### 完成内容
+
+| Task | 内容 | 状态 | 验证 |
+|------|------|------|------|
+| Task 7 | 广告标记 UI | ✅ | TypeScript 编译通过 |
+| Task 8 | LLM 广告判定服务 | ✅ | Rust 编译通过 |
+| Task 9 | 屏蔽列表 CRUD API | ✅ | Rust 编译通过 |
+| Task 10 | 雷达采集过滤集成 | ✅ | Rust 编译通过 |
+
+### 新增文件
+
+- `src-tauri/src/services/ad_detector.rs` - LLM 广告判定
+- `src-tauri/src/commands/ad_patterns_cmd.rs` - 屏蔽列表 API
+- `src/api/adPatterns.ts` - 前端 API
+
+### 修改文件
+
+- `src/components/RadarInbox.tsx` - 添加标记广告按钮
+- `src/plugins/radar.rs` - 采集时广告过滤
+
+### API 命令
+
+- `mark_as_ad` - 标记广告并学习
+- `list_ad_patterns` - 列出屏蔽规则
+- `check_ad_pattern` - 检查是否广告
+- `add_ad_whitelist` - 添加白名单
+- `list_ad_whitelist` - 列出白名单
+
+### 提交
+
+- af59626: feat(M19.2): 广告学习功能后端实现
+- 27fdd18: feat(M19.2): 广告标记 UI 实现
+- 38ef339: feat(M19.2): 雷达采集广告过滤集成
+- 5589d2e: docs: M19.2 全部完成
+
+### 版本发布
+
+- `Previous/os-compass.exe` - 已更新
+- `Previous/WebView2Loader.dll` - 已更新
+
+### 待测试功能
+
+1. 雷达采集时广告过滤是否生效
+2. 标记广告按钮是否正常工作
+3. LLM 分析是否正确返回结果
+4. 白名单功能是否正常
+
+### 状态：⚠️ 开发完成，待手动测试验证
+
 ### 待继续
 
 - M19.2 广告学习（Task 7-10）
