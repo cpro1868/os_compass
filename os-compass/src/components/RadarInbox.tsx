@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, getSupportedPlatformDomains, RadarSource, RadarItem, RadarSourceInput } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
 import { translate } from '../api';
-import { markAsAd, AdMarkResult } from '../api/adPatterns';
 
 // 获取一周前的日期（格式：YYYY-MM-DD）
 const getOneWeekAgo = (): string => {
@@ -54,9 +53,6 @@ export function RadarInbox() {
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [translatingId, setTranslatingId] = useState<number | null>(null);
   const [translatedContent, setTranslatedContent] = useState<Record<number, string>>({});
-  const [adMarkItem, setAdMarkItem] = useState<RadarItem | null>(null);
-  const [adMarkResult, setAdMarkResult] = useState<AdMarkResult | null>(null);
-  const [adMarking, setAdMarking] = useState(false);
 
   const loadSupportedDomains = useCallback(async () => {
     try {
@@ -642,16 +638,6 @@ export function RadarInbox() {
                                   导入
                                 </button>
                               )}
-                              <button
-                                onClick={() => {
-                                  setAdMarkItem(item);
-                                  setAdMarkResult(null);
-                                }}
-                                className="px-3 py-1.5 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition cursor-pointer"
-                              >
-                                <i className="fa-solid fa-ban text-xs mr-1" />
-                                标记广告
-                              </button>
                               {item.status === 'collected' && !hasImport && (
                                 <span className="px-3 py-1.5 text-sm rounded-lg text-green-600 dark:text-green-400">
                                   <i className="fa-solid fa-bookmark mr-1" />{t('radar.collected')}
@@ -993,117 +979,6 @@ export function RadarInbox() {
                 确认导入
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {adMarkItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <i className="fa-solid fa-ban text-red-500 mr-2" />
-              标记广告
-            </h3>
-
-            {!adMarkResult ? (
-              <>
-                <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <p className="text-sm font-medium mb-2">即将分析以下内容：</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{adMarkItem.project_name}</p>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{adMarkItem.description}</p>
-                </div>
-                <p className="text-sm text-gray-500 mb-4">
-                  点击确认后，系统将使用 LLM 分析内容是否为广告，并学习屏蔽规则。
-                </p>
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={() => setAdMarkItem(null)}
-                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!adMarkItem) return;
-                      setAdMarking(true);
-                      try {
-                        const result = await markAsAd(
-                          String(adMarkItem.id),
-                          adMarkItem.project_name || '',
-                          adMarkItem.description || '',
-                          adMarkItem.project_url || ''
-                        );
-                        setAdMarkResult(result);
-                        if (result.success) {
-                          showToast(result.message, 'success');
-                        }
-                      } catch (e) {
-                        showToast('标记失败: ' + String(e), 'error');
-                      } finally {
-                        setAdMarking(false);
-                      }
-                    }}
-                    disabled={adMarking}
-                    className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition disabled:opacity-50"
-                  >
-                    {adMarking ? '分析中...' : '确认分析'}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="mb-4">
-                  <div className={`p-4 rounded-lg ${adMarkResult.llm_judgment?.is_ad ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
-                    <div className="flex items-center mb-2">
-                      <span className={`px-2 py-1 text-xs font-medium rounded ${
-                        adMarkResult.llm_judgment?.is_ad
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
-                          : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
-                      }`}>
-                        {adMarkResult.llm_judgment?.is_ad ? '判定为广告' : '判定为正常内容'}
-                      </span>
-                      <span className="ml-2 text-sm text-gray-500">
-                        置信度: {Math.round((adMarkResult.llm_judgment?.confidence || 0) * 100)}%
-                      </span>
-                    </div>
-                    {adMarkResult.llm_judgment?.reasoning && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                        {adMarkResult.llm_judgment.reasoning}
-                      </p>
-                    )}
-                    {adMarkResult.llm_judgment?.ad_keywords && adMarkResult.llm_judgment.ad_keywords.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-xs text-gray-500 mb-1">提取的关键词：</p>
-                        <div className="flex flex-wrap gap-1">
-                          {adMarkResult.llm_judgment.ad_keywords.map((kw, i) => (
-                            <span key={i} className="px-2 py-0.5 text-xs bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded">
-                              {kw}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                  <p className="text-sm text-amber-700 dark:text-amber-300">
-                    <i className="fa-solid fa-info-circle mr-1" />
-                    如需排除误判，可将 URL 加入白名单
-                  </p>
-                </div>
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={() => {
-                      setAdMarkItem(null);
-                      setAdMarkResult(null);
-                    }}
-                    className="px-4 py-2 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition"
-                  >
-                    关闭
-                  </button>
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}
