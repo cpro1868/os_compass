@@ -2,6 +2,52 @@
 
 # Session Log
 
+## 2026-08-19 17:10 - M19.2 重新实现（修复死锁）
+
+### 问题
+
+程序启动时卡死（`Responding = False`）
+
+### 根因
+
+`init_ad_patterns()` 函数内部尝试获取 `SYSTEM_DB` 锁，但它是在已经持有该锁的代码块内被调用的，导致**死锁**：
+
+```rust
+// lib.rs: 在 SYSTEM_DB 锁内调用
+if let Ok(system_db) = system_db::SYSTEM_DB.lock() {
+    commands::init_ad_patterns()  // 这又尝试获取锁 -> 死锁
+}
+```
+
+### 修复
+
+新增 `init_ad_patterns_with_conn()` 函数，直接使用已打开的数据库连接：
+
+```rust
+pub fn init_ad_patterns_with_conn(conn: &rusqlite::Connection) -> Result<(), String> {
+    conn.execute_batch(...)  // 不再获取锁
+}
+```
+
+### 测试验证
+
+| 检查项 | 结果 |
+|--------|------|
+| 程序启动 | ✅ Responding = True |
+
+### 提交
+
+```
+21950d7 feat(M19.2): 广告学习功能后端实现（修复死锁问题）
+3bbf9ff docs: 更新 M19.2 状态 - 修复死锁问题
+```
+
+### 状态
+
+⚠️ 后端完成，待前端 UI 和雷达过滤集成
+
+---
+
 ## 2026-08-19 16:45 - M19.2 广告学习功能回滚
 
 ### 问题发现
