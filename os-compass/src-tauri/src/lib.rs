@@ -165,6 +165,11 @@ pub fn run() {
                         } else {
                             log::info!("[article_prompts] Article prompts initialized successfully");
                         }
+                        if let Err(e) = commands::init_ad_patterns_with_conn(&conn) {
+                            log::error!("[ad_patterns] Failed to initialize: {}", e);
+                        } else {
+                            log::info!("[ad_patterns] Ad patterns initialized successfully");
+                        }
                     }
                 }
             }
@@ -535,6 +540,15 @@ pub fn run() {
             commands::generate_article,
             commands::export_article,
             commands::get_article_styles,
+            commands::mark_as_ad,
+            commands::list_ad_patterns,
+            commands::add_ad_pattern,
+            commands::update_ad_pattern,
+            commands::delete_ad_pattern,
+            commands::check_ad_pattern,
+            commands::add_ad_whitelist,
+            commands::remove_ad_whitelist,
+            commands::list_ad_whitelist,
             get_app_data_dir,
             get_radar_data_dir,
             get_vault_dir,
