@@ -6,6 +6,7 @@ use crate::feature_plugin::{
 use crate::plugin_config_db::PLUGIN_CONFIG_DB;
 use crate::settings::get_settings;
 use crate::source_engine::{get_adapter, SourceType};
+use crate::commands::ad_patterns_cmd::{check_ad_pattern_internal, increment_pattern_hit};
 use async_trait::async_trait;
 use log;
 use rusqlite::params;
@@ -265,8 +266,19 @@ pub async fn radar_scan_source(
             write_filter_log(&format!("[INFO] Filter is OFF"));
         }
 
+        let item_url = if content.url.is_empty() { content.title.clone() } else { content.url.clone() };
+        let ad_check = check_ad_pattern_internal(&content.title, content.content.as_deref().unwrap_or(""), &item_url);
+        if ad_check.is_blocked {
+            write_filter_log(&format!("[AD-FILTER] title={}, matched={} patterns", content.title, ad_check.matched_patterns.len()));
+            for pattern in &ad_check.matched_patterns {
+                write_filter_log(&format!("[AD-FILTER]   - {}: {} (confidence: {})", pattern.pattern_type, pattern.value, pattern.confidence));
+                increment_pattern_hit(pattern.id);
+            }
+            continue;
+        }
+
         let project_name = content.title.clone();
-        let project_url = if content.url.is_empty() { content.title.clone() } else { content.url.clone() };
+        let project_url = item_url;
         let description = content.content.clone();
         let language = None::<String>;
 
