@@ -159,13 +159,12 @@ pub fn run() {
                 log::info!("[system_db] System DB initialized successfully");
                 if let Ok(system_db) = system_db::SYSTEM_DB.lock() {
                     if let Some(db) = system_db.as_ref() {
-                        let conn = db.get_connection();
-                        if let Err(e) = article::ArticlePrompts::init_system_db(&conn) {
+                        if let Err(e) = article::ArticlePrompts::init_system_db(&db.get_connection()) {
                             log::error!("[article_prompts] Failed to initialize: {}", e);
                         } else {
                             log::info!("[article_prompts] Article prompts initialized successfully");
                         }
-                        if let Err(e) = commands::init_ad_patterns_with_conn(&conn) {
+                        if let Err(e) = commands::init_ad_patterns_with_conn(db) {
                             log::error!("[ad_patterns] Failed to initialize: {}", e);
                         } else {
                             log::info!("[ad_patterns] Ad patterns initialized successfully");

@@ -1,6 +1,6 @@
-use crate::system_db::SYSTEM_DB;
+use crate::system_db::{SYSTEM_DB, SystemDb};
 use crate::services::ad_detector;
-use rusqlite::params;
+use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::command;
@@ -330,7 +330,8 @@ pub fn list_ad_whitelist() -> Result<Vec<AdWhitelist>, String> {
     Ok(rows)
 }
 
-pub fn init_ad_patterns_with_conn(conn: &rusqlite::Connection) -> Result<(), String> {
+pub fn init_ad_patterns_with_conn(db: &SystemDb) -> Result<(), String> {
+    let conn = db.get_connection();
     conn.execute_batch(
         r#"
         CREATE TABLE IF NOT EXISTS ad_patterns (
