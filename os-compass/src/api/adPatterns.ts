@@ -34,8 +34,8 @@ export interface AdMarkResult {
 }
 
 export interface AdCheckResult {
-  isBlocked: boolean;
-  matchedPatterns: Array<{
+  is_blocked: boolean;
+  matched_patterns: Array<{
     id: number;
     type: string;
     value: string;
@@ -117,13 +117,4 @@ export async function removeAdWhitelist(url: string): Promise<void> {
 
 export async function listAdWhitelist(): Promise<AdWhitelist[]> {
   return invoke<AdWhitelist[]>('list_ad_whitelist');
-}
-
-export async function getAdStats(): Promise<{
-  totalBlocked: number;
-  totalWhitelisted: number;
-  todayMarked: number;
-  hitRate: number;
-}> {
-  return invoke('get_ad_stats');
 }
