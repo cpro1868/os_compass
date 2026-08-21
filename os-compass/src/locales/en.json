@@ -860,7 +860,44 @@
       "deleteFailed": "Failed to delete source",
       "clearFailed": "Failed to clear data",
       "typeMismatch": "Type mismatch: URL should be {{expected}}, but you selected {{actual}}"
-    }
+    },
+    "autoCollect": "Auto Collect",
+    "autoCollectEnabled": "Scheduled collection enabled",
+    "autoCollectDisabled": "Scheduled collection disabled",
+    "autoCollectError": "Failed to set scheduled collection",
+    "scheduleSettings": "Schedule Settings",
+    "collectMode": "Collection Mode",
+    "intervalMode": "Interval Mode",
+    "intervalModeHint": "Auto collect at fixed intervals",
+    "customMode": "Custom Mode",
+    "customModeHint": "Custom collection interval by second/minute/hour",
+    "interval": {
+      "5min": "Every 5 minutes",
+      "15min": "Every 15 minutes",
+      "30min": "Every 30 minutes",
+      "1h": "Every 1 hour",
+      "2h": "Every 2 hours",
+      "6h": "Every 6 hours",
+      "12h": "Every 12 hours",
+      "24h": "Every 24 hours"
+    },
+    "unit": {
+      "second": "seconds",
+      "minute": "minutes",
+      "hour": "hours"
+    },
+    "every": "Every",
+    "notificationSettings": "Notification Settings",
+    "enableNotification": "Enable Notification",
+    "systemNotification": "System Notification",
+    "badgeNotification": "Radar Icon Badge (unread count)",
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped"
+    },
+    "nextRun": "Next Run",
+    "scheduleSaved": "Schedule settings saved",
+    "scheduleSaveError": "Failed to save schedule settings"
   },
   "search": {
     "title": "Intent Search",

@@ -65,6 +65,18 @@
           <i class="fa-solid fa-trash-alt"></i>
           <span class="hidden sm:inline">清空</span>
         </button>
+        <!-- 自动采集开关 -->
+        <div class="flex items-center gap-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg">
+          <i class="fa-regular fa-clock text-gray-400 text-sm"></i>
+          <span id="autoCollectLabel" class="text-sm text-gray-400">自动采集</span>
+          <label class="relative inline-flex items-center cursor-pointer ml-1">
+            <input type="checkbox" id="autoCollectToggle" class="sr-only peer" onchange="toggleAutoCollect()">
+            <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+          <button onclick="openAutoCollectSettings()" class="ml-1 text-gray-400 hover:text-white transition" title="定时采集设置">
+            <i class="fa-solid fa-gear text-sm"></i>
+          </button>
+        </div>
         <button id="scanBtn" onclick="triggerScan()"
           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center gap-2 transition">
           <i id="scanIcon" class="fa-solid fa-rotate"></i>
@@ -1390,6 +1402,127 @@
     </div>
   </div>
 
+  <!-- 定时采集设置弹窗 -->
+  <div id="autoCollectModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden">
+    <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4">
+      <div class="flex items-center justify-between p-4 border-b border-gray-700">
+        <h2 class="text-lg font-semibold flex items-center gap-2">
+          <i class="fa-regular fa-clock text-blue-500"></i>
+          定时采集设置
+        </h2>
+        <button onclick="closeAutoCollectSettings()" class="text-gray-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+
+      <div class="p-4 space-y-4">
+        <!-- 采集模式 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">采集模式</label>
+          <div class="space-y-2">
+            <label class="flex items-center gap-3 p-3 bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-700/50 transition">
+              <input type="radio" name="collectMode" value="interval" checked
+                class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500"
+                onchange="toggleCollectMode()">
+              <div class="flex-1">
+                <span class="text-sm font-medium">间隔模式</span>
+                <p class="text-xs text-gray-500">按固定时间间隔自动采集</p>
+              </div>
+            </label>
+            <div id="intervalOptions" class="pl-7">
+              <select id="intervalSelect"
+                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-200 focus:outline-none focus:border-blue-500">
+                <option value="5">每 5 分钟</option>
+                <option value="15" selected>每 15 分钟</option>
+                <option value="30">每 30 分钟</option>
+                <option value="60">每 1 小时</option>
+                <option value="120">每 2 小时</option>
+                <option value="360">每 6 小时</option>
+                <option value="720">每 12 小时</option>
+                <option value="1440">每 24 小时</option>
+              </select>
+            </div>
+
+            <label class="flex items-center gap-3 p-3 bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-700/50 transition">
+              <input type="radio" name="collectMode" value="custom"
+                class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500"
+                onchange="toggleCollectMode()">
+              <div class="flex-1">
+                <span class="text-sm font-medium">自定义模式</span>
+                <p class="text-xs text-gray-500">按秒/分/时自定义采集间隔</p>
+              </div>
+            </label>
+            <div id="customOptions" class="pl-7 hidden">
+              <div class="flex items-center gap-2">
+                <select id="customUnit"
+                  class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-200 focus:outline-none focus:border-blue-500"
+                  onchange="updateCustomInterval()">
+                  <option value="second">秒</option>
+                  <option value="minute" selected>分钟</option>
+                  <option value="hour">小时</option>
+                </select>
+                <span class="text-sm text-gray-400">每</span>
+                <input type="number" id="customValue" value="1" min="1" max="59"
+                  class="w-16 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-200 focus:outline-none focus:border-blue-500 text-center">
+                <span id="customUnitLabel" class="text-sm text-gray-400">分钟</span>
+              </div>
+              <p id="customHint" class="text-xs text-gray-500 mt-2">每 1 分钟采集一次</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 通知设置 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">通知设置</label>
+          <div class="space-y-2">
+            <label class="flex items-center gap-3 p-3 bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-700/50 transition">
+              <input type="checkbox" id="enableNotification" checked
+                class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-bell text-gray-400"></i>
+                <span class="text-sm">启用通知</span>
+              </div>
+            </label>
+            <div id="notificationOptions" class="pl-7 space-y-2">
+              <label class="flex items-center gap-3 p-2 bg-gray-900/50 rounded-lg cursor-pointer hover:bg-gray-700/30 transition">
+                <input type="checkbox" id="systemNotification" checked
+                  class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                <span class="text-sm text-gray-300">系统通知</span>
+              </label>
+              <label class="flex items-center gap-3 p-2 bg-gray-900/50 rounded-lg cursor-pointer hover:bg-gray-700/30 transition">
+                <input type="checkbox" id="badgeNotification" checked
+                  class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                <span class="text-sm text-gray-300">雷达图标徽章（显示未读数）</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 运行状态 -->
+        <div id="collectStatus" class="p-3 bg-gray-900 rounded-lg">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span id="statusIndicator" class="w-2 h-2 rounded-full bg-gray-500"></span>
+              <span id="statusText" class="text-sm text-gray-400">已停止</span>
+            </div>
+            <span id="nextCollectTime" class="text-xs text-gray-500"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 p-4 border-t border-gray-700">
+        <button onclick="closeAutoCollectSettings()"
+          class="px-4 py-2 text-sm text-gray-400 hover:text-white border border-gray-600 rounded-lg transition">
+          取消
+        </button>
+        <button onclick="saveAutoCollectSettings()"
+          class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+          保存设置
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Tab 切换
     function switchPatternsTab(tab) {
@@ -1403,6 +1536,105 @@
       document.getElementById('rulesContent').classList.toggle('hidden', tab !== 'rules');
       document.getElementById('whitelistContent').classList.toggle('hidden', tab !== 'whitelist');
     }
+
+    // 自动采集开关切换
+    function toggleAutoCollect() {
+      const toggle = document.getElementById('autoCollectToggle');
+      const label = document.getElementById('autoCollectLabel');
+      if (toggle.checked) {
+        label.textContent = '每15分钟';
+        label.classList.remove('text-gray-400');
+        label.classList.add('text-blue-400');
+        showToast('定时采集已开启', 'success');
+      } else {
+        label.textContent = '自动采集';
+        label.classList.remove('text-blue-400');
+        label.classList.add('text-gray-400');
+        showToast('定时采集已关闭', 'info');
+      }
+    }
+
+    // 打开定时采集设置弹窗
+    function openAutoCollectSettings() {
+      document.getElementById('autoCollectModal').classList.remove('hidden');
+    }
+
+    // 关闭定时采集设置弹窗
+    function closeAutoCollectSettings() {
+      document.getElementById('autoCollectModal').classList.add('hidden');
+    }
+
+    // 采集模式切换
+    function toggleCollectMode() {
+      const mode = document.querySelector('input[name="collectMode"]:checked').value;
+      document.getElementById('intervalOptions').classList.toggle('hidden', mode !== 'interval');
+      document.getElementById('customOptions').classList.toggle('hidden', mode !== 'custom');
+      if (mode === 'custom') {
+        updateCustomInterval();
+      }
+    }
+
+    // 更新自定义间隔显示
+    function updateCustomInterval() {
+      const unit = document.getElementById('customUnit').value;
+      const value = document.getElementById('customValue').value || 1;
+      const unitLabel = document.getElementById('customUnitLabel');
+      const hint = document.getElementById('customHint');
+      const valueInput = document.getElementById('customValue');
+
+      const unitNames = { second: '秒', minute: '分钟', hour: '小时' };
+      unitLabel.textContent = unitNames[unit];
+      hint.textContent = `每 ${value} ${unitNames[unit]}采集一次`;
+
+      if (unit === 'second') {
+        valueInput.max = 59;
+      } else if (unit === 'minute') {
+        valueInput.max = 59;
+      } else {
+        valueInput.max = 23;
+      }
+    }
+
+    // 保存定时采集设置
+    function saveAutoCollectSettings() {
+      const mode = document.querySelector('input[name="collectMode"]:checked').value;
+      let intervalText = '';
+      if (mode === 'interval') {
+        intervalText = document.getElementById('intervalSelect').options[document.getElementById('intervalSelect').selectedIndex].text;
+      } else {
+        const unit = document.getElementById('customUnit').value;
+        const value = document.getElementById('customValue').value || 1;
+        const unitNames = { second: '秒', minute: '分钟', hour: '小时' };
+        intervalText = `每${value}${unitNames[unit]}`;
+      }
+      const enableNotification = document.getElementById('enableNotification').checked;
+      const systemNotification = document.getElementById('systemNotification').checked;
+      const badgeNotification = document.getElementById('badgeNotification').checked;
+
+      closeAutoCollectSettings();
+      showToast('定时采集设置已保存', 'success');
+
+      const toggle = document.getElementById('autoCollectToggle');
+      const label = document.getElementById('autoCollectLabel');
+      if (!toggle.checked) {
+        toggle.checked = true;
+      }
+      label.textContent = intervalText;
+      label.classList.remove('text-gray-400');
+      label.classList.add('text-blue-400');
+    }
+
+    // 点击弹窗背景关闭
+    document.getElementById('autoCollectModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeAutoCollectSettings();
+      }
+    });
+
+    // 通知设置开关
+    document.getElementById('enableNotification').addEventListener('change', function() {
+      document.getElementById('notificationOptions').classList.toggle('hidden', !this.checked);
+    });
   </script>
 </body>
 </html>

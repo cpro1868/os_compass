@@ -99,6 +99,7 @@ pub fn run() {
                 .level(log::LevelFilter::Info)
                 .build(),
         )
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             eprintln!("[INIT] OS-Compass 启动中...");
 
@@ -106,10 +107,14 @@ pub fn run() {
             use tauri::tray::TrayIconBuilder;
 
             let show_item = MenuItemBuilder::with_id("show", "显示/隐藏").build(app)?;
+            let separator1 = MenuItemBuilder::with_id("sep1", "─────────────").enabled(false).build(app)?;
+            let toggle_auto_collect = MenuItemBuilder::with_id("toggle_auto_collect", "定时采集: 关闭").build(app)?;
+            let scan_now = MenuItemBuilder::with_id("scan_now", "立即扫描情报").build(app)?;
+            let separator2 = MenuItemBuilder::with_id("sep2", "─────────────").enabled(false).build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "退出").build(app)?;
 
             let menu = MenuBuilder::new(app)
-                .items(&[&show_item, &quit_item])
+                .items(&[&show_item, &separator1, &toggle_auto_collect, &scan_now, &separator2, &quit_item])
                 .build()?;
 
             let _tray = TrayIconBuilder::new()
@@ -127,6 +132,42 @@ pub fn run() {
                                     let _ = window.set_focus();
                                 }
                             }
+                        }
+                        "toggle_auto_collect" => {
+                            if let Ok(schedule) = crate::plugin_config_db::PLUGIN_CONFIG_DB.get_radar_schedule() {
+                                let new_enabled = !schedule.enabled;
+                                if let Err(e) = crate::plugin_config_db::PLUGIN_CONFIG_DB.update_radar_schedule(
+                                    &crate::plugin_config_db::RadarScheduleUpdate {
+                                        enabled: Some(new_enabled),
+                                        ..Default::default()
+                                    }
+                                ) {
+                                    log::error!("[tray] Failed to toggle auto collect: {}", e);
+                                } else {
+                                    log::info!("[tray] Auto collect toggled to: {}", new_enabled);
+                                    let _ = app.emit("radar-schedule-changed", ());
+                                }
+                            }
+                        }
+                        "scan_now" => {
+                            let app_clone = app.clone();
+                            tauri::async_runtime::spawn(async move {
+                                log::info!("[tray] Running manual radar scan...");
+                                crate::plugins::radar::init_spam_lexicon();
+                                match crate::plugins::radar::radar_scan_all(None).await {
+                                    Ok((scanned, new_items, errors)) => {
+                                        log::info!("[tray] Scan completed: scanned={}, new={}, errors={}", scanned, new_items, errors);
+                                        let _ = app_clone.emit("radar-scan-complete", serde_json::json!({
+                                            "scanned": scanned,
+                                            "newItems": new_items,
+                                            "errors": errors
+                                        }));
+                                    }
+                                    Err(e) => {
+                                        log::error!("[tray] Scan failed: {}", e);
+                                    }
+                                }
+                            });
                         }
                         "quit" => {
                             app.exit(0);
@@ -172,6 +213,11 @@ pub fn run() {
                     }
                 }
             }
+
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                crate::commands::start_radar_scheduler(app_handle).await;
+            });
 
             // 初始化 embedding 模块（从系统库读取配置）
             if let Err(e) = embedding::init_module() {
@@ -518,6 +564,13 @@ pub fn run() {
             commands::get_radar_unread_count,
             commands::clear_radar_cache,
             commands::clear_radar_all,
+            commands::get_radar_schedule,
+            commands::update_radar_schedule,
+            commands::trigger_radar_scan_now,
+            commands::list_radar_notifications,
+            commands::mark_radar_notification_read,
+            commands::clear_radar_notifications,
+            commands::get_radar_unread_notification_count,
             commands::intent_search,
             commands::analyze_user_intent,
             commands::get_search_history,

@@ -176,3 +176,34 @@ CREATE INDEX IF NOT EXISTS idx_feature_plugins_enabled ON feature_plugins(enable
 INSERT OR IGNORE INTO feature_plugins (id, name, plugin_type, enabled, version, db_mode, db_path_template) VALUES
 ('radar', '情报雷达', 'radar', 0, '1.0.0', 'vault', '${vault_dir}/plugin_${plugin_id}.db'),
 ('search', '意图搜索', 'search', 0, '1.0.0', 'vault', '${vault_dir}/plugin_${plugin_id}.db');
+
+CREATE TABLE IF NOT EXISTS radar_schedule (
+    id INTEGER PRIMARY KEY CHECK(id = 1),
+    enabled INTEGER DEFAULT 0,
+    mode TEXT DEFAULT 'interval',
+    interval_seconds INTEGER DEFAULT 1800,
+    custom_unit TEXT,
+    custom_value INTEGER,
+    notification_enabled INTEGER DEFAULT 1,
+    system_notification INTEGER DEFAULT 1,
+    badge_notification INTEGER DEFAULT 1,
+    last_run_at TEXT,
+    next_run_at TEXT,
+    new_items_count INTEGER DEFAULT 0,
+    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_radar_schedule_enabled ON radar_schedule(enabled);
+
+INSERT OR IGNORE INTO radar_schedule (id, enabled, mode, interval_seconds) VALUES (1, 0, 'interval', 1800);
+
+CREATE TABLE IF NOT EXISTS radar_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    body TEXT,
+    item_count INTEGER DEFAULT 0,
+    read INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_radar_notifications_read ON radar_notifications(read);
