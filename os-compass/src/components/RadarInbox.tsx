@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, getSupportedPlatformDomains, RadarSource, RadarItem, RadarSourceInput } from '../api/radar';
+import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, getSupportedPlatformDomains, RadarSource, RadarItem, RadarSourceInput, getRadarSchedule, updateRadarSchedule, RadarSchedule, RadarScheduleUpdate } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
 import { translate } from '../api';
 import { markAsAd, AdMarkResult } from '../api/adPatterns';
@@ -57,6 +57,10 @@ export function RadarInbox() {
   const [adMarkItem, setAdMarkItem] = useState<RadarItem | null>(null);
   const [adMarkResult, setAdMarkResult] = useState<AdMarkResult | null>(null);
   const [adMarking, setAdMarking] = useState(false);
+
+  const [schedule, setSchedule] = useState<RadarSchedule | null>(null);
+  const [showScheduleSettings, setShowScheduleSettings] = useState(false);
+  const [scheduleUpdate, setScheduleUpdate] = useState<RadarScheduleUpdate>({});
 
   const loadSupportedDomains = useCallback(async () => {
     try {
@@ -170,17 +174,27 @@ export function RadarInbox() {
     loadSources();
     loadItems();
     loadSupportedDomains();
-    
-    // 监听仓库切换事件，切换后重新加载数据
+    loadSchedule();
+
     const handleVaultChanged = () => {
       console.log('[RadarInbox] vault changed, reloading...');
       loadSources();
       loadItems();
       loadSupportedDomains();
+      loadSchedule();
     };
     window.addEventListener('vault-changed', handleVaultChanged);
     return () => window.removeEventListener('vault-changed', handleVaultChanged);
   }, [loadSources, loadItems, loadSupportedDomains]);
+
+  const loadSchedule = async () => {
+    try {
+      const data = await getRadarSchedule();
+      setSchedule(data);
+    } catch (e) {
+      console.error('Failed to load schedule:', e);
+    }
+  };
 
   const handleScan = async () => {
     setScanning(true);
@@ -442,6 +456,48 @@ export function RadarInbox() {
             <i className="fa-solid fa-trash-alt" />
             <span className="hidden sm:inline">{t('radar.clearAll')}</span>
           </button>
+          <div className="flex items-center gap-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg">
+            <i className="fa-regular fa-clock text-gray-500 dark:text-gray-400 text-sm" />
+            <span className={`text-sm ${schedule?.enabled ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+              {schedule?.enabled ? (schedule.mode === 'interval' ? `每${schedule.interval_seconds / 60}分钟` : `每${schedule.custom_value}${schedule.custom_unit === 'second' ? '秒' : schedule.custom_unit === 'minute' ? '分钟' : '小时'}`) : t('radar.autoCollect')}
+            </span>
+            <label className="relative inline-flex items-center cursor-pointer ml-1">
+              <input
+                type="checkbox"
+                checked={schedule?.enabled || false}
+                onChange={async (e) => {
+                  try {
+                    await updateRadarSchedule({ enabled: e.target.checked });
+                    await loadSchedule();
+                    showToast(e.target.checked ? t('radar.autoCollectEnabled') : t('radar.autoCollectDisabled'), 'success');
+                  } catch (err) {
+                    showToast(t('radar.autoCollectError'), 'error');
+                  }
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500" />
+            </label>
+            <button
+              onClick={() => {
+                setScheduleUpdate({
+                  enabled: schedule?.enabled,
+                  mode: schedule?.mode as 'interval' | 'custom',
+                  interval_seconds: schedule?.interval_seconds,
+                  custom_unit: schedule?.custom_unit as 'second' | 'minute' | 'hour' | undefined,
+                  custom_value: schedule?.custom_value ?? undefined,
+                  notification_enabled: schedule?.notification_enabled,
+                  system_notification: schedule?.system_notification,
+                  badge_notification: schedule?.badge_notification,
+                });
+                setShowScheduleSettings(true);
+              }}
+              className="ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+              title={t('radar.scheduleSettings')}
+            >
+              <i className="fa-solid fa-gear text-sm" />
+            </button>
+          </div>
           <button
             onClick={handleScan}
             disabled={scanning}
@@ -1098,6 +1154,180 @@ export function RadarInbox() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {showScheduleSettings && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowScheduleSettings(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <i className="fa-regular fa-clock text-blue-500" />
+                {t('radar.scheduleSettings')}
+              </h2>
+              <button onClick={() => setShowScheduleSettings(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i className="fa-solid fa-xmark text-xl" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('radar.collectMode')}</label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                    <input
+                      type="radio"
+                      name="collectMode"
+                      value="interval"
+                      checked={scheduleUpdate.mode === 'interval'}
+                      onChange={() => setScheduleUpdate(prev => ({ ...prev, mode: 'interval' }))}
+                      className="w-4 h-4 text-blue-600 bg-gray-300 border-gray-400 focus:ring-blue-500 dark:bg-gray-700"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">{t('radar.intervalMode')}</span>
+                      <p className="text-xs text-gray-500">{t('radar.intervalModeHint')}</p>
+                    </div>
+                  </label>
+                  <div className={`pl-7 ${scheduleUpdate.mode === 'interval' ? '' : 'hidden'}`}>
+                    <select
+                      value={scheduleUpdate.interval_seconds}
+                      onChange={(e) => setScheduleUpdate(prev => ({ ...prev, interval_seconds: Number(e.target.value) }))}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value={300}>{t('radar.interval.5min')}</option>
+                      <option value={900}>{t('radar.interval.15min')}</option>
+                      <option value={1800}>{t('radar.interval.30min')}</option>
+                      <option value={3600}>{t('radar.interval.1h')}</option>
+                      <option value={7200}>{t('radar.interval.2h')}</option>
+                      <option value={21600}>{t('radar.interval.6h')}</option>
+                      <option value={43200}>{t('radar.interval.12h')}</option>
+                      <option value={86400}>{t('radar.interval.24h')}</option>
+                    </select>
+                  </div>
+
+                  <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                    <input
+                      type="radio"
+                      name="collectMode"
+                      value="custom"
+                      checked={scheduleUpdate.mode === 'custom'}
+                      onChange={() => setScheduleUpdate(prev => ({ ...prev, mode: 'custom' }))}
+                      className="w-4 h-4 text-blue-600 bg-gray-300 border-gray-400 focus:ring-blue-500 dark:bg-gray-700"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">{t('radar.customMode')}</span>
+                      <p className="text-xs text-gray-500">{t('radar.customModeHint')}</p>
+                    </div>
+                  </label>
+                  <div className={`pl-7 ${scheduleUpdate.mode === 'custom' ? '' : 'hidden'}`}>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={scheduleUpdate.custom_unit || 'minute'}
+                        onChange={(e) => setScheduleUpdate(prev => ({ ...prev, custom_unit: e.target.value as 'second' | 'minute' | 'hour' }))}
+                        className="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="second">{t('radar.unit.second')}</option>
+                        <option value="minute">{t('radar.unit.minute')}</option>
+                        <option value="hour">{t('radar.unit.hour')}</option>
+                      </select>
+                      <span className="text-sm text-gray-500">{t('radar.every')}</span>
+                      <input
+                        type="number"
+                        value={scheduleUpdate.custom_value || 1}
+                        onChange={(e) => setScheduleUpdate(prev => ({ ...prev, custom_value: Number(e.target.value) }))}
+                        min={1}
+                        max={scheduleUpdate.custom_unit === 'hour' ? 23 : 59}
+                        className="w-16 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 text-center"
+                      />
+                      <span className="text-sm text-gray-500">
+                        {scheduleUpdate.custom_unit === 'second' ? t('radar.unit.second') : scheduleUpdate.custom_unit === 'minute' ? t('radar.unit.minute') : t('radar.unit.hour')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('radar.notificationSettings')}</label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                    <input
+                      type="checkbox"
+                      checked={scheduleUpdate.notification_enabled ?? true}
+                      onChange={(e) => setScheduleUpdate(prev => ({ ...prev, notification_enabled: e.target.checked }))}
+                      className="w-4 h-4 text-blue-600 bg-gray-300 border-gray-400 rounded focus:ring-blue-500 dark:bg-gray-700"
+                    />
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-bell text-gray-400" />
+                      <span className="text-sm">{t('radar.enableNotification')}</span>
+                    </div>
+                  </label>
+                  <div className={`pl-7 space-y-2 ${scheduleUpdate.notification_enabled ? '' : 'hidden'}`}>
+                    <label className="flex items-center gap-3 p-2 bg-gray-100/50 dark:bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition">
+                      <input
+                        type="checkbox"
+                        checked={scheduleUpdate.system_notification ?? true}
+                        onChange={(e) => setScheduleUpdate(prev => ({ ...prev, system_notification: e.target.checked }))}
+                        className="w-4 h-4 text-blue-600 bg-gray-300 border-gray-400 rounded focus:ring-blue-500 dark:bg-gray-700"
+                      />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">{t('radar.systemNotification')}</span>
+                    </label>
+                    <label className="flex items-center gap-3 p-2 bg-gray-100/50 dark:bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition">
+                      <input
+                        type="checkbox"
+                        checked={scheduleUpdate.badge_notification ?? true}
+                        onChange={(e) => setScheduleUpdate(prev => ({ ...prev, badge_notification: e.target.checked }))}
+                        className="w-4 h-4 text-blue-600 bg-gray-300 border-gray-400 rounded focus:ring-blue-500 dark:bg-gray-700"
+                      />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">{t('radar.badgeNotification')}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {schedule && (
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${schedule.enabled ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {schedule.enabled ? t('radar.status.running') : t('radar.status.stopped')}
+                      </span>
+                    </div>
+                    {schedule.next_run_at && (
+                      <span className="text-xs text-gray-500">
+                        {t('radar.nextRun')}: {schedule.next_run_at}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowScheduleSettings(false)}
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg transition"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await updateRadarSchedule(scheduleUpdate);
+                    await loadSchedule();
+                    setShowScheduleSettings(false);
+                    showToast(t('radar.scheduleSaved'), 'success');
+                  } catch (e) {
+                    showToast(t('radar.scheduleSaveError') + ': ' + String(e), 'error');
+                  }
+                }}
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+              >
+                {t('common.save')}
+              </button>
+            </div>
           </div>
         </div>
       )}

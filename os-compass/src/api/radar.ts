@@ -160,3 +160,65 @@ export async function clearRadarAll(): Promise<number> {
 export async function getSupportedPlatformDomains(): Promise<string[]> {
   return invoke<string[]>('get_supported_platform_domains');
 }
+
+export interface RadarSchedule {
+  enabled: boolean;
+  mode: 'interval' | 'custom';
+  interval_seconds: number;
+  custom_unit: 'second' | 'minute' | 'hour' | null;
+  custom_value: number | null;
+  notification_enabled: boolean;
+  system_notification: boolean;
+  badge_notification: boolean;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  new_items_count: number;
+}
+
+export interface RadarScheduleUpdate {
+  enabled?: boolean;
+  mode?: 'interval' | 'custom';
+  interval_seconds?: number;
+  custom_unit?: 'second' | 'minute' | 'hour';
+  custom_value?: number;
+  notification_enabled?: boolean;
+  system_notification?: boolean;
+  badge_notification?: boolean;
+}
+
+export interface Notification {
+  id: number;
+  title: string;
+  body: string | null;
+  item_count: number;
+  read: boolean;
+  created_at: string;
+}
+
+export async function getRadarSchedule(): Promise<RadarSchedule> {
+  return invoke<RadarSchedule>('get_radar_schedule');
+}
+
+export async function updateRadarSchedule(update: RadarScheduleUpdate): Promise<void> {
+  return invoke('update_radar_schedule', { update });
+}
+
+export async function triggerRadarScanNow(): Promise<ScanResult> {
+  return invoke<ScanResult>('trigger_radar_scan_now');
+}
+
+export async function listRadarNotifications(unreadOnly?: boolean): Promise<Notification[]> {
+  return invoke<Notification[]>('list_radar_notifications', { unreadOnly });
+}
+
+export async function markRadarNotificationRead(id: number): Promise<void> {
+  return invoke('mark_radar_notification_read', { id });
+}
+
+export async function clearRadarNotifications(): Promise<void> {
+  return invoke('clear_radar_notifications');
+}
+
+export async function getRadarUnreadNotificationCount(): Promise<number> {
+  return invoke<number>('get_radar_unread_notification_count');
+}

@@ -864,7 +864,44 @@
       "deleteFailed": "删除信息源失败",
       "clearFailed": "清空数据失败",
       "typeMismatch": "类型不匹配：URL 应该是 {{expected}}，但您选择了 {{actual}}"
-    }
+    },
+    "autoCollect": "自动采集",
+    "autoCollectEnabled": "定时采集已开启",
+    "autoCollectDisabled": "定时采集已关闭",
+    "autoCollectError": "定时采集设置失败",
+    "scheduleSettings": "定时采集设置",
+    "collectMode": "采集模式",
+    "intervalMode": "间隔模式",
+    "intervalModeHint": "按固定时间间隔自动采集",
+    "customMode": "自定义模式",
+    "customModeHint": "按秒/分/时自定义采集间隔",
+    "interval": {
+      "5min": "每 5 分钟",
+      "15min": "每 15 分钟",
+      "30min": "每 30 分钟",
+      "1h": "每 1 小时",
+      "2h": "每 2 小时",
+      "6h": "每 6 小时",
+      "12h": "每 12 小时",
+      "24h": "每 24 小时"
+    },
+    "unit": {
+      "second": "秒",
+      "minute": "分钟",
+      "hour": "小时"
+    },
+    "every": "每",
+    "notificationSettings": "通知设置",
+    "enableNotification": "启用通知",
+    "systemNotification": "系统通知",
+    "badgeNotification": "雷达图标徽章（显示未读数）",
+    "status": {
+      "running": "运行中",
+      "stopped": "已停止"
+    },
+    "nextRun": "下次采集",
+    "scheduleSaved": "定时采集设置已保存",
+    "scheduleSaveError": "保存定时采集设置失败"
   },
   "search": {
     "title": "意图搜索",

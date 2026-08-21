@@ -1985,23 +1985,46 @@ await invoke('add_ad_whitelist', { url: 'https://example.com/legit-article' });
 
 ## 3.18 M19 定时采集接口
 
-> **M19 定时采集功能**：后台定时采集 + 系统通知
+> **M19 定时采集功能**：情报雷达定时自动采集，有新内容时通知用户
+>
+> **原型文件**：`design-system/public/radar-inbox.html`
 
 ### 3.18.1 定时任务管理
 
 | 命令 | 参数 | 返回 | 说明 |
 |------|------|------|------|
 | `get_radar_schedule` | 无 | `RadarSchedule` | 获取定时配置 |
-| `update_radar_schedule` | `{ enabled?, intervalSeconds? }` | `void` | 更新定时配置 |
+| `update_radar_schedule` | `RadarScheduleUpdate` | `void` | 更新定时配置 |
 | `trigger_radar_scan_now` | 无 | `number` | 手动触发立即采集 |
+
+**采集模式**：
+- `interval`（间隔模式）：固定时间间隔（5min/15min/30min/1h/2h/6h/12h/24h）
+- `custom`（自定义模式）：秒/分/时自定义间隔
 
 ```typescript
 interface RadarSchedule {
   enabled: boolean;
-  interval_seconds: number;
+  mode: 'interval' | 'custom';
+  interval_seconds: number;      // 间隔模式秒数
+  custom_unit: 'second' | 'minute' | 'hour';  // 自定义单位
+  custom_value: number;          // 自定义数值
+  notification_enabled: boolean;
+  system_notification: boolean;
+  badge_notification: boolean;
   last_run_at: string | null;
   next_run_at: string | null;
   new_items_count: number;
+}
+
+interface RadarScheduleUpdate {
+  enabled?: boolean;
+  mode?: 'interval' | 'custom';
+  interval_seconds?: number;
+  custom_unit?: 'second' | 'minute' | 'hour';
+  custom_value?: number;
+  notification_enabled?: boolean;
+  system_notification?: boolean;
+  badge_notification?: boolean;
 }
 ```
 
@@ -2011,10 +2034,22 @@ interface RadarSchedule {
 // 获取定时采集配置
 const schedule = await invoke<RadarSchedule>('get_radar_schedule');
 
-// 开启定时采集，间隔30分钟
+// 开启定时采集（间隔模式，每15分钟）
 await invoke('update_radar_schedule', {
   enabled: true,
-  intervalSeconds: 1800
+  mode: 'interval',
+  intervalSeconds: 900
+});
+
+// 开启定时采集（自定义模式，每30秒）
+await invoke('update_radar_schedule', {
+  enabled: true,
+  mode: 'custom',
+  customUnit: 'second',
+  customValue: 30,
+  notificationEnabled: true,
+  systemNotification: true,
+  badgeNotification: true
 });
 
 // 手动触发立即采集

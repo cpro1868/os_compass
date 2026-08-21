@@ -415,3 +415,235 @@ pub fn clear_radar_all() -> Result<i64, String> {
     log::debug!("[radar] Cleared {} items", affected);
     Ok(affected as i64)
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RadarSchedule {
+    pub enabled: bool,
+    pub mode: String,
+    pub interval_seconds: i64,
+    pub custom_unit: Option<String>,
+    pub custom_value: Option<i64>,
+    pub notification_enabled: bool,
+    pub system_notification: bool,
+    pub badge_notification: bool,
+    pub last_run_at: Option<String>,
+    pub next_run_at: Option<String>,
+    pub new_items_count: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RadarScheduleUpdate {
+    pub enabled: Option<bool>,
+    pub mode: Option<String>,
+    pub interval_seconds: Option<i64>,
+    pub custom_unit: Option<String>,
+    pub custom_value: Option<i64>,
+    pub notification_enabled: Option<bool>,
+    pub system_notification: Option<bool>,
+    pub badge_notification: Option<bool>,
+}
+
+#[command]
+pub fn get_radar_schedule() -> Result<RadarSchedule, String> {
+    let row = PLUGIN_CONFIG_DB.get_radar_schedule()
+        .map_err(|e| e.to_string())?;
+    Ok(RadarSchedule {
+        enabled: row.enabled,
+        mode: row.mode,
+        interval_seconds: row.interval_seconds,
+        custom_unit: row.custom_unit,
+        custom_value: row.custom_value,
+        notification_enabled: row.notification_enabled,
+        system_notification: row.system_notification,
+        badge_notification: row.badge_notification,
+        last_run_at: row.last_run_at,
+        next_run_at: row.next_run_at,
+        new_items_count: row.new_items_count,
+    })
+}
+
+#[command]
+pub fn update_radar_schedule(update: RadarScheduleUpdate) -> Result<(), String> {
+    PLUGIN_CONFIG_DB.update_radar_schedule(&update)
+        .map_err(|e| e.to_string())?;
+    log::info!("[radar_schedule] Updated schedule: {:?}", serde_json::to_string(&update).unwrap_or_default());
+    Ok(())
+}
+
+#[command]
+pub fn trigger_radar_scan_now() -> Result<serde_json::Value, String> {
+    crate::plugins::radar::init_spam_lexicon();
+    let (scanned, new_items, errors) = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(None))?;
+
+    if new_items > 0 {
+        let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        PLUGIN_CONFIG_DB.update_radar_schedule_run(&now, &now, new_items)
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(serde_json::json!({
+        "scanned": scanned,
+        "newItems": new_items,
+        "errors": errors
+    }))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Notification {
+    pub id: i64,
+    pub title: String,
+    pub body: Option<String>,
+    pub item_count: i64,
+    pub read: bool,
+    pub created_at: String,
+}
+
+#[command]
+pub fn list_radar_notifications(unread_only: Option<bool>) -> Result<Vec<Notification>, String> {
+    let unread = unread_only.unwrap_or(false);
+    let rows = PLUGIN_CONFIG_DB.list_notifications(unread)
+        .map_err(|e| e.to_string())?;
+    Ok(rows.into_iter().map(|row| Notification {
+        id: row.id,
+        title: row.title,
+        body: row.body,
+        item_count: row.item_count,
+        read: row.read,
+        created_at: row.created_at,
+    }).collect())
+}
+
+#[command]
+pub fn mark_radar_notification_read(id: i64) -> Result<(), String> {
+    PLUGIN_CONFIG_DB.mark_notification_read(id)
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[command]
+pub fn clear_radar_notifications() -> Result<(), String> {
+    PLUGIN_CONFIG_DB.clear_notifications()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[command]
+pub fn get_radar_unread_notification_count() -> Result<i64, String> {
+    PLUGIN_CONFIG_DB.get_unread_notification_count()
+        .map_err(|e| e.to_string())
+}
+
+fn calculate_interval_seconds(schedule: &crate::plugin_config_db::RadarScheduleRow) -> u64 {
+    if schedule.mode == "custom" {
+        let value = schedule.custom_value.unwrap_or(1) as u64;
+        let unit = schedule.custom_unit.as_deref().unwrap_or("minute");
+        match unit {
+            "second" => value,
+            "minute" => value * 60,
+            "hour" => value * 3600,
+            _ => value * 60,
+        }
+    } else {
+        schedule.interval_seconds as u64
+    }
+}
+
+pub async fn start_radar_scheduler(app: tauri::AppHandle) {
+    log::info!("[radar_scheduler] Starting radar scheduler...");
+
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+
+        let schedule = match PLUGIN_CONFIG_DB.get_radar_schedule() {
+            Ok(s) => s,
+            Err(e) => {
+                log::error!("[radar_scheduler] Failed to get schedule: {}", e);
+                continue;
+            }
+        };
+
+        if !schedule.enabled {
+            continue;
+        }
+
+        let interval = calculate_interval_seconds(&schedule);
+
+        if let Some(next_run) = &schedule.next_run_at {
+            let now = chrono::Local::now();
+            if let Ok(next) = chrono::NaiveDateTime::parse_from_str(next_run, "%Y-%m-%d %H:%M:%S") {
+                let next_dt = chrono::DateTime::<chrono::Local>::from_naive_utc_and_offset(next, *now.offset());
+                if next_dt > now {
+                    let remaining = (next_dt - now).num_seconds() as u64;
+                    if remaining > 0 && remaining < 60 {
+                        tokio::time::sleep(tokio::time::Duration::from_secs(remaining)).await;
+                    } else {
+                        continue;
+                    }
+                }
+            }
+        } else {
+            tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
+        }
+
+        if let Ok(current_schedule) = PLUGIN_CONFIG_DB.get_radar_schedule() {
+            if !current_schedule.enabled {
+                continue;
+            }
+        } else {
+            continue;
+        }
+
+        log::info!("[radar_scheduler] Running scheduled radar scan...");
+
+        crate::plugins::radar::init_spam_lexicon();
+
+        let (scanned, new_items, errors) = match radar_scan_all(None).await {
+            Ok(result) => result,
+            Err(e) => {
+                log::error!("[radar_scheduler] Scan failed: {}", e);
+                (0, 0, 1)
+            }
+        };
+
+        let now = chrono::Local::now();
+        let last_run = now.format("%Y-%m-%d %H:%M:%S").to_string();
+        let next_run = (now + chrono::Duration::seconds(interval as i64)).format("%Y-%m-%d %H:%M:%S").to_string();
+
+        if let Err(e) = PLUGIN_CONFIG_DB.update_radar_schedule_run(&last_run, &next_run, new_items) {
+            log::error!("[radar_scheduler] Failed to update schedule run: {}", e);
+        }
+
+        if new_items > 0 {
+            log::info!("[radar_scheduler] Scan completed: scanned={}, new={}, errors={}", scanned, new_items, errors);
+
+            if let Ok(current_schedule) = PLUGIN_CONFIG_DB.get_radar_schedule() {
+                if current_schedule.notification_enabled && current_schedule.system_notification {
+                    if let Err(e) = send_system_notification(&app, new_items) {
+                        log::error!("[radar_scheduler] Failed to send notification: {}", e);
+                    }
+                }
+
+                if current_schedule.notification_enabled && current_schedule.badge_notification {
+                    let _ = app.emit("radar-new-items", new_items);
+                }
+            }
+
+            let _ = app.emit("radar-scan-complete", serde_json::json!({
+                "scanned": scanned,
+                "newItems": new_items,
+                "errors": errors
+            }));
+        }
+    }
+}
+
+fn send_system_notification(app: &tauri::AppHandle, new_items: i64) -> Result<(), String> {
+    use tauri_plugin_notification::NotificationExt;
+
+    app.notification()
+        .builder()
+        .title("📡 情报更新")
+        .body(&format!("发现 {} 条新情报", new_items))
+        .show()
+        .map_err(|e| e.to_string())
+}
