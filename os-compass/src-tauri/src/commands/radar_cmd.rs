@@ -546,7 +546,7 @@ pub fn start_radar_scheduler(app: tauri::AppHandle) {
 
 async fn scheduler_loop(app: tauri::AppHandle) {
     loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
         let schedule = match PLUGIN_CONFIG_DB.get_radar_schedule() {
             Ok(s) => s,
@@ -562,18 +562,18 @@ async fn scheduler_loop(app: tauri::AppHandle) {
 
         let interval = calculate_interval_seconds(&schedule);
 
-        if let Some(next_run) = &schedule.next_run_at {
+        if let Some(next_run) = &schedule.last_run_at {
             let now = chrono::Local::now();
-            if let Ok(next) = chrono::NaiveDateTime::parse_from_str(next_run, "%Y-%m-%d %H:%M:%S") {
-                let next_dt = chrono::DateTime::<chrono::Local>::from_naive_utc_and_offset(next, *now.offset());
-                if next_dt > now {
-                    let remaining = (next_dt - now).num_seconds() as u64;
-                    if remaining > 0 && remaining < 60 {
-                        tokio::time::sleep(tokio::time::Duration::from_secs(remaining)).await;
-                    } else {
-                        continue;
-                    }
+            if let Ok(last) = chrono::NaiveDateTime::parse_from_str(next_run, "%Y-%m-%d %H:%M:%S") {
+                let last_dt = chrono::DateTime::<chrono::Local>::from_naive_utc_and_offset(last, *now.offset());
+                let elapsed = (now - last_dt).num_seconds() as u64;
+                if elapsed < interval {
+                    let wait_time = interval - elapsed;
+                    log::debug!("[radar_scheduler] Waiting {} seconds before next scan", wait_time);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(wait_time)).await;
                 }
+            } else {
+                tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
             }
         } else {
             tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
