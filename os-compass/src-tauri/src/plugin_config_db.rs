@@ -1,6 +1,7 @@
 use crate::feature_plugin::PluginInfo;
 use log;
 use rusqlite::{Connection, Result};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -361,7 +362,7 @@ impl PluginConfigDb {
         .map_err(|e| e.to_string())
     }
 
-    pub fn get_radar_schedule(&self) -> Result<RadarScheduleRow> {
+    pub fn get_radar_schedule(&self) -> Result<RadarScheduleRow, String> {
         let conn = self.conn.lock().unwrap();
         conn.query_row(
             "SELECT id, enabled, mode, interval_seconds, custom_unit, custom_value, notification_enabled, system_notification, badge_notification, last_run_at, next_run_at, new_items_count FROM radar_schedule WHERE id = 1",
@@ -477,7 +478,7 @@ impl PluginConfigDb {
         Ok(())
     }
 
-    pub fn get_unread_notification_count(&self) -> Result<i64> {
+    pub fn get_unread_notification_count(&self) -> Result<i64, String> {
         let conn = self.conn.lock().unwrap();
         conn.query_row(
             "SELECT COUNT(*) FROM radar_notifications WHERE read = 0",
@@ -503,7 +504,7 @@ pub struct RadarScheduleRow {
     pub new_items_count: i64,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RadarScheduleUpdate {
     pub enabled: Option<bool>,
     pub mode: Option<String>,

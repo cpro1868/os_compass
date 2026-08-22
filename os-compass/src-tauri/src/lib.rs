@@ -151,10 +151,11 @@ pub fn run() {
                         }
                         "scan_now" => {
                             let app_clone = app.clone();
-                            tauri::async_runtime::spawn(async move {
+                            std::thread::spawn(move || {
                                 log::info!("[tray] Running manual radar scan...");
                                 crate::plugins::radar::init_spam_lexicon();
-                                match crate::plugins::radar::radar_scan_all(None).await {
+                                let result = tauri::async_runtime::block_on(crate::plugins::radar::radar_scan_all(None));
+                                match result {
                                     Ok((scanned, new_items, errors)) => {
                                         log::info!("[tray] Scan completed: scanned={}, new={}, errors={}", scanned, new_items, errors);
                                         let _ = app_clone.emit("radar-scan-complete", serde_json::json!({
@@ -215,9 +216,7 @@ pub fn run() {
             }
 
             let app_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                crate::commands::start_radar_scheduler(app_handle).await;
-            });
+            crate::commands::start_radar_scheduler(app_handle);
 
             // 初始化 embedding 模块（从系统库读取配置）
             if let Err(e) = embedding::init_module() {

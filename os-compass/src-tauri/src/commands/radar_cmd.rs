@@ -1,13 +1,10 @@
-use crate::db::open_db_at_path;
-use crate::feature_plugin::PluginContext;
 use crate::plugins::radar::{init_radar_db, radar_scan_all};
-use crate::plugin_config_db::PLUGIN_CONFIG_DB;
+use crate::plugin_config_db::{PLUGIN_CONFIG_DB, RadarScheduleUpdate};
 use crate::plugin_manager::PLUGIN_MANAGER;
-use crate::settings::get_settings;
 use crate::vault::CURRENT_VAULT_CONFIG;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
-use tauri::command;
+use tauri::{command, Emitter};
 use log;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -431,18 +428,6 @@ pub struct RadarSchedule {
     pub new_items_count: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RadarScheduleUpdate {
-    pub enabled: Option<bool>,
-    pub mode: Option<String>,
-    pub interval_seconds: Option<i64>,
-    pub custom_unit: Option<String>,
-    pub custom_value: Option<i64>,
-    pub notification_enabled: Option<bool>,
-    pub system_notification: Option<bool>,
-    pub badge_notification: Option<bool>,
-}
-
 #[command]
 pub fn get_radar_schedule() -> Result<RadarSchedule, String> {
     let row = PLUGIN_CONFIG_DB.get_radar_schedule()
@@ -548,9 +533,18 @@ fn calculate_interval_seconds(schedule: &crate::plugin_config_db::RadarScheduleR
     }
 }
 
-pub async fn start_radar_scheduler(app: tauri::AppHandle) {
+pub fn start_radar_scheduler(app: tauri::AppHandle) {
     log::info!("[radar_scheduler] Starting radar scheduler...");
 
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async move {
+            scheduler_loop(app).await;
+        });
+    });
+}
+
+async fn scheduler_loop(app: tauri::AppHandle) {
     loop {
         tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
 

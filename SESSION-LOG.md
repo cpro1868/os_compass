@@ -2,6 +2,50 @@
 
 # Session Log
 
+## 2026-08-22 - M19.3 定时采集功能完成
+
+### 完成内容
+
+M19.3 定时采集功能（Task 11-15）全部完成：
+- Task 11: 定时采集开关 UI ✅
+- Task 12: 后台定时任务 ✅
+- Task 13: 系统通知集成 ✅
+- Task 14: 数据去重逻辑 ✅
+- Task 15: 托盘菜单集成 ✅
+
+### 技术修改
+
+1. **Cargo.toml**: 添加 `tauri-plugin-notification`
+2. **plugin_config_db.rs**: 新增 `radar_schedule`/`radar_notifications` 表操作
+3. **radar_cmd.rs**: 新增定时任务命令
+4. **lib.rs**: 托盘菜单 + 定时任务初始化
+5. **RadarInbox.tsx**: 定时采集 UI 组件
+6. **api/radar.ts**: 定时采集 API
+
+### 编译修复
+
+1. 修复 `start_radar_scheduler` Send 错误：使用独立 Tokio Runtime
+2. 修复 `RadarScheduleUpdate` 类型：添加 Serialize/Deserialize derive
+3. 修复 `get_radar_schedule` 返回类型：改为 `Result<RadarScheduleRow, String>`
+
+### 构建验证
+
+| 检查项 | 结果 |
+|--------|------|
+| TypeScript | ✅ |
+| Rust 编译 | ✅ |
+| Release 构建 | ✅ |
+| Previous 目录 | ✅ |
+
+### 提交
+
+```
+bf97ae2 chore: 更新 M19.3 定时采集完成状态
+796c324 feat(M19.3): 定时采集功能
+```
+
+---
+
 ## 2026-08-19 17:30 - M19.2 UI 完成，程序正常
 
 ### 完成内容
