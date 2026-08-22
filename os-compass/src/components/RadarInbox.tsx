@@ -184,7 +184,18 @@ export function RadarInbox() {
       loadSchedule();
     };
     window.addEventListener('vault-changed', handleVaultChanged);
-    return () => window.removeEventListener('vault-changed', handleVaultChanged);
+
+    const handleRadarScanComplete = () => {
+      console.log('[RadarInbox] Radar scan completed, reloading...');
+      loadItems();
+      loadSources();
+    };
+    window.addEventListener('radar-scan-complete', handleRadarScanComplete);
+
+    return () => {
+      window.removeEventListener('vault-changed', handleVaultChanged);
+      window.removeEventListener('radar-scan-complete', handleRadarScanComplete);
+    };
   }, [loadSources, loadItems, loadSupportedDomains]);
 
   const loadSchedule = async () => {

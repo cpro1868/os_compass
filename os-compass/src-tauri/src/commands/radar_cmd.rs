@@ -613,9 +613,15 @@ async fn scheduler_loop(app: tauri::AppHandle) {
             log::error!("[radar_scheduler] Failed to update schedule run: {}", e);
         }
 
-        if new_items > 0 {
-            log::info!("[radar_scheduler] Scan completed: scanned={}, new={}, errors={}", scanned, new_items, errors);
+        log::info!("[radar_scheduler] Scan completed: scanned={}, new={}, errors={}", scanned, new_items, errors);
 
+        let _ = app.emit("radar-scan-complete", serde_json::json!({
+            "scanned": scanned,
+            "newItems": new_items,
+            "errors": errors
+        }));
+
+        if new_items > 0 {
             if let Ok(current_schedule) = PLUGIN_CONFIG_DB.get_radar_schedule() {
                 if current_schedule.notification_enabled && current_schedule.system_notification {
                     if let Err(e) = send_system_notification(&app, new_items) {
@@ -627,12 +633,6 @@ async fn scheduler_loop(app: tauri::AppHandle) {
                     let _ = app.emit("radar-new-items", new_items);
                 }
             }
-
-            let _ = app.emit("radar-scan-complete", serde_json::json!({
-                "scanned": scanned,
-                "newItems": new_items,
-                "errors": errors
-            }));
         }
     }
 }
