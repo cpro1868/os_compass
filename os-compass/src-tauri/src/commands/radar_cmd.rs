@@ -561,21 +561,27 @@ async fn scheduler_loop(app: tauri::AppHandle) {
         }
 
         let interval = calculate_interval_seconds(&schedule);
+        log::info!("[radar_scheduler] interval={} seconds, last_run={:?}", interval, schedule.last_run_at);
 
-        if let Some(next_run) = &schedule.last_run_at {
+        if let Some(last_run) = &schedule.last_run_at {
             let now = chrono::Local::now();
-            if let Ok(last) = chrono::NaiveDateTime::parse_from_str(next_run, "%Y-%m-%d %H:%M:%S") {
+            if let Ok(last) = chrono::NaiveDateTime::parse_from_str(last_run, "%Y-%m-%d %H:%M:%S") {
                 let last_dt = chrono::DateTime::<chrono::Local>::from_naive_utc_and_offset(last, *now.offset());
                 let elapsed = (now - last_dt).num_seconds() as u64;
+                log::info!("[radar_scheduler] elapsed={} seconds", elapsed);
                 if elapsed < interval {
                     let wait_time = interval - elapsed;
-                    log::debug!("[radar_scheduler] Waiting {} seconds before next scan", wait_time);
+                    log::info!("[radar_scheduler] Waiting {} seconds before next scan", wait_time);
                     tokio::time::sleep(tokio::time::Duration::from_secs(wait_time)).await;
+                } else {
+                    log::info!("[radar_scheduler] Interval elapsed, executing scan now");
                 }
             } else {
+                log::warn!("[radar_scheduler] Failed to parse last_run_at: {}", last_run);
                 tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
             }
         } else {
+            log::info!("[radar_scheduler] No last_run_at, waiting interval seconds");
             tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
         }
 
