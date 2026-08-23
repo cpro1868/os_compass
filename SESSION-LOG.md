@@ -2,6 +2,32 @@
 
 # Session Log
 
+## 2026-08-23 - M19.3 Bug 修复
+
+### 问题
+
+1. **定时采集不刷新页面**：后端在 `new_items > 0` 时才 emit 事件
+2. **useEffect 内使用 useRef**：React Hooks 规则不允许
+
+### 修复
+
+1. 后端无论是否有新数据都 emit `radar-scan-complete`
+2. 前端拆分为独立 useEffect 监听事件
+3. 移除 useRef，改用独立 useEffect
+
+### 提交
+
+```
+7c1f6ed fix(M19.3): 使用 useRef 保存最新函数引用
+75af8da fix(M19.3): 无论是否有新数据都通知前端刷新
+1e29e04 fix(M19.3): 添加调度日志以便调试
+c38e495 fix(M19.3): 修复定时采集间隔逻辑
+db8b232 fix(M19.3): 修复编译错误 + 更新文档
+c38e495 fix(M19.3): 修复定时采集间隔逻辑
+```
+
+---
+
 ## 2026-08-22 - M19.3 定时采集功能完成
 
 ### 完成内容

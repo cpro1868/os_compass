@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, getSupportedPlatformDomains, RadarSource, RadarItem, RadarSourceInput, getRadarSchedule, updateRadarSchedule, RadarSchedule, RadarScheduleUpdate } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
@@ -168,43 +168,37 @@ export function RadarInbox() {
     setPagination(prev => ({ ...prev, page: 1 }));
   }, [activeTab, searchKeyword, searchSourceIds, searchStartDate, searchEndDate]);
 
-  // 移除错误的自动加载 useEffect
-
+  // 初始化加载
   useEffect(() => {
     loadSources();
     loadItems();
     loadSupportedDomains();
     loadSchedule();
+  }, []);
 
-    const loadItemsRef = useRef(loadItems);
-    const loadSourcesRef = useRef(loadSources);
-
+  // 监听仓库切换
+  useEffect(() => {
     const handleVaultChanged = () => {
       console.log('[RadarInbox] vault changed, reloading...');
-      loadSourcesRef.current();
-      loadItemsRef.current();
+      loadSources();
+      loadItems();
       loadSupportedDomains();
       loadSchedule();
     };
     window.addEventListener('vault-changed', handleVaultChanged);
+    return () => window.removeEventListener('vault-changed', handleVaultChanged);
+  }, []);
 
+  // 监听定时采集完成
+  useEffect(() => {
     const handleRadarScanComplete = () => {
-      console.log('[RadarInbox] Radar scan completed, reloading...');
-      loadItemsRef.current();
-      loadSourcesRef.current();
+      console.log('[RadarInbox] radar scan completed, reloading...');
+      loadItems();
+      loadSources();
     };
     window.addEventListener('radar-scan-complete', handleRadarScanComplete);
-
-    useEffect(() => {
-      loadItemsRef.current = loadItems;
-      loadSourcesRef.current = loadSources;
-    });
-
-    return () => {
-      window.removeEventListener('vault-changed', handleVaultChanged);
-      window.removeEventListener('radar-scan-complete', handleRadarScanComplete);
-    };
-  }, [loadItems, loadSources, loadSupportedDomains]);
+    return () => window.removeEventListener('radar-scan-complete', handleRadarScanComplete);
+  }, []);
 
   const loadSchedule = async () => {
     try {
