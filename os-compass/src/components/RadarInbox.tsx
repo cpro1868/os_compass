@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, getSupportedPlatformDomains, RadarSource, RadarItem, RadarSourceInput, getRadarSchedule, updateRadarSchedule, RadarSchedule, RadarScheduleUpdate } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
@@ -176,10 +176,13 @@ export function RadarInbox() {
     loadSupportedDomains();
     loadSchedule();
 
+    const loadItemsRef = useRef(loadItems);
+    const loadSourcesRef = useRef(loadSources);
+
     const handleVaultChanged = () => {
       console.log('[RadarInbox] vault changed, reloading...');
-      loadSources();
-      loadItems();
+      loadSourcesRef.current();
+      loadItemsRef.current();
       loadSupportedDomains();
       loadSchedule();
     };
@@ -187,16 +190,21 @@ export function RadarInbox() {
 
     const handleRadarScanComplete = () => {
       console.log('[RadarInbox] Radar scan completed, reloading...');
-      loadItems();
-      loadSources();
+      loadItemsRef.current();
+      loadSourcesRef.current();
     };
     window.addEventListener('radar-scan-complete', handleRadarScanComplete);
+
+    useEffect(() => {
+      loadItemsRef.current = loadItems;
+      loadSourcesRef.current = loadSources;
+    });
 
     return () => {
       window.removeEventListener('vault-changed', handleVaultChanged);
       window.removeEventListener('radar-scan-complete', handleRadarScanComplete);
     };
-  }, [loadSources, loadItems, loadSupportedDomains]);
+  }, [loadItems, loadSources, loadSupportedDomains]);
 
   const loadSchedule = async () => {
     try {
