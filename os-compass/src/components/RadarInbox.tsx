@@ -191,13 +191,16 @@ export function RadarInbox() {
 
   // 监听定时采集完成
   useEffect(() => {
-    const handleRadarScanComplete = () => {
-      console.log('[RadarInbox] radar scan completed, reloading...');
+    const handleRadarScanComplete = (event: Event) => {
+      console.log('[RadarInbox] radar scan completed event received:', event.type);
       loadItems();
       loadSources();
     };
     window.addEventListener('radar-scan-complete', handleRadarScanComplete);
-    return () => window.removeEventListener('radar-scan-complete', handleRadarScanComplete);
+    console.log('[RadarInbox] registered radar-scan-complete listener');
+    return () => {
+      window.removeEventListener('radar-scan-complete', handleRadarScanComplete);
+    };
   }, []);
 
   const loadSchedule = async () => {

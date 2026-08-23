@@ -623,15 +623,19 @@ async fn scheduler_loop(app: tauri::AppHandle) {
 
         if new_items > 0 {
             if let Ok(current_schedule) = PLUGIN_CONFIG_DB.get_radar_schedule() {
+                log::info!("[radar_scheduler] notification check: enabled={}, system={}", current_schedule.notification_enabled, current_schedule.system_notification);
                 if current_schedule.notification_enabled && current_schedule.system_notification {
-                    if let Err(e) = send_system_notification(&app, new_items) {
-                        log::error!("[radar_scheduler] Failed to send notification: {}", e);
+                    match send_system_notification(&app, new_items) {
+                        Ok(()) => log::info!("[radar_scheduler] System notification sent successfully"),
+                        Err(e) => log::error!("[radar_scheduler] Failed to send notification: {}", e),
                     }
                 }
 
                 if current_schedule.notification_enabled && current_schedule.badge_notification {
                     let _ = app.emit("radar-new-items", new_items);
                 }
+            } else {
+                log::error!("[radar_scheduler] Failed to get schedule for notification check");
             }
         }
     }
