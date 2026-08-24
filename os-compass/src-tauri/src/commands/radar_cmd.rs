@@ -615,11 +615,15 @@ async fn scheduler_loop(app: tauri::AppHandle) {
 
         log::info!("[radar_scheduler] Scan completed: scanned={}, new={}, errors={}", scanned, new_items, errors);
 
-        let _ = app.emit("radar-scan-complete", serde_json::json!({
+        log::info!("[radar_scheduler] Emitting radar-scan-complete event...");
+        match app.emit("radar-scan-complete", serde_json::json!({
             "scanned": scanned,
             "newItems": new_items,
             "errors": errors
-        }));
+        })) {
+            Ok(()) => log::info!("[radar_scheduler] Event emitted successfully"),
+            Err(e) => log::error!("[radar_scheduler] Failed to emit event: {}", e),
+        }
 
         // 无论是否有新数据，都尝试发送通知
         if let Ok(current_schedule) = PLUGIN_CONFIG_DB.get_radar_schedule() {
