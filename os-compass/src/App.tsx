@@ -110,13 +110,20 @@ function App() {
   // 全局监听定时采集完成事件，显示 Toast 通知
   useEffect(() => {
     const handler = (e: Event) => {
+      console.log('[App] radar-scan-complete event received');
       const detail = (e as CustomEvent).detail;
+      console.log('[App] event detail:', detail);
       if (detail?.newItems > 0) {
         showToast(`📡 发现 ${detail.newItems} 条新情报`, 'info');
+      } else {
+        showToast(`📡 情报采集完成，扫描了 ${detail?.scanned || 0} 条`, 'info');
       }
     };
     window.addEventListener("radar-scan-complete", handler);
-    return () => window.removeEventListener("radar-scan-complete", handler);
+    console.log('[App] registered radar-scan-complete listener');
+    return () => {
+      window.removeEventListener("radar-scan-complete", handler);
+    };
   }, []);
 
   // 监听导航事件

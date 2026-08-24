@@ -192,9 +192,10 @@ export function RadarInbox() {
   // 监听定时采集完成
   useEffect(() => {
     const handleRadarScanComplete = () => {
-      console.log('[RadarInbox] radar scan completed event received');
+      console.log('[RadarInbox] radar scan completed event received, reloading...');
       loadItems();
       loadSources();
+      console.log('[RadarInbox] loadItems and loadSources called');
     };
     window.addEventListener('radar-scan-complete', handleRadarScanComplete);
     console.log('[RadarInbox] registered radar-scan-complete listener');
