@@ -4,6 +4,7 @@ import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource,
 import { useToastStore } from '../stores/toastStore';
 import { translate } from '../api';
 import { markAsAd, AdMarkResult } from '../api/adPatterns';
+import { listen } from '@tauri-apps/api/event';
 
 // 获取一周前的日期（格式：YYYY-MM-DD）
 const getOneWeekAgo = (): string => {
@@ -191,16 +192,26 @@ export function RadarInbox() {
 
   // 监听定时采集完成
   useEffect(() => {
-    const handleRadarScanComplete = () => {
-      console.log('[RadarInbox] radar scan completed event received, reloading...');
-      loadItems();
-      loadSources();
-      console.log('[RadarInbox] loadItems and loadSources called');
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      console.log('[RadarInbox] Setting up radar-scan-complete listener...');
+      unlisten = await listen<{scanned: number, newItems: number, errors: number}>('radar-scan-complete', () => {
+        console.log('[RadarInbox] radar scan completed event received, reloading...');
+        loadItems();
+        loadSources();
+        console.log('[RadarInbox] loadItems and loadSources called');
+      });
+      console.log('[RadarInbox] radar-scan-complete listener registered');
     };
-    window.addEventListener('radar-scan-complete', handleRadarScanComplete);
-    console.log('[RadarInbox] registered radar-scan-complete listener');
+
+    setupListener();
+
     return () => {
-      window.removeEventListener('radar-scan-complete', handleRadarScanComplete);
+      if (unlisten) {
+        unlisten();
+        console.log('[RadarInbox] radar-scan-complete listener unregistered');
+      }
     };
   }, [loadItems, loadSources]);
 
