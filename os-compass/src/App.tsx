@@ -24,6 +24,7 @@ import { NavigationDialog } from "./components/NavigationDialog";
 import { InitWizard } from "./components/InitWizard";
 import { HomePage } from "./components/HomePage";
 import { getCurrentVault } from "./api";
+import { listen } from "@tauri-apps/api/event";
 
 type ViewMode = "home" | "kanban" | "list" | "archive" | "category" | "tag" | "stats" | "radar" | "search" | "organization";
 
@@ -109,20 +110,28 @@ function App() {
 
   // 全局监听定时采集完成事件，显示 Toast 通知
   useEffect(() => {
-    const handler = (e: Event) => {
-      console.log('[App] radar-scan-complete event received');
-      const detail = (e as CustomEvent).detail;
-      console.log('[App] event detail:', detail);
-      if (detail?.newItems > 0) {
-        showToast(`📡 发现 ${detail.newItems} 条新情报`, 'info');
-      } else {
-        showToast(`📡 情报采集完成，扫描了 ${detail?.scanned || 0} 条`, 'info');
-      }
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      console.log('[App] Setting up radar-scan-complete listener...');
+      unlisten = await listen<{scanned: number, newItems: number, errors: number}>('radar-scan-complete', (event) => {
+        console.log('[App] radar-scan-complete event received:', event.payload);
+        if (event.payload.newItems > 0) {
+          showToast(`📡 发现 ${event.payload.newItems} 条新情报`, 'info');
+        } else {
+          showToast(`📡 情报采集完成，扫描了 ${event.payload.scanned} 条`, 'info');
+        }
+      });
+      console.log('[App] radar-scan-complete listener registered');
     };
-    window.addEventListener("radar-scan-complete", handler);
-    console.log('[App] registered radar-scan-complete listener');
+
+    setupListener();
+
     return () => {
-      window.removeEventListener("radar-scan-complete", handler);
+      if (unlisten) {
+        unlisten();
+        console.log('[App] radar-scan-complete listener unregistered');
+      }
     };
   }, [showToast]);
 
