@@ -654,10 +654,22 @@ async fn scheduler_loop(app: tauri::AppHandle) {
 fn send_system_notification(app: &tauri::AppHandle, title: &str, body: &str) -> Result<(), String> {
     use tauri_plugin_notification::NotificationExt;
 
-    app.notification()
+    log::info!("[notification] Preparing to send notification: title={}, body={}", title, body);
+
+    let result = app.notification()
         .builder()
         .title(title)
         .body(body)
-        .show()
-        .map_err(|e| e.to_string())
+        .show();
+
+    match result {
+        Ok(()) => {
+            log::info!("[notification] Notification sent successfully");
+            Ok(())
+        }
+        Err(e) => {
+            log::error!("[notification] Failed to send notification: {}", e);
+            Err(e.to_string())
+        }
+    }
 }
