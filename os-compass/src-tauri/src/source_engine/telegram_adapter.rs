@@ -165,7 +165,29 @@ impl TelegramAdapter {
     async fn http_get(&self, url: &str, proxy: Option<&str>) -> Result<String, SourceError> {
         let proxy_info = proxy.unwrap_or("none");
         log::debug!("[telegram] http_get: url={}, proxy={}", url, proxy_info);
-        
+
+        const MAX_RETRIES: u32 = 3;
+        const RETRY_DELAY_MS: u64 = 2000;
+
+        for attempt in 1..=MAX_RETRIES {
+            match self.http_get_once(url, proxy).await {
+                Ok(result) => return Ok(result),
+                Err(e) if attempt < MAX_RETRIES => {
+                    log::warn!("[telegram] Request failed (attempt {}/{}): {}, retrying in {}ms...",
+                        attempt, MAX_RETRIES, e, RETRY_DELAY_MS);
+                    tokio::time::sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
+                }
+                Err(e) => {
+                    log::error!("[telegram] Request failed after {} attempts: {}", MAX_RETRIES, e);
+                    return Err(e);
+                }
+            }
+        }
+
+        unreachable!()
+    }
+
+    async fn http_get_once(&self, url: &str, proxy: Option<&str>) -> Result<String, SourceError> {
         let mut builder = reqwest::Client::builder()
             .timeout(Duration::from_secs(60))
             .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
@@ -194,7 +216,7 @@ impl TelegramAdapter {
 
         let status = response.status();
         log::debug!("[telegram] Response status: {}", status);
-        
+
         if status.as_u16() == 429 {
             return Err(SourceError::NetworkError("Rate limited".to_string()));
         }
