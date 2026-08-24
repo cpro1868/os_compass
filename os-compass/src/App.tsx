@@ -19,7 +19,7 @@ import { ErrorState } from "./components/ErrorState";
 import { RadarInbox } from "./components/RadarInbox";
 import { SearchView } from "./components/SearchView";
 import { OrganizationManager } from "./components/OrganizationManager";
-import { ToastContainer } from "./stores/toastStore";
+import { ToastContainer, useToastStore } from "./stores/toastStore";
 import { NavigationDialog } from "./components/NavigationDialog";
 import { InitWizard } from "./components/InitWizard";
 import { HomePage } from "./components/HomePage";
@@ -30,6 +30,7 @@ type ViewMode = "home" | "kanban" | "list" | "archive" | "category" | "tag" | "s
 function App() {
   const { t } = useTranslation();
   const { projects, loading, error, fetchProjects, fetchCategories, fetchTags, updateStatus } = useAppStore();
+  const { showToast } = useToastStore();
   const [showImport, setShowImport] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showVault, setShowVault] = useState(false);
@@ -104,6 +105,18 @@ function App() {
     const handler = () => setShowImport(true);
     window.addEventListener("openImport", handler);
     return () => window.removeEventListener("openImport", handler);
+  }, []);
+
+  // 全局监听定时采集完成事件，显示 Toast 通知
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.newItems > 0) {
+        showToast(`📡 发现 ${detail.newItems} 条新情报`, 'info');
+      }
+    };
+    window.addEventListener("radar-scan-complete", handler);
+    return () => window.removeEventListener("radar-scan-complete", handler);
   }, []);
 
   // 监听导航事件

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, getSupportedPlatformDomains, RadarSource, RadarItem, RadarSourceInput, getRadarSchedule, updateRadarSchedule, RadarSchedule, RadarScheduleUpdate } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
@@ -191,17 +191,21 @@ export function RadarInbox() {
 
   // 监听定时采集完成
   useEffect(() => {
-    const handleRadarScanComplete = (event: Event) => {
-      console.log('[RadarInbox] radar scan completed event received:', event.type);
-      loadItems();
-      loadSources();
+    const loadItemsRef = useRef(loadItems);
+    const loadSourcesRef = useRef(loadSources);
+
+    const handleRadarScanComplete = () => {
+      console.log('[RadarInbox] radar scan completed event received');
+      loadItemsRef.current();
+      loadSourcesRef.current();
     };
+
     window.addEventListener('radar-scan-complete', handleRadarScanComplete);
     console.log('[RadarInbox] registered radar-scan-complete listener');
     return () => {
       window.removeEventListener('radar-scan-complete', handleRadarScanComplete);
     };
-  }, []);
+  }, [loadItems, loadSources]);
 
   const loadSchedule = async () => {
     try {
