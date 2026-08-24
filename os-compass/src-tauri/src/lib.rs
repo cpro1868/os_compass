@@ -74,6 +74,19 @@ fn find_git_root(path: &std::path::Path) -> Option<std::path::PathBuf> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    std::panic::set_hook(Box::new(|panic_info| {
+        let msg = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+            s.to_string()
+        } else if let Some(s) = panic_info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "Unknown panic".to_string()
+        };
+        let location = panic_info.location().map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column())).unwrap_or_else(|| "unknown".to_string());
+        eprintln!("[PANIC] {} at {}", msg, location);
+        log::error!("[PANIC] {} at {}", msg, location);
+    }));
+
     log::info!("OS-Compass starting...");
     
     tauri::Builder::default()
