@@ -124,7 +124,7 @@ function App() {
     return () => {
       window.removeEventListener("radar-scan-complete", handler);
     };
-  }, []);
+  }, [showToast]);
 
   // 监听导航事件
   useEffect(() => {
