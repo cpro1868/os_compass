@@ -621,33 +621,39 @@ async fn scheduler_loop(app: tauri::AppHandle) {
             "errors": errors
         }));
 
-        if new_items > 0 {
-            if let Ok(current_schedule) = PLUGIN_CONFIG_DB.get_radar_schedule() {
+        // 无论是否有新数据，都尝试发送通知
+        if let Ok(current_schedule) = PLUGIN_CONFIG_DB.get_radar_schedule() {
+            if current_schedule.notification_enabled {
                 log::info!("[radar_scheduler] notification check: enabled={}, system={}", current_schedule.notification_enabled, current_schedule.system_notification);
-                if current_schedule.notification_enabled && current_schedule.system_notification {
-                    match send_system_notification(&app, new_items) {
+                if current_schedule.system_notification {
+                    let (title, body) = if new_items > 0 {
+                        ("📡 情报更新", format!("发现 {} 条新情报", new_items))
+                    } else {
+                        ("📡 情报采集完成", format!("扫描了 {} 条情报，无新增", scanned))
+                    };
+                    match send_system_notification(&app, title, &body) {
                         Ok(()) => log::info!("[radar_scheduler] System notification sent successfully"),
                         Err(e) => log::error!("[radar_scheduler] Failed to send notification: {}", e),
                     }
                 }
 
-                if current_schedule.notification_enabled && current_schedule.badge_notification {
+                if current_schedule.badge_notification {
                     let _ = app.emit("radar-new-items", new_items);
                 }
-            } else {
-                log::error!("[radar_scheduler] Failed to get schedule for notification check");
             }
+        } else {
+            log::error!("[radar_scheduler] Failed to get schedule for notification check");
         }
     }
 }
 
-fn send_system_notification(app: &tauri::AppHandle, new_items: i64) -> Result<(), String> {
+fn send_system_notification(app: &tauri::AppHandle, title: &str, body: &str) -> Result<(), String> {
     use tauri_plugin_notification::NotificationExt;
 
     app.notification()
         .builder()
-        .title("📡 情报更新")
-        .body(&format!("发现 {} 条新情报", new_items))
+        .title(title)
+        .body(body)
         .show()
         .map_err(|e| e.to_string())
 }
