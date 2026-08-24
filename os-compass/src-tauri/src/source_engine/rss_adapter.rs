@@ -101,10 +101,37 @@ impl SourceAdapter for RssAdapter {
 
     async fn fetch(&mut self, url: &str, proxy: Option<&str>, _time_range: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
         log::debug!("[rss] Fetching: {}", url);
+
+        const MAX_RETRIES: u32 = 3;
+        const RETRY_DELAY_MS: u64 = 2000;
+
+        for attempt in 1..=MAX_RETRIES {
+            match self.try_fetch(url, proxy).await {
+                Ok(results) => return Ok(results),
+                Err(e) if attempt < MAX_RETRIES => {
+                    log::warn!("[rss] Request failed (attempt {}/{}): {}, retrying in {}ms...",
+                        attempt, MAX_RETRIES, e, RETRY_DELAY_MS);
+                    tokio::time::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS)).await;
+                }
+                Err(e) => {
+                    log::error!("[rss] Request failed after {} attempts: {}", MAX_RETRIES, e);
+                    return Err(e);
+                }
+            }
+        }
+
+        unreachable!()
+    }
+}
+
+impl RssAdapter {
+    async fn try_fetch(&self, url: &str, proxy: Option<&str>) -> Result<Vec<RawContent>, SourceError> {
         let client = build_client(proxy)?;
-        let response = client.get(url).send().await?;
+        let response = client.get(url).send().await
+            .map_err(|e| SourceError::NetworkError(e.to_string()))?;
         log::debug!("[rss] Response status: {}", response.status());
-        let xml = response.text().await?;
+        let xml = response.text().await
+            .map_err(|e| SourceError::NetworkError(e.to_string()))?;
         log::debug!("[rss] XML length: {} bytes", xml.len());
 
         let results = extract_rss_items(&xml);
