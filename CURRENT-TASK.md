@@ -43,7 +43,7 @@
 | M18 智能意图搜索 | ✅ 完成 | off_topic 已延后 |
 | M18-2 向量搜索改造 | ✅ 完成 | sqlite-vss → sqlite-vec |
 | **M19 平台扩展** | ⚠️ 部分完成 | 18h | M19.1/M19.2/M19.3 代码已完成，待用户验证 |
-| **M20 批量向量化** | 📋 待开发 | 2h | 代码部分实现，待完成 |
+| **M20 批量向量化 + 初始化分类** | 📋 待开发 | 5h | Task 1-3（批量向量化）+ 初始化预置分类 |
 | **M21 向量化修复** | 📋 待开发 | 2h | 代码部分实现，待完成 |
 | **M22 意图搜索历史** | 📋 待开发 | 5h | 部分代码实现，前端待完成 |
 | **M23 安装打包发布** | 📋 待开发 | 11h | 仅需求文档，代码未开始 |
@@ -54,7 +54,7 @@
 
 | 需求 | 说明 | 优先级 |
 |------|------|--------|
-| 初始化分类 | 首次初始化时提供默认最佳实践分类模板 | P1 |
+| （暂无，初始化分类已移至 M20） | - | - |
 
 ---
 
@@ -143,6 +143,94 @@
 | `docs/M19其他常用网站采集扩展.md` | 需求完整说明 |
 | `docs/M19平台扩展详细分析.md` | API + 评分算法 |
 | `docs/数据库设计说明书.md` §11-13 | 表结构 |
+
+---
+
+## M20: 批量向量化 + 初始化预置分类
+
+### M20.1 批量向量化功能
+
+**功能概述**：在看板页添加批量向量化按钮，快速向量化当前仓库所有项目。
+
+| Task | 内容 | 工时 | 状态 |
+|------|------|------|------|
+| Task 1 | 看板页向量化按钮（KanbanView.tsx） | 0.5h | 📋 待开发 |
+| Task 2 | 向量扩展路径设置（SettingsDialog.tsx） | 0.5h | 📋 待开发 |
+| Task 3 | 后端批量向量化 API（embedding.rs） | 1h | 📋 待开发 |
+
+### M20.2 初始化预置分类（M18 遗漏需求）
+
+**功能概述**：首次初始化时提供默认最佳实践分类模板（技术/学术/商业/创意四级分类树）。
+
+**来源**：
+- `requirements.md` MVP-002：创建 3 个预置分类并写入 explain 字段
+- `概要设计说明书.md` §8.8：用户创建新仓库时可选择导入预置分类体系
+- `详细设计说明书.md` 7.8：四级分类树设计
+
+**预置分类结构**（四级）：
+```
+技术 (technology)
+├── 前端开发 (technology/frontend)
+│   ├── Web框架 (technology/frontend/framework)
+│   │   ├── React生态 (technology/frontend/framework/react)
+│   │   └── Vue生态 (technology/frontend/framework/vue)
+│   └── UI组件库 (technology/frontend/ui)
+├── 后端开发 (technology/backend)
+│   ├── Web框架 (technology/backend/framework)
+│   └── 数据库 (technology/backend/database)
+├── 移动开发 (technology/mobile)
+├── DevOps (technology/devops)
+└── AI/ML (technology/ai)
+
+学术 (academic)
+├── 基础科学 (academic/science)
+├── 工程学科 (academic/engineering)
+├── 医学 (academic/medicine)
+└── 社会科学 (academic/social)
+
+商业 (business)
+├── 企业管理 (business/enterprise)
+├── 金融科技 (business/fintech)
+├── 市场营销 (business/marketing)
+└── 创业 (business/startup)
+
+创意 (creative)
+├── 内容创作 (creative/content)
+├── 音视频 (creative/av)
+├── 设计 (creative/design)
+└── 游戏 (creative/game)
+```
+
+**每个分类必须包含 explain 字段**（供 AI 分类时作为判定边界）。
+
+**实现要点**：
+
+| Task | 内容 | 工时 | 状态 |
+|------|------|------|------|
+| Task 1 | `init_schema.sql` 添加预置分类 INSERT 语句 | 1h | 📋 待开发 |
+| Task 2 | `db.rs` 新增 `ensure_preset_categories()` 函数 | 1h | 📋 待开发 |
+| Task 3 | 仓库创建时调用分类预置（可选导入） | 1h | 📋 待开发 |
+
+**存储位置**：仓库库 `os_compass.db` 的 `categories` 表
+
+**验收标准**：
+- [ ] 新建仓库时自动创建预置分类
+- [ ] 每个预置分类有 explain 字段（非空）
+- [ ] AI 导入项目时能根据 explain 做分类判断
+- [ ] 预置分类树为四级结构（parent_id 层级关系正确）
+
+**涉及文件**：
+- `scripts/init_schema.sql` - 添加预置分类 INSERT
+- `src-tauri/src/db.rs` - 新增 `ensure_preset_categories()` 方法
+- `src-tauri/src/lib.rs` - 仓库创建时调用分类预置
+
+### M20 工时汇总
+
+| 模块 | 任务 | 工时 |
+|------|------|------|
+| 批量向量化 | Task 1-3 | 2h |
+| 初始化预置分类 | Task 1-3 | 3h |
+| **总计** | 6 Tasks | **5h** |
 
 ---
 
