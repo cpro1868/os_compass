@@ -236,4 +236,120 @@ mod tests {
 
         assert_eq!(status, "DIVING");
     }
+
+    fn create_test_db_with_categories() -> Connection {
+        let dir = tempdir().unwrap();
+        let db_path: PathBuf = dir.path().join("test_categories.db");
+        let conn = Connection::open(&db_path).unwrap();
+
+        conn.execute_batch(
+            r#"
+            CREATE TABLE IF NOT EXISTS categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                parent_id INTEGER REFERENCES categories(id),
+                sort_order INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now', 'localtime')),
+                updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+            );
+            "#,
+        )
+        .unwrap();
+
+        conn
+    }
+
+    fn count_categories(conn: &Connection) -> i64 {
+        conn.query_row("SELECT COUNT(*) FROM categories", [], |row| row.get(0)).unwrap()
+    }
+
+    #[test]
+    fn test_import_preset_categories_creates_hierarchy() {
+        let conn = create_test_db_with_categories();
+
+        let txt = "技术/前端开发/React生态\n技术/后端开发/数据库\n";
+
+        let created = crate::db::import_preset_categories_into(&conn, txt).unwrap();
+
+        // 6 个分类：技术, 前端开发, React生态, 后端开发, 数据库
+        assert_eq!(created, 5);
+        assert_eq!(count_categories(&conn), 5);
+
+        // 验证层级：React生态 的父级是 前端开发，前端开发 的父级是 技术
+        let react_id: i64 = conn.query_row(
+            "SELECT id FROM categories WHERE name = 'React生态'",
+            [],
+            |row| row.get(0),
+        ).unwrap();
+        let react_parent: i64 = conn.query_row(
+            "SELECT parent_id FROM categories WHERE id = ?",
+            rusqlite::params![react_id],
+            |row| row.get(0),
+        ).unwrap();
+        let frontend_name: String = conn.query_row(
+            "SELECT name FROM categories WHERE id = ?",
+            rusqlite::params![react_parent],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(frontend_name, "前端开发");
+    }
+
+    #[test]
+    fn test_import_preset_categories_is_idempotent() {
+        let conn = create_test_db_with_categories();
+
+        let txt = "技术/前端开发/React生态\n";
+
+        let first = crate::db::import_preset_categories_into(&conn, txt).unwrap();
+        assert_eq!(first, 3);
+
+        // 第二次导入不应重复创建
+        let second = crate::db::import_preset_categories_into(&conn, txt).unwrap();
+        assert_eq!(second, 0);
+        assert_eq!(count_categories(&conn), 3);
+    }
+
+    #[test]
+    fn test_import_preset_categories_does_not_conflict_with_user_categories() {
+        let conn = create_test_db_with_categories();
+
+        // 模拟用户已有自定义分类（占用自增 id 1、2）
+        conn.execute(
+            "INSERT INTO categories (name, parent_id) VALUES ('用户自定义A', NULL)",
+            [],
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO categories (name, parent_id) VALUES ('用户自定义B', NULL)",
+            [],
+        ).unwrap();
+        let before = count_categories(&conn);
+        assert_eq!(before, 2);
+
+        let txt = "技术/前端开发/React生态\n";
+
+        let created = crate::db::import_preset_categories_into(&conn, txt).unwrap();
+        assert_eq!(created, 3);
+
+        // 总数 = 2 用户 + 3 预置 = 5
+        assert_eq!(count_categories(&conn), 5);
+
+        // 用户分类应完好保留
+        let user_a: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM categories WHERE name = '用户自定义A'",
+            [],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(user_a, 1);
+    }
+
+    #[test]
+    fn test_import_preset_categories_skips_comments_and_empty_lines() {
+        let conn = create_test_db_with_categories();
+
+        let txt = "-- 注释\n# 另一种注释\n\n技术/前端开发\n   \n";
+
+        let created = crate::db::import_preset_categories_into(&conn, txt).unwrap();
+        assert_eq!(created, 2);
+        assert_eq!(count_categories(&conn), 2);
+    }
 }

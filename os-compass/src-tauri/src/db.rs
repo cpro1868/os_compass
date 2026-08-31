@@ -317,3 +317,148 @@ pub fn open_db_at_path(path: &std::path::Path) -> Result<Connection, String> {
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;").map_err(|e| e.to_string())?;
     Ok(conn)
 }
+
+/// 加载预置分类清单（exe 同级 scripts/preset_categories.txt）
+/// 找不到则返回 None，由调用方使用内嵌兜底清单
+fn load_preset_categories_script() -> Option<String> {
+    let exe = std::env::current_exe().ok()?;
+    let exe_dir = exe.parent()?;
+    let script_path = exe_dir.join("scripts").join("preset_categories.txt");
+    if !script_path.exists() {
+        return None;
+    }
+    std::fs::read_to_string(script_path).ok()
+}
+
+/// 内嵌兜底预置分类清单元数据（与 scripts/preset_categories.txt 内容一致）
+/// 仅在外部脚本文件丢失时使用，保证功能可用
+const PRESET_CATEGORIES_TXT: &str = r#"技术/前端开发/Web框架/React生态
+技术/前端开发/Web框架/Vue生态
+技术/前端开发/Web框架/Angular
+技术/前端开发/Web框架/Svelte
+技术/前端开发/UI组件库
+技术/前端开发/小程序
+技术/前端开发/桌面应用
+技术/后端开发/Web框架
+技术/后端开发/数据库
+技术/后端开发/微服务
+技术/后端开发/缓存与消息队列
+技术/移动开发/Android
+技术/移动开发/iOS
+技术/移动开发/跨平台
+技术/DevOps/容器与编排
+技术/DevOps/CI与CD
+技术/DevOps/监控与可观测性
+技术/DevOps/基础设施即代码
+技术/AI与机器学习/大模型与LLM
+技术/AI与机器学习/机器学习框架
+技术/AI与机器学习/计算机视觉
+技术/AI与机器学习/自然语言处理
+技术/AI与机器学习/数据工程
+技术/数据工程/大数据框架
+技术/数据工程/数据仓库
+技术/数据工程/ETL与数据治理
+学术/基础科学/数学
+学术/基础科学/物理学
+学术/基础科学/化学
+学术/基础科学/生物学
+学术/工程学科/土木工程
+学术/工程学科/机械工程
+学术/工程学科/电子电气
+学术/医学与生命科学/药物研发
+学术/医学与生命科学/基因技术
+学术/医学与生命科学/医学影像
+学术/社会科学/经济学
+学术/社会科学/心理学
+学术/社会科学/社会学
+商业/企业管理/ERP与企业管理
+商业/企业管理/CRM与客户管理
+商业/企业管理/项目管理
+商业/金融科技/支付系统
+商业/金融科技/风险管理
+商业/金融科技/区块链与加密货币
+商业/市场营销/广告投放
+商业/市场营销/增长与裂变
+商业/创业/创业工具
+商业/创业/商业智能
+创意/内容创作/写作工具
+创意/内容创作/博客与CMS
+创意/内容创作/图文编辑
+创意/音视频/视频剪辑
+创意/音视频/特效动画
+创意/音视频/流媒体
+创意/设计/UI与UX设计
+创意/设计/3D建模
+创意/设计/平面设计
+创意/游戏/游戏引擎
+创意/游戏/游戏开发
+创意/游戏/独立游戏"#;
+
+/// 导入预置分类（幂等）
+///
+/// 逻辑：
+/// 1. 读取预置分类清单（外部脚本优先，缺失则用内嵌兜底）
+/// 2. 按 `/` 拆分为路径，逐级处理：父分类不存在则先创建（自增 id），再建子分类
+/// 3. 按 name 判断已存在（同路径同层级下唯一），存在则跳过
+/// 4. 完全不使用写死 id，不与用户已有分类冲突
+///
+/// 返回本次实际新增的分类数量。仅当用户在安装/初始化时选择"导入预置分类"才调用。
+pub fn import_preset_categories() -> Result<i64, String> {
+    let txt = load_preset_categories_script().unwrap_or_else(|| PRESET_CATEGORIES_TXT.to_string());
+
+    let db_guard = DATABASE.lock().unwrap();
+    let db = db_guard.as_ref().ok_or("Database not initialized")?;
+    let conn = db.get_connection();
+
+    import_preset_categories_into(&conn, &txt)
+}
+
+/// 将预置分类清单导入到指定连接（幂等、逐级创建、动态 id）
+pub fn import_preset_categories_into(conn: &rusqlite::Connection, txt: &str) -> Result<i64, String> {
+    let mut created: i64 = 0;
+
+    for line in txt.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with("--") || line.starts_with('#') {
+            continue; // 跳过空行与注释
+        }
+        let segments: Vec<&str> = line.split('/').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+        if segments.is_empty() {
+            continue;
+        }
+
+        let mut parent_id: Option<i64> = None;
+        for seg in segments {
+            let id: Option<i64> = if let Some(pid) = parent_id {
+                conn.query_row(
+                    "SELECT id FROM categories WHERE name = ?1 AND parent_id IS ?2",
+                    rusqlite::params![seg, pid],
+                    |row| row.get(0),
+                ).ok()
+            } else {
+                conn.query_row(
+                    "SELECT id FROM categories WHERE name = ?1 AND parent_id IS NULL",
+                    rusqlite::params![seg],
+                    |row| row.get(0),
+                ).ok()
+            };
+
+            match id {
+                Some(cid) => {
+                    parent_id = Some(cid);
+                }
+                None => {
+                    conn.execute(
+                        "INSERT INTO categories (name, parent_id, sort_order) VALUES (?1, ?2, 0)",
+                        rusqlite::params![seg, parent_id],
+                    ).map_err(|e| format!("Failed to insert category '{}': {}", seg, e))?;
+                    let cid = conn.last_insert_rowid();
+                    parent_id = Some(cid);
+                    created += 1;
+                }
+            }
+        }
+    }
+
+    Ok(created)
+}

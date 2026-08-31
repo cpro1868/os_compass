@@ -27,6 +27,8 @@ export function InitWizard({ onComplete, isManual = false }: InitWizardProps) {
   const [vaultPath, setVaultPath] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  // 是否导入预置分类
+  const [importPresetCategories, setImportPresetCategories] = useState(true);
 
   // 导入表单
   const [backupPath, setBackupPath] = useState("");
@@ -75,6 +77,14 @@ export function InitWizard({ onComplete, isManual = false }: InitWizardProps) {
 
     try {
       await createVault(vaultName, vaultPath);
+      // 用户选择导入预置分类时，执行导入（幂等）
+      if (importPresetCategories) {
+        try {
+          await invoke<number>("import_preset_categories");
+        } catch (e) {
+          console.error("Failed to import preset categories:", e);
+        }
+      }
       setStep("init");
       await simulateInit();
     } catch (e) {
@@ -298,6 +308,15 @@ export function InitWizard({ onComplete, isManual = false }: InitWizardProps) {
                     </button>
                   </div>
                 </div>
+                <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={importPresetCategories}
+                    onChange={(e) => setImportPresetCategories(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-600 bg-slate-700 accent-emerald-500"
+                  />
+                  {t("initWizard.importPresetCategories")}
+                </label>
                 {createError && (
                   <p className="text-red-400 text-sm">{createError}</p>
                 )}

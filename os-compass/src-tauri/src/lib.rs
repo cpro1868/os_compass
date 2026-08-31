@@ -62,6 +62,11 @@ fn get_vault_dir() -> String {
         .unwrap_or_default()
 }
 
+#[command]
+fn import_preset_categories() -> Result<i64, String> {
+    db::import_preset_categories()
+}
+
 fn find_git_root(path: &std::path::Path) -> Option<std::path::PathBuf> {
     let mut current = path;
     loop {
@@ -373,6 +378,32 @@ pub fn run() {
                             }
                         }
                     }
+
+                    // 确保 scripts/preset_categories.txt 存在于 exe 同级目录
+                    let preset_target = scripts_dir.join("preset_categories.txt");
+                    if !preset_target.exists() {
+                        std::fs::create_dir_all(&scripts_dir).ok();
+                        let mut preset_copied = false;
+                        if let Ok(resource_dir) = app.path().resource_dir() {
+                            let res_preset = resource_dir.join("preset_categories.txt");
+                            if res_preset.exists() {
+                                if std::fs::copy(&res_preset, &preset_target).is_ok() {
+                                    preset_copied = true;
+                                    log::info!("Copied preset_categories.txt from resource dir");
+                                }
+                            }
+                        }
+                        if !preset_copied {
+                            if let Some(proj_dir) = PROJECT_DIR.lock().unwrap().as_ref() {
+                                let dev_preset = proj_dir.join("scripts").join("preset_categories.txt");
+                                if dev_preset.exists() {
+                                    if std::fs::copy(&dev_preset, &preset_target).is_ok() {
+                                        log::info!("Copied preset_categories.txt from project dir");
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -616,6 +647,7 @@ pub fn run() {
             get_app_data_dir,
             get_radar_data_dir,
             get_vault_dir,
+            import_preset_categories,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
