@@ -962,6 +962,7 @@
     "browse": "Browse",
     "create": "Create",
     "createAndContinue": "Create & Continue",
+    "importPresetCategories": "Import preset category system",
     "selectBackup": "Select Backup Directory",
     "targetLocation": "Import Target Location",
     "startImport": "Start Import",

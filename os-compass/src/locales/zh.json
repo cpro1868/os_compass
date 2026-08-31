@@ -966,6 +966,7 @@
     "browse": "浏览",
     "create": "创建",
     "createAndContinue": "创建并继续",
+    "importPresetCategories": "导入预置分类体系",
     "selectBackup": "选择备份目录",
     "targetLocation": "导入目标位置",
     "startImport": "开始导入",
