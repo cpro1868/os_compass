@@ -71,6 +71,7 @@ pub struct Category {
     pub sort_order: i32,
     pub parent_id: Option<i64>,
     pub is_system: bool,
+    pub project_count: i64,
     pub created_at: String,
     pub updated_at: String,
 }

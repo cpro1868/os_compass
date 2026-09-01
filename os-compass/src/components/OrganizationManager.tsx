@@ -247,14 +247,14 @@ export function OrganizationManager() {
               >
                 <i className="fa-solid fa-trash text-xs"></i>
               </button>
+              <button
+                onClick={() => openNewCategory(cat.id)}
+                className="p-1 text-gray-400 hover:text-green-500"
+              >
+                <i className="fa-solid fa-plus text-xs"></i>
+              </button>
             </>
           )}
-          <button
-            onClick={() => openNewCategory(cat.id)}
-            className="p-1 text-gray-400 hover:text-green-500"
-          >
-            <i className="fa-solid fa-plus text-xs"></i>
-          </button>
         </div>
       </div>
       {expandedIds.has(cat.id) && cat.children && (

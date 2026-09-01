@@ -248,7 +248,11 @@ pub fn get_categories() -> Result<Vec<Category>, String> {
     let db = db.as_ref().ok_or("Database not initialized")?;
     let conn = db.get_connection();
     let mut stmt = conn
-        .prepare("SELECT id, name, parent_id, sort_order, created_at, updated_at FROM categories ORDER BY sort_order, name")
+        .prepare(
+            "SELECT c.id, c.name, c.parent_id, c.sort_order, c.created_at, c.updated_at, \
+             (SELECT COUNT(*) FROM projects p WHERE p.category_id = c.id AND p.data_status = 'ACTIVE') \
+             FROM categories c ORDER BY c.sort_order, c.name",
+        )
         .map_err(|e| e.to_string())?;
     let categories = stmt
         .query_map([], |row| {
@@ -261,6 +265,7 @@ pub fn get_categories() -> Result<Vec<Category>, String> {
                 sort_order: row.get(3)?,
                 parent_id: row.get(2)?,
                 is_system: id == 1,
+                project_count: row.get(6)?,
                 created_at: row.get(4)?,
                 updated_at: row.get(5)?,
             })
@@ -525,18 +530,24 @@ pub fn get_category(id: i64) -> Result<Option<Category>, String> {
     let db = db.as_ref().ok_or("Database not initialized")?;
     let conn = db.get_connection();
     let mut stmt = conn
-        .prepare("SELECT id, name, parent_id, sort_order, created_at, updated_at FROM categories WHERE id = ?")
+        .prepare(
+            "SELECT c.id, c.name, c.parent_id, c.sort_order, c.created_at, c.updated_at, \
+             (SELECT COUNT(*) FROM projects p WHERE p.category_id = c.id AND p.data_status = 'ACTIVE') \
+             FROM categories c WHERE c.id = ?",
+        )
         .map_err(|e| e.to_string())?;
     let category = stmt
         .query_row([id], |row| {
+            let cid: i64 = row.get(0)?;
             Ok(Category {
-                id: row.get(0)?,
+                id: cid,
                 name: row.get(1)?,
                 path: format!("/{}", row.get::<_, String>(1).unwrap_or_default()),
                 explain: None,
                 sort_order: row.get(3)?,
                 parent_id: row.get(2)?,
-                is_system: false,
+                is_system: cid == 1,
+                project_count: row.get(6)?,
                 created_at: row.get(4)?,
                 updated_at: row.get(5)?,
             })
@@ -553,6 +564,12 @@ pub fn create_category(input: serde_json::Value) -> Result<i64, String> {
     let name: String = serde_json::from_value(input.get("name").unwrap_or(&serde_json::Value::Null).clone()).map_err(|e| e.to_string())?;
     let parent_id: Option<i64> = serde_json::from_value(input.get("parent_id").unwrap_or(&serde_json::Value::Null).clone()).ok();
     let sort_order: i32 = serde_json::from_value(input.get("sort_order").unwrap_or(&serde_json::Value::Null).clone()).unwrap_or(0);
+
+    // 系统分类（未分类 id=1）不能作为父分类
+    if parent_id == Some(1) {
+        return Err("系统分类“未分类”不可作为父分类".to_string());
+    }
+
     conn.execute(
         "INSERT INTO categories (name, parent_id, sort_order, created_at, updated_at) VALUES (?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))",
         rusqlite::params![name, parent_id, sort_order],
@@ -566,6 +583,17 @@ pub fn update_category(input: Category) -> Result<(), String> {
     let db = DATABASE.lock().map_err(|e| e.to_string())?;
     let db = db.as_ref().ok_or("Database not initialized")?;
     let conn = db.get_connection();
+
+    // 禁止将分类移到系统分类（未分类）下
+    if input.parent_id == Some(1) {
+        return Err("系统分类“未分类”不可作为父分类".to_string());
+    }
+
+    // 系统分类（id=1）不能修改 name/parent_id/sort_order
+    if input.id == 1 {
+        return Err("系统分类“未分类”不可修改".to_string());
+    }
+
     conn.execute(
         "UPDATE categories SET name = ?, parent_id = ?, sort_order = ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
         rusqlite::params![input.name, input.parent_id, input.sort_order, input.id],
@@ -579,6 +607,32 @@ pub fn delete_category(id: i64) -> Result<(), String> {
     let db = DATABASE.lock().map_err(|e| e.to_string())?;
     let db = db.as_ref().ok_or("Database not initialized")?;
     let conn = db.get_connection();
+
+    // 系统分类不可删除
+    if id == 1 {
+        return Err("系统分类“未分类”不可删除".to_string());
+    }
+
+    // 有子分类不可删除
+    let child_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM categories WHERE parent_id = ?",
+        [id],
+        |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+    if child_count > 0 {
+        return Err("该分类下存在子分类，无法删除".to_string());
+    }
+
+    // 有项目不可删除
+    let project_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM projects WHERE category_id = ? AND data_status = 'ACTIVE'",
+        [id],
+        |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+    if project_count > 0 {
+        return Err(format!("该分类下有 {} 个项目，无法删除", project_count));
+    }
+
     conn.execute("DELETE FROM categories WHERE id = ?", [id])
         .map_err(|e| e.to_string())?;
     Ok(())
