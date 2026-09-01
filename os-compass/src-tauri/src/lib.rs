@@ -67,6 +67,22 @@ fn import_preset_categories() -> Result<i64, String> {
     db::import_preset_categories()
 }
 
+#[command]
+fn parse_categories_file(
+    file_path: String,
+    parent_id: Option<i64>,
+) -> Result<db::ParsedCategories, String> {
+    db::parse_categories_file(&file_path, parent_id)
+}
+
+#[command]
+fn import_categories_from_file(
+    file_path: String,
+    parent_id: Option<i64>,
+) -> Result<db::ImportSummary, String> {
+    db::import_categories_from_file(&file_path, parent_id)
+}
+
 fn find_git_root(path: &std::path::Path) -> Option<std::path::PathBuf> {
     let mut current = path;
     loop {
@@ -648,6 +664,8 @@ pub fn run() {
             get_radar_data_dir,
             get_vault_dir,
             import_preset_categories,
+            parse_categories_file,
+            import_categories_from_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Category } from "../types";
 import * as api from "../api";
 import { EmptyState } from "./EmptyState";
+import { ImportCategoryDialog } from "./ImportCategoryDialog";
 
 interface CategoryNode extends Category {
   children?: CategoryNode[];
@@ -24,6 +25,7 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [dragOverId, setDragOverId] = useState<number | null>(null);
   const [dragOverPos, setDragOverPos] = useState<"before" | "inside" | "after" | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     parent_id: null as number | null,
@@ -372,6 +374,12 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
         >
           <i className="fa-solid fa-plus mr-2"></i>{t("category.create")}
         </button>
+        <button
+          onClick={() => setShowImportDialog(true)}
+          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+        >
+          <i className="fa-solid fa-file-import mr-2"></i>{t("category.import")}
+        </button>
       </header>
 
       <div className="flex-1 overflow-auto p-6">
@@ -465,6 +473,14 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
           )}
         </div>
       </div>
+
+      {showImportDialog && (
+        <ImportCategoryDialog
+          categories={categories}
+          onClose={() => setShowImportDialog(false)}
+          onImported={loadCategories}
+        />
+      )}
     </div>
   );
 }

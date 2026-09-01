@@ -414,33 +414,314 @@ pub fn import_preset_categories() -> Result<i64, String> {
 }
 
 /// 将预置分类清单导入到指定连接（幂等、逐级创建、动态 id）
+///
+/// 内部实现：解析 → 调用通用 `import_category_items_into` 核心逻辑。
+/// 保留此函数以维持 M20.2 既有调用方/测试不变。
 pub fn import_preset_categories_into(conn: &rusqlite::Connection, txt: &str) -> Result<i64, String> {
-    let mut created: i64 = 0;
+    let items = parse_categories_txt(txt);
+    let summary = import_category_items_into(conn, &items, None)?;
+    Ok(summary.created as i64)
+}
 
-    for line in txt.lines() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with("--") || line.starts_with('#') {
-            continue; // 跳过空行与注释
+// =============================================================================
+// 分类管理 - 自定义导入功能（M21 里程碑）
+// =============================================================================
+
+/// 单条分类条目（已归一化为完整路径，含自身 name）
+#[derive(Debug, Clone)]
+pub struct CategoryItem {
+    /// 完整层级路径（含自身 name 在最后），如 ["技术","前端开发","Web框架","React生态"]
+    pub full_path: Vec<String>,
+    /// 原始来源行号（1-based），便于错误提示
+    pub source_line: usize,
+}
+
+/// 预览条目（用于前端展示）
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct PreviewItem {
+    pub full_path: String,
+    pub status: String, // "new" | "skip" | "error"
+    pub reason: Option<String>,
+    pub source_line: usize,
+}
+
+/// 解析结果（预览用，不写库）
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ParsedCategories {
+    pub total: u32,
+    pub items: Vec<PreviewItem>,
+}
+
+/// 单条导入错误
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ImportError {
+    pub source_line: usize,
+    pub full_path: String,
+    pub reason: String,
+}
+
+/// 导入汇总
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ImportSummary {
+    pub created: u32,
+    pub skipped: u32,
+    pub errors: Vec<ImportError>,
+}
+
+/// 解析 TXT 格式（与预置脚本一致：/ 分隔、# / -- 注释、空行跳过、空段丢弃）
+fn parse_categories_txt(txt: &str) -> Vec<CategoryItem> {
+    parse_categories_txt_inner(txt)
+}
+
+/// 测试可见的内部入口
+pub fn parse_categories_txt_for_test(txt: &str) -> Vec<CategoryItem> {
+    parse_categories_txt_inner(txt)
+}
+
+fn parse_categories_txt_inner(txt: &str) -> Vec<CategoryItem> {
+    let mut items = Vec::new();
+    for (idx, line) in txt.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with("--") || trimmed.starts_with('#') {
+            continue;
         }
-        let segments: Vec<&str> = line.split('/').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+        let segments: Vec<String> = trimmed
+            .split('/')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+            .collect();
         if segments.is_empty() {
             continue;
         }
+        items.push(CategoryItem {
+            full_path: segments,
+            source_line: idx + 1,
+        });
+    }
+    items
+}
 
-        let mut parent_id: Option<i64> = None;
-        for seg in segments {
+/// 解析 JSON 格式（顶层数组，每项 { path?: [..], name: "..." }，explain 忽略）
+#[derive(Debug, serde::Deserialize)]
+struct JsonCategoryEntry {
+    path: Option<Vec<String>>,
+    #[serde(default)]
+    name: String,
+}
+
+fn parse_categories_json(content: &str) -> Result<Vec<CategoryItem>, String> {
+    parse_categories_json_inner(content)
+}
+
+/// 测试可见的内部入口
+pub fn parse_categories_json_for_test(content: &str) -> Result<Vec<CategoryItem>, String> {
+    parse_categories_json_inner(content)
+}
+
+fn parse_categories_json_inner(content: &str) -> Result<Vec<CategoryItem>, String> {
+    let entries: Vec<JsonCategoryEntry> = serde_json::from_str(content)
+        .map_err(|e| format!("JSON 解析失败: {}", e))?;
+
+    let mut items = Vec::with_capacity(entries.len());
+    for (idx, entry) in entries.into_iter().enumerate() {
+        let line = idx + 1;
+        let name = entry.name.trim().to_string();
+        if name.is_empty() {
+            return Err(format!("第 {} 行: 分类名 (name) 不能为空", line));
+        }
+        let mut full_path: Vec<String> = entry
+            .path
+            .unwrap_or_default()
+            .into_iter()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        full_path.push(name);
+        if full_path.is_empty() {
+            return Err(format!("第 {} 行: 分类路径为空", line));
+        }
+        items.push(CategoryItem {
+            full_path,
+            source_line: line,
+        });
+    }
+    Ok(items)
+}
+
+/// 读取文件内容，UTF-8 优先，失败回退 GBK（Windows 用户常见编码）
+fn read_categories_file(path: &str) -> Result<(String, &'static str), String> {
+    read_categories_file_inner(path)
+}
+
+/// 测试可见的内部入口
+pub fn read_categories_file_for_test(path: &str) -> Result<(String, &'static str), String> {
+    read_categories_file_inner(path)
+}
+
+fn read_categories_file_inner(path: &str) -> Result<(String, &'static str), String> {
+    let bytes = std::fs::read(path).map_err(|e| format!("无法读取文件 '{}': {}", path, e))?;
+    match std::str::from_utf8(&bytes) {
+        Ok(s) => Ok((s.to_string(), "utf-8")),
+        Err(_) => {
+            // GBK 解码回退
+            let (decoded, _, had_errors) = encoding_rs::GBK.decode(&bytes);
+            if had_errors {
+                return Err(format!(
+                    "文件编码既非 UTF-8 也非 GBK: {}",
+                    path
+                ));
+            }
+            Ok((decoded.into_owned(), "gbk"))
+        }
+    }
+}
+
+/// 按扩展名分发解析（txt 或 json）
+fn parse_categories_file_content(content: &str, file_path: &str) -> Result<Vec<CategoryItem>, String> {
+    let lower = file_path.to_lowercase();
+    if lower.ends_with(".json") {
+        parse_categories_json(content)
+    } else {
+        // 默认按 txt 处理（.txt 与其他无扩展名情况）
+        Ok(parse_categories_txt(content))
+    }
+}
+
+/// 判重并预览（不写库）
+///
+/// 逻辑：对每个条目逐级查 categories；任何一段未命中 → status=new；
+/// 全部命中 → status=skip。base_parent_id 与顶级判重范围一致。
+///
+/// 返回的 `total` 为有效条目数（不含解析失败）。
+pub fn parse_categories_file(file_path: &str, base_parent_id: Option<i64>) -> Result<ParsedCategories, String> {
+    let (content, _enc) = read_categories_file(file_path)?;
+    let items = parse_categories_file_content(&content, file_path)?;
+
+    let db_guard = DATABASE.lock().map_err(|e| e.to_string())?;
+    let db = db_guard.as_ref().ok_or("Database not initialized")?;
+    let conn = db.get_connection();
+
+    let mut previews = Vec::with_capacity(items.len());
+    let mut total: u32 = 0;
+    for item in items {
+        let full_path_str = item.full_path.join("/");
+        match simulate_path_exists(&conn, &item.full_path, base_parent_id) {
+            Ok(true) => {
+                total += 1;
+                previews.push(PreviewItem {
+                    full_path: full_path_str,
+                    status: "skip".to_string(),
+                    reason: None,
+                    source_line: item.source_line,
+                });
+            }
+            Ok(false) => {
+                total += 1;
+                previews.push(PreviewItem {
+                    full_path: full_path_str,
+                    status: "new".to_string(),
+                    reason: None,
+                    source_line: item.source_line,
+                });
+            }
+            Err(e) => {
+                previews.push(PreviewItem {
+                    full_path: full_path_str,
+                    status: "error".to_string(),
+                    reason: Some(e),
+                    source_line: item.source_line,
+                });
+            }
+        }
+    }
+    Ok(ParsedCategories { total, items: previews })
+}
+
+/// 仅查表模拟路径是否已存在（不写入），返回 Ok(true)=全部存在、Ok(false)=存在缺失
+fn simulate_path_exists(
+    conn: &rusqlite::Connection,
+    segments: &[String],
+    base_parent_id: Option<i64>,
+) -> Result<bool, String> {
+    simulate_path_exists_inner(conn, segments, base_parent_id)
+}
+
+/// 测试可见的内部入口
+pub fn simulate_path_exists_for_test(
+    conn: &rusqlite::Connection,
+    segments: &[String],
+    base_parent_id: Option<i64>,
+) -> Result<bool, String> {
+    simulate_path_exists_inner(conn, segments, base_parent_id)
+}
+
+fn simulate_path_exists_inner(
+    conn: &rusqlite::Connection,
+    segments: &[String],
+    base_parent_id: Option<i64>,
+) -> Result<bool, String> {
+    let mut parent_id = base_parent_id;
+    for seg in segments {
+        let id: Option<i64> = if let Some(pid) = parent_id {
+            conn.query_row(
+                "SELECT id FROM categories WHERE name = ?1 AND parent_id IS ?2",
+                rusqlite::params![seg, pid],
+                |row| row.get(0),
+            )
+            .ok()
+        } else {
+            conn.query_row(
+                "SELECT id FROM categories WHERE name = ?1 AND parent_id IS NULL",
+                rusqlite::params![seg],
+                |row| row.get(0),
+            )
+            .ok()
+        };
+        match id {
+            Some(cid) => parent_id = Some(cid),
+            None => return Ok(false),
+        }
+    }
+    Ok(true)
+}
+
+/// 通用核心：将已解析的 CategoryItem 列表逐级入库（幂等、动态 id）
+///
+/// 返回 ImportSummary（created 包含自动建的中间父级，skipped 为整条完全存在的条目数）。
+/// 单条 INSERT 失败不中断，计入 errors。
+pub fn import_category_items_into(
+    conn: &rusqlite::Connection,
+    items: &[CategoryItem],
+    base_parent_id: Option<i64>,
+) -> Result<ImportSummary, String> {
+    let mut created: u32 = 0;
+    let mut skipped: u32 = 0;
+    let mut errors: Vec<ImportError> = Vec::new();
+
+    for item in items {
+        let full_path_str = item.full_path.join("/");
+        let mut parent_id = base_parent_id;
+        let mut entry_created_any = false;
+        let mut entry_skipped = true;
+        let mut entry_failed = false;
+
+        for seg in &item.full_path {
+            // 查存在
             let id: Option<i64> = if let Some(pid) = parent_id {
                 conn.query_row(
                     "SELECT id FROM categories WHERE name = ?1 AND parent_id IS ?2",
                     rusqlite::params![seg, pid],
                     |row| row.get(0),
-                ).ok()
+                )
+                .ok()
             } else {
                 conn.query_row(
                     "SELECT id FROM categories WHERE name = ?1 AND parent_id IS NULL",
                     rusqlite::params![seg],
                     |row| row.get(0),
-                ).ok()
+                )
+                .ok()
             };
 
             match id {
@@ -448,17 +729,73 @@ pub fn import_preset_categories_into(conn: &rusqlite::Connection, txt: &str) -> 
                     parent_id = Some(cid);
                 }
                 None => {
-                    conn.execute(
+                    match conn.execute(
                         "INSERT INTO categories (name, parent_id, sort_order) VALUES (?1, ?2, 0)",
                         rusqlite::params![seg, parent_id],
-                    ).map_err(|e| format!("Failed to insert category '{}': {}", seg, e))?;
-                    let cid = conn.last_insert_rowid();
-                    parent_id = Some(cid);
-                    created += 1;
+                    ) {
+                        Ok(_) => {
+                            let cid = conn.last_insert_rowid();
+                            parent_id = Some(cid);
+                            created += 1;
+                            entry_created_any = true;
+                            entry_skipped = false;
+                        }
+                        Err(e) => {
+                            errors.push(ImportError {
+                                source_line: item.source_line,
+                                full_path: full_path_str.clone(),
+                                reason: format!("插入 '{}' 失败: {}", seg, e),
+                            });
+                            entry_failed = true;
+                            break;
+                        }
+                    }
                 }
             }
         }
+
+        if entry_failed {
+            continue;
+        }
+        if entry_skipped && !entry_created_any {
+            skipped += 1;
+        }
+        // 备注：entry_created_any=true 表示该条目至少新建了一个节点
+        // （含中间父级），不计入 skipped
     }
 
-    Ok(created)
+    Ok(ImportSummary { created, skipped, errors })
+}
+
+/// 导入分类文件（事务写入，前端可重复调用同一文件得到稳定幂等结果）
+pub fn import_categories_from_file(
+    file_path: &str,
+    base_parent_id: Option<i64>,
+) -> Result<ImportSummary, String> {
+    let (content, _enc) = read_categories_file(file_path)?;
+    let items = parse_categories_file_content(&content, file_path)?;
+
+    let db_guard = DATABASE.lock().map_err(|e| e.to_string())?;
+    let db = db_guard.as_ref().ok_or("Database not initialized")?;
+    let conn = db.get_connection();
+
+    // 事务包裹
+    conn.execute_batch("BEGIN TRANSACTION")
+        .map_err(|e| format!("BEGIN TRANSACTION 失败: {}", e))?;
+
+    let result = import_category_items_into(&conn, &items, base_parent_id);
+
+    match &result {
+        Ok(_) => {
+            if let Err(e) = conn.execute_batch("COMMIT") {
+                let _ = conn.execute_batch("ROLLBACK");
+                return Err(format!("COMMIT 失败: {}", e));
+            }
+        }
+        Err(_) => {
+            let _ = conn.execute_batch("ROLLBACK");
+        }
+    }
+
+    result
 }
