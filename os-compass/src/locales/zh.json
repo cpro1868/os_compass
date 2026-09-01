@@ -127,7 +127,26 @@
     },
     "willCreateUnder": "将创建在 \"{{name}}\" 下",
     "willCreateTop": "将创建为顶级分类",
-    "confirmDelete": "确定要删除此分类吗？"
+    "confirmDelete": "确定要删除此分类吗？",
+    "import": "导入分类",
+    "importDialogTitle": "从文件导入分类",
+    "importOptions": "导入选项",
+    "selectFile": "选择文件",
+    "fileFormatHint": "支持 .txt（路径格式）或 .json（结构化格式）",
+    "fileParsed": "已解析 {count} 条",
+    "parentCategory": "父分类",
+    "parentCategoryTop": "顶级（无父分类）",
+    "skipHint": "已存在的同名分类将自动跳过",
+    "preview": "预览",
+    "previewStats": "共 {total} 条：将新增 {created}，跳过 {skipped}，失败 {errors}",
+    "statusNew": "新增",
+    "statusSkipped": "跳过",
+    "statusError": "失败",
+    "confirmImport": "确认导入",
+    "back": "返回",
+    "showErrors": "查看失败明细",
+    "importing": "正在导入...",
+    "importDone": "导入完成：新增 {created} 条，跳过 {skipped} 条，失败 {errors} 条"
   },
   "tag": {
     "title": "标签管理",
@@ -200,13 +219,11 @@
     "useCases": "适用场景",
     "risks": "风险提示",
     "dependencies": "依赖建议",
-    "runbook": "Runbook",
     "generateRunbook": "生成 Runbook",
     "generating": "生成中...",
     "runbookTip": "将 README 转换为可操作的步骤指南",
     "editRunbook": "编辑",
     "saveRunbook": "保存",
-    "clone": "克隆",
     "cloneTip": "克隆项目源码到本地",
     "clonePath": "克隆到",
     "cloneSuccess": "克隆成功",
@@ -216,11 +233,9 @@
     "notCloned": "未克隆",
     "cloned": "已克隆",
     "cloneNow": "立即克隆",
-    "releases": "版本",
     "releasesDesc": "项目发布版本列表",
     "noReleases": "暂无版本信息",
     "download": "下载",
-    "notes": "笔记",
     "notesDesc": "关于此项目的个人笔记",
     "addNote": "添加笔记",
     "notePlaceholder": "写下你的笔记...",
@@ -258,9 +273,7 @@
     "taskDescription": "翻译简介中...",
     "taskReadmeTranslation": "翻译 README 中...",
     "taskGeneric": "{{type}} 处理中...",
-    "backgroundTaskNote": "后台任务正在执行，完成后自动更新",
-    "user": "用户信息",
-    "readme": "README"
+    "backgroundTaskNote": "后台任务正在执行，完成后自动更新"
   },
   "clone": {
     "title": "克隆设置",
@@ -457,7 +470,13 @@
       "plugins": "功能插件",
       "vector": "向量搜索"
     },
-    "storage": "存储设置",
+    "storage": {
+      "info": "数据存储说明",
+      "pluginConfig": "系统级配置",
+      "pluginConfigDesc": "插件启用状态、配置信息",
+      "pluginData": "插件业务数据",
+      "pluginDataDesc": "雷达订阅源、扫描结果等（跟随系统目录）"
+    },
     "dataDir": "数据目录",
     "browse": "浏览",
     "appearance": "外观",
@@ -619,13 +638,6 @@
         "high": "高（严格过滤）"
       },
       "adFilterDesc": "采集时自动过滤广告和垃圾信息"
-    },
-    "storage": {
-      "info": "数据存储说明",
-      "pluginConfig": "系统级配置",
-      "pluginConfigDesc": "插件启用状态、配置信息",
-      "pluginData": "插件业务数据",
-      "pluginDataDesc": "雷达订阅源、扫描结果等（跟随系统目录）"
     },
     "pluginLevel": {
       "system": "系统级",
@@ -826,7 +838,9 @@
       "actionFailed": "操作失败",
       "nameRequired": "名称和 URL 不能为空",
       "addFailed": "添加信息源失败",
-      "deleteFailed": "删除信息源失败"
+      "deleteFailed": "删除信息源失败",
+      "clearFailed": "清空数据失败",
+      "typeMismatch": "类型不匹配：URL 应该是 {{expected}}，但您选择了 {{actual}}"
     },
     "scanComplete": "扫描完成：{{count}} 个新项目",
     "sourceAdded": "信息源添加成功",
@@ -855,16 +869,6 @@
     "clearConfirmMessage": "此操作将删除所有雷达采集的数据，且无法恢复。确定要继续吗？",
     "clearConfirm": "确认清空",
     "clearedSuccess": "数据已清空",
-    "error": {
-      "loadFailed": "加载数据失败",
-      "scanFailed": "扫描失败",
-      "actionFailed": "操作失败",
-      "nameRequired": "名称和 URL 不能为空",
-      "addFailed": "添加信息源失败",
-      "deleteFailed": "删除信息源失败",
-      "clearFailed": "清空数据失败",
-      "typeMismatch": "类型不匹配：URL 应该是 {{expected}}，但您选择了 {{actual}}"
-    },
     "autoCollect": "自动采集",
     "autoCollectEnabled": "定时采集已开启",
     "autoCollectDisabled": "定时采集已关闭",
