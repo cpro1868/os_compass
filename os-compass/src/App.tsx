@@ -18,11 +18,11 @@ import { ArchiveView } from "./components/ArchiveView";
 import { ErrorState } from "./components/ErrorState";
 import { RadarInbox } from "./components/RadarInbox";
 import { SearchView } from "./components/SearchView";
-import { OrganizationManager } from "./components/OrganizationManager";
-import { ToastContainer, useToastStore } from "./stores/toastStore";
 import { NavigationDialog } from "./components/NavigationDialog";
 import { InitWizard } from "./components/InitWizard";
 import { HomePage } from "./components/HomePage";
+import { CategoryManager } from "./components/CategoryManager";
+import { ToastContainer, useToastStore } from "./stores/toastStore";
 import { getCurrentVault } from "./api";
 import { listen } from "@tauri-apps/api/event";
 
@@ -197,7 +197,7 @@ function App() {
   };
 
   const openCategory = () => {
-    setViewMode("organization");
+    setViewMode("category");
   };
 
   const handleBatchArchive = async () => {
@@ -230,7 +230,7 @@ function App() {
     fetchProjects();
   };
 
-  const viewTitle = viewMode === "kanban" ? t("nav.kanban") : viewMode === "list" ? t("nav.list") : t("archive.title");
+  const viewTitle = viewMode === "kanban" ? t("nav.kanban") : viewMode === "list" ? t("nav.list") : viewMode === "archive" ? t("archive.title") : t("sidebar.organization");
 
   return (
     <>
@@ -425,9 +425,9 @@ function App() {
                   }}
                 />
               ) : viewMode === "category" ? (
-                <OrganizationManager />
+                <CategoryManager onBack={() => setViewMode("home")} />
               ) : viewMode === "tag" ? (
-                <OrganizationManager />
+                <CategoryManager onBack={() => setViewMode("home")} />
               ) : viewMode === "stats" ? (
                 <StatsView onBack={() => setViewMode("kanban")} />
               ) : viewMode === "radar" ? (
@@ -435,7 +435,7 @@ function App() {
               ) : viewMode === "search" ? (
                 <SearchView />
               ) : viewMode === "organization" ? (
-                <OrganizationManager />
+                <CategoryManager onBack={() => setViewMode("home")} />
               ) : (
                 <ArchiveView
                   onBack={() => setViewMode("list")}

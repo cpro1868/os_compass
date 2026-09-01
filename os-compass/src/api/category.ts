@@ -8,6 +8,7 @@ export interface Category {
   sort_order: number;
   parent_id?: number;
   is_system: boolean;
+  project_count: number;
   created_at: string;
 }
 

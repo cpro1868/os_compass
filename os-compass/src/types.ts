@@ -45,6 +45,7 @@ export interface Category {
   sort_order: number;
   parent_id: number | null;
   is_system: boolean;
+  project_count: number;
   created_at: string;
   updated_at: string;
 }

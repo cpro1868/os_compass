@@ -1,0 +1,24 @@
+fix: 修复分类管理三大问题（页面错位/无导入/未分类挂子分类）
+
+根因：
+- App.tsx openCategory 设置 viewMode=organization 导致 CategoryManager（含完整功能）从未被使用，实际渲染 OrganizationManager
+- 导入按钮在 CategoryManager 中，但从未渲染
+- 未分类挂子分类：后端未拦截 parent_id=1，OrganizationManager + 按钮在 !is_system 条件外
+
+修复：
+1. App.tsx openCategory 改 category，category/tag/organization 三模式都指向 CategoryManager
+2. CategoryManager 合并标签 tab，恢复导入按钮
+3. 后端 project.rs create/update/delete 拦截 parent_id=1 + 系统分类保护
+4. OrganizationManager + 按钮移入 !is_system 条件内
+5. models/mod.rs + types.ts + api/category.ts 新增 project_count
+6. ImportCategoryDialog 复用，前端双 tab
+
+验证：
+- pnpm typecheck ok
+- cargo check ok
+- pnpm tauri build ok
+- Previous/os-compass.exe 更新
+
+关键事实修正：
+- 实际数据库查询确认：未分类 id=1（两仓库均同），表无 is_system 列，运行时 id==1 判定
+- 发现 id=7 System 错误挂在未分类(parent_id=1) 下，确证 bug
