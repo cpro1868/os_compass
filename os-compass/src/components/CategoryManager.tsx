@@ -447,9 +447,8 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
   const renderCategoryItem = (cat: CategoryNode, level: number = 0) => (
     <div key={cat.id}>
       <div
-        className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg group ${
-          level > 0 ? "ml-8" : ""
-        }`}
+        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg group"
+        style={{ marginLeft: level * 32 }}
       >
         {cat.children && cat.children.length > 0 && (
           <button
