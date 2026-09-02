@@ -133,12 +133,12 @@
     "importOptions": "导入选项",
     "selectFile": "选择文件",
     "fileFormatHint": "支持 .txt（路径格式）或 .json（结构化格式）",
-    "fileParsed": "已解析 {count} 条",
+    "fileParsed": "已解析 {{count}} 条",
     "parentCategory": "父分类",
     "parentCategoryTop": "顶级（无父分类）",
     "skipHint": "已存在的同名分类将自动跳过",
     "preview": "预览",
-    "previewStats": "共 {total} 条：将新增 {created}，跳过 {skipped}，失败 {errors}",
+    "previewStats": "共 {{total}} 条：将新增 {{created}}，跳过 {{skipped}}，失败 {{errors}}",
     "statusNew": "新增",
     "statusSkipped": "跳过",
     "statusError": "失败",
@@ -146,7 +146,7 @@
     "back": "返回",
     "showErrors": "查看失败明细",
     "importing": "正在导入...",
-    "importDone": "导入完成：新增 {created} 条，跳过 {skipped} 条，失败 {errors} 条"
+    "importDone": "导入完成：新增 {{created}} 条，跳过 {{skipped}} 条，失败 {{errors}} 条"
   },
   "tag": {
     "title": "标签管理",

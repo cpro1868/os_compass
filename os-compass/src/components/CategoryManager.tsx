@@ -448,7 +448,7 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
     <div key={cat.id}>
       <div
         className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg group ${
-          level > 0 ? "ml-6" : ""
+          level > 0 ? "ml-8" : ""
         }`}
       >
         {cat.children && cat.children.length > 0 && (
@@ -657,7 +657,7 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-              {t("category.name") || "分类名称"}
+              {t("category.form.name") || "分类名称"}
             </label>
             <input
               type="text"
