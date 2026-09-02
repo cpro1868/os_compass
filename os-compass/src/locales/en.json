@@ -133,12 +133,12 @@
     "importOptions": "Import Options",
     "selectFile": "Select File",
     "fileFormatHint": "Supports .txt (path format) or .json (structured)",
-    "fileParsed": "Parsed {count} entries",
+    "fileParsed": "Parsed {{count}} entries",
     "parentCategory": "Parent Category",
     "parentCategoryTop": "Top Level (no parent)",
     "skipHint": "Existing categories with the same name will be skipped automatically",
     "preview": "Preview",
-    "previewStats": "Total {total}: {created} new, {skipped} skipped, {errors} failed",
+    "previewStats": "Total {{total}}: {{created}} new, {{skipped}} skipped, {{errors}} failed",
     "statusNew": "New",
     "statusSkipped": "Skipped",
     "statusError": "Failed",
@@ -146,7 +146,7 @@
     "back": "Back",
     "showErrors": "Show failed details",
     "importing": "Importing...",
-    "importDone": "Done: {created} created, {skipped} skipped, {errors} failed"
+    "importDone": "Done: {{created}} created, {{skipped}} skipped, {{errors}} failed"
   },
   "tag": {
     "title": "Tag Manager",
