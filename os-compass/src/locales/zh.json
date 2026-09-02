@@ -941,6 +941,14 @@
     "noHistory": "暂无搜索历史",
     "clearHistory": "清除历史",
     "historyCleared": "历史已清除",
+    "clarification": {
+      "prompt": "请选择或补充您的需求：",
+      "placeholder": "补充您的具体需求..."
+    },
+    "smartRecommendation": "智能建议",
+    "relatedCategories": "相关分类",
+    "relatedTags": "关联标签",
+    "expandedSearch": "扩展搜索",
     "import": "导入",
     "importSuccess": "项目导入成功",
     "viewOnGitHub": "查看",

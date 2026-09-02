@@ -2,7 +2,40 @@
 
 # Session Log
 
-## 2026-09-03 00:05 - 当前开发计划文档化
+## 2026-09-03 01:52 - 工作包 A 完成：首页搜索与意图搜索统一
+
+### 完成内容
+
+将 HomePage 简化的搜索流程对齐到 SearchView 完整意图搜索：
+
+- 接入 analyzeIntent（30s 超时，2h 缓存）+ 追问澄清 + 会话上下文
+- 复用 intentCache/searchCache，仓库切换清空
+- 结果卡片带 source.local/source.llm 标签
+- 智能推荐 + LLM 文本 + 搜索历史侧栏
+- 项目点击改用 open_project_detail
+
+### 修改文件
+
+- `os-compass/src/components/HomePage.tsx`（重写，~565 行）
+- `os-compass/src/locales/{zh,en}.json`（+6 键：clarification/smartRecommendation/relatedCategories/relatedTags/expandedSearch）
+
+### 验证
+
+- typecheck ✅
+- vitest ✅ 61 passed
+- pnpm tauri build ✅ 1m 51s
+- Previous/os-compass.exe ✅ 01:50, 40.8MB
+
+### 提交
+
+```
+feat(首页搜索): 补齐意图分析/追问/历史/缓存/联网结果
+docs(开发计划): 首页搜索与意图搜索统一完成
+```
+
+---
+
+
 
 ### 完成内容
 
