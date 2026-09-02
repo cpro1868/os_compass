@@ -941,6 +941,14 @@
     "noHistory": "No search history",
     "clearHistory": "Clear History",
     "historyCleared": "History cleared",
+    "clarification": {
+      "prompt": "Please select or supplement your need:",
+      "placeholder": "Add more details..."
+    },
+    "smartRecommendation": "Smart Suggestions",
+    "relatedCategories": "Related Categories",
+    "relatedTags": "Related Tags",
+    "expandedSearch": "Expand Search",
     "import": "Import",
     "importSuccess": "Project imported successfully",
     "viewOnGitHub": "View",
