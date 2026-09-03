@@ -2,6 +2,19 @@
 
 # Session Log
 
+## 2026-09-03 16:09 - 意图搜索卡死第二轮修复
+
+### 结果
+
+- `llm_parser.rs` 的 `parse_content_with_llm` 移除 `block_on`，改为纯 async/await
+- 新增 `recommend_projects_with_llm`：爬虫不可用时直接 LLM 生成项目推荐
+- `three_layer_search.llm_search` 增加爬虫失败/空结果降级到 LLM 直接推荐，补充日志
+- 清理 `search.rs` 无用 `compute_url_hash`/`sha2`/`hex` 导入
+- 验证：cargo check、typecheck、61 前端测试、Tauri MSI/NSIS 构建全部通过
+- `release/` 与 `Previous/` 已更新
+
+---
+
 ## 2026-09-03 14:05 - 意图搜索回归修复
 
 ### 结果

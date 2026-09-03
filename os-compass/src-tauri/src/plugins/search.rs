@@ -4,11 +4,14 @@ use crate::feature_plugin::{
 };
 use crate::llm::{LlmClient, LlmMessage};
 use crate::settings::get_settings;
-use crate::source_engine::{get_adapter, llm_parser::parse_content_with_llm, SourceType};
+use crate::source_engine::{
+    get_adapter,
+    llm_parser::{parse_content_with_llm, recommend_projects_with_llm},
+    SourceType,
+};
 use async_trait::async_trait;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
@@ -136,12 +139,6 @@ pub fn init_search_db(vault_dir: &std::path::Path) -> Result<rusqlite::Connectio
     Ok(conn)
 }
 
-fn compute_url_hash(url: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(url.as_bytes());
-    hex::encode(hasher.finalize())
-}
-
 pub async fn three_layer_search(
     vault_dir: &std::path::Path,
     query: &str,
@@ -246,6 +243,7 @@ pub async fn three_layer_search(
 
     let llm_search = async {
         let mut web_results: Vec<ProjectMatch> = Vec::new();
+        let started = std::time::Instant::now();
 
         let proxy = if settings.proxy_host.is_empty() {
             None
@@ -256,36 +254,82 @@ pub async fn three_layer_search(
         let mut adapter = get_adapter(SourceType::WebCrawl);
         let search_url = format!("https://api.github.com/search/repositories?q={}", urlencoding::encode(query));
 
-        if let Ok(contents) = adapter.fetch(&search_url, proxy, None).await {
-            for content in contents.iter().take(10) {
-                let _url_hash = compute_url_hash(&content.url);
-                let parsed = parse_content_with_llm(content, &settings).unwrap_or_default();
+        let mut crawl_ok = false;
+        match adapter.fetch(&search_url, proxy, None).await {
+            Ok(contents) if !contents.is_empty() => {
+                crawl_ok = true;
+                write_debug_log(&format!("[DEBUG] llm_search: 爬虫返回 {} 条内容", contents.len()));
+                for content in contents.iter().take(10) {
+                    let parsed = parse_content_with_llm(content, &settings).await.unwrap_or_default();
 
-                let name = parsed
-                    .first()
-                    .and_then(|p| p.project_name.clone())
-                    .unwrap_or_else(|| content.title.clone());
+                    let name = parsed
+                        .first()
+                        .and_then(|p| p.project_name.clone())
+                        .unwrap_or_else(|| content.title.clone());
 
-                let url = parsed
-                    .first()
-                    .and_then(|p| p.project_url.clone())
-                    .unwrap_or_else(|| content.url.clone());
+                    let url = parsed
+                        .first()
+                        .and_then(|p| p.project_url.clone())
+                        .unwrap_or_else(|| content.url.clone());
 
-                let description = parsed.first().and_then(|p| p.description.clone());
+                    let description = parsed.first().and_then(|p| p.description.clone());
 
-                web_results.push(ProjectMatch {
-                    name,
-                    url,
-                    description,
-                    stars: None,
-                    forks: None,
-                    language: None,
-                    health_score: None,
-                    source: "llm".to_string(),
-                    match_score: 0.5,
-                });
+                    web_results.push(ProjectMatch {
+                        name,
+                        url,
+                        description,
+                        stars: None,
+                        forks: None,
+                        language: None,
+                        health_score: None,
+                        source: "llm".to_string(),
+                        match_score: 0.5,
+                    });
+                }
+            }
+            Ok(_) => {
+                write_debug_log("[DEBUG] llm_search: 爬虫返回空内容");
+            }
+            Err(e) => {
+                write_debug_log(&format!("[DEBUG] llm_search: 爬虫失败: {}（耗时 {:?}）", e, started.elapsed()));
             }
         }
+
+        if !crawl_ok {
+            write_debug_log(&format!("[DEBUG] llm_search: 启用 LLM 直接推荐兜底（耗时 {:?}）", started.elapsed()));
+            match recommend_projects_with_llm(query, &settings, 8).await {
+                Ok(recommended) => {
+                    write_debug_log(&format!("[DEBUG] llm_search: LLM 直接推荐 {} 个项目", recommended.len()));
+                    for proj in recommended.into_iter() {
+                        let name = proj.project_name.unwrap_or_else(|| query.to_string());
+                        let url = proj.project_url.unwrap_or_else(|| {
+                            let slug = name.replace('/', "-").to_lowercase();
+                            format!("https://github.com/{}", slug)
+                        });
+                        web_results.push(ProjectMatch {
+                            name,
+                            url,
+                            description: proj.description,
+                            stars: None,
+                            forks: None,
+                            language: proj.language,
+                            health_score: None,
+                            source: "llm_recommend".to_string(),
+                            match_score: 0.6,
+                        });
+                    }
+                }
+                Err(e) => {
+                    write_debug_log(&format!("[DEBUG] llm_search: LLM 直接推荐失败: {}", e));
+                }
+            }
+        }
+
+        write_debug_log(&format!(
+            "[DEBUG] llm_search: 完成，web_results={}（总耗时 {:?}）",
+            web_results.len(),
+            started.elapsed()
+        ));
 
         web_results
     };
