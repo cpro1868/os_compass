@@ -1,6 +1,15 @@
 # OS-Compass 当前任务
 
-## 2026-09-03 意图搜索回归修复
+## 2026-09-03 意图搜索回归修复（第二轮）
+
+- 根因：`llm_parser.rs` 的 `parse_content_with_llm` 仍用 `block_on` 阻塞；联网依赖 `localhost:8080/crawl`、爬虫不可用时无 LLM 直接推荐兜底。
+- 修复：`parse_content_with_llm` 改为原生 async/await；新增 `recommend_projects_with_llm`；`three_layer_search.llm_search` 在爬虫失败/空结果时降级到 LLM 直接推荐并补充耗时日志；清理 `search.rs` 未使用的 `compute_url_hash` 与 `sha2/hex` 导入。
+- 验证：`cargo check --lib`、`pnpm typecheck`、`pnpm test`（61 passed）、`pnpm tauri build` 均通过
+- 最新安装包：`release/` 下 MSI + NSIS；`Previous/` 已更新
+
+---
+
+## 2026-09-03 意图搜索回归修复（第一轮）
 
 - 根因：`intent_search` 使用 `block_on` 调用异步搜索，且 `three_layer_search` 在异步网络搜索期间持有 `DATABASE` 锁
 - 另外修复：仓库配置统一保存目录路径；兼容旧版数据库文件路径与空配置
