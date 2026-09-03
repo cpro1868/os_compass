@@ -2,6 +2,24 @@
 
 # Session Log
 
+## 2026-09-03 23:39 - 向量模型连通性与配置读取修复
+
+### 关键结论
+
+用户的排查线索完全命中了系统核心问题：
+1. 向量模型（SiliconFlow BAAI/bge-m3）连通性 100% 正常（1.5s 响应）。
+2. 代码因为列名错乱（`vec_extension_path` vs `vss_extension_path`）读不到配置，导致 `is_enabled()` 永远 false，系统绕过向量搜索走 40s 的 LLM 兜底。
+3. 仓库库存的是普通 JSON 数组，但代码用 sqlite-vec 虚表语法导致 `distance` 错误。
+
+### 修复与验证
+
+- 列名对齐到 `vss_extension_path`
+- `semantic_search` 改为 Rust 内存余弦相似度计算，对库内 20 个项目实测 1.7s 返回 top-5（视频剪辑精确命中 shotcut / reclip）
+- 全量 62 个测试、typecheck、cargo check、tauri build 均通过
+- Previous/os-compass.exe 已更新
+
+---
+
 ## 2026-09-03 22:14 - 意图搜索完成态不退出（组件测试复现并修复）
 
 ### 证据

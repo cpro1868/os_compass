@@ -278,7 +278,7 @@ pub fn save_embedding_settings(settings: EmbeddingSettings) -> Result<(), String
     let conn = get_system_db()?;
 
     conn.execute(
-        "UPDATE embedding_settings SET embedding_enabled = ?, embedding_api_type = ?, embedding_api_url = ?, embedding_api_key = ?, embedding_model = ?, embedding_dimension = ?, vec_extension_path = ? WHERE id = 1",
+        "UPDATE embedding_settings SET embedding_enabled = ?, embedding_api_type = ?, embedding_api_url = ?, embedding_api_key = ?, embedding_model = ?, embedding_dimension = ?, vss_extension_path = ? WHERE id = 1",
         params![
             if settings.embedding_enabled { 1 } else { 0 },
             settings.embedding_api_type,

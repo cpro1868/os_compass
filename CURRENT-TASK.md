@@ -1,5 +1,34 @@
 # OS-Compass 当前任务
 
+## 2026-09-03 23:39 - 向量模型连通性与配置读取修复（端到端验证）
+
+### 用户线索验证结果
+
+用户的怀疑方向完全正确：
+1. **向量模型连通性**：SiliconFlow `https://api.siliconflow.cn/v1/embeddings`（`BAAI/bge-m3`）完全健康，单次调用 ~1.5-2.0s，返回 1024 维向量，**API 本身未卡住**。
+2. **真正的断裂点**：
+   - `plugins.db.embedding_settings` 表列名是 `vss_extension_path`，但 `embedding.rs:237-248` 和 `commands/search_cmd.rs:281` 查询/更新用的是 `vec_extension_path`。
+   - 列名不匹配导致 `load_embedding_settings()` 异常，fallback 返回默认配置（API Key 为空），`is_enabled()` 永远返回 `false`。
+   - 结果：**用户配置的 SiliconFlow + BAAI/bge-m3 从未真正生效**，系统一直显示"embedding 未启用"，导致搜索直接跳过向量、进入爬虫超时与 40 秒的 LLM 兜底推荐。
+3. **另一个致命点**：
+   - 仓库库 `project_embeddings` 是普通 SQLite 表（存 JSON 字符串），但 `semantic_search` 原代码用了 sqlite-vec 虚表语法 `WHERE embedding MATCH ? AND k = ? ORDER BY distance`，即便配置读对也会抛 `no such column: distance`。
+
+### 修复
+
+1. **统一列名**：`embedding.rs` 与 `search_cmd.rs` 全部统一读取 `vss_extension_path`，与已有数据库表保持一致。
+2. **重写 `semantic_search`**：直接在 Rust 侧读取已存的 20 条项目向量（JSON 数组），并与查询向量做**余弦相似度（cosine similarity）计算**后排序取 Top N。无需依赖 sqlite-vec C 扩展，对已有 20 条向量立即生效。
+3. **真实 E2E 验证**：
+   - "推荐一个开源视频剪辑工具" → 命中 shotcut（0.7089）、reclip（0.6332）
+   - "Rust CLI 工具" → 命中 Kode-CLI（0.5138）
+   - 单次搜索总耗时 **~1.7 秒**，不再跑 40 秒的 LLM 兜底。
+4. **全链路构建验证**：
+   - 前端 62 个测试通过
+   - typecheck 通过
+   - `cargo check --lib` 通过
+   - `pnpm tauri build` MSI + NSIS 成功，产物 SHA-256 与 `Previous/os-compass.exe` 完全一致。
+
+---
+
 ## 2026-09-03 22:14 - 意图搜索完成态不退出（真实组件测试复现）
 
 ### 证据
