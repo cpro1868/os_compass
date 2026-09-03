@@ -2,6 +2,27 @@
 
 # Session Log
 
+## 2026-09-03 - M23 安装包归档目录
+
+### 完成内容
+
+- 确认 `pnpm tauri build` 已生成 MSI 与 NSIS 安装包
+- 原始产物位于 `os-compass/src-tauri/target/release/bundle/`
+- 新建项目根目录 `release/`
+- 已归档：`release/os-compass_0.1.0_x64_en-US.msi`（15MB）
+- 已归档：`release/os-compass_0.1.0_x64-setup.exe`（10MB）
+- `scripts/build-release.ps1` 后续会自动同步安装包到 `release/`
+- M23 文档已补充产物归档路径
+
+### 验证
+
+- MSI 文件存在 ✅
+- NSIS 文件存在 ✅
+- 构建脚本语法检查 ✅
+- `git diff --check` ✅
+
+---
+
 ## 2026-09-03 01:52 - 工作包 A 完成：首页搜索与意图搜索统一
 
 ### 完成内容
