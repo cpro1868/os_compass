@@ -153,13 +153,6 @@ pub async fn three_layer_search(
     let settings = get_settings();
     write_debug_log("[DEBUG] three_layer_search: settings 加载完成");
 
-    write_debug_log("[DEBUG] three_layer_search: 尝试获取 DATABASE 锁...");
-    let db_guard = crate::db::DATABASE.lock().unwrap();
-    write_debug_log("[DEBUG] three_layer_search: DATABASE 锁获取成功");
-    let db = db_guard.as_ref().ok_or("Database not initialized")?;
-    let main_conn = db.get_connection();
-    write_debug_log("[DEBUG] three_layer_search: main_conn 初始化完成");
-
     let local_search = async {
         write_debug_log("[DEBUG] local_search: 开始...");
         let mut local_results: Vec<ProjectMatch> = Vec::new();
@@ -169,7 +162,13 @@ pub async fn three_layer_search(
             write_debug_log("[DEBUG] local_search: embedding 已启用，调用 semantic_search...");
             match crate::embedding::semantic_search(query, 10).await {
                 Ok(matches) => {
-                    write_debug_log(&format!("[DEBUG] three_layer_search: 向量搜索返回 {} 个结果", matches.len()));
+                    write_debug_log(&format!("[DEBUG] local_search: 向量搜索返回 {} 个结果", matches.len()));
+                    let db_guard = crate::db::DATABASE.lock().unwrap();
+                    let db = match db_guard.as_ref() {
+                        Some(db) => db,
+                        None => return Vec::new(),
+                    };
+                    let main_conn = db.get_connection();
                     for (project_id, distance) in matches {
                         if let Ok((name, url, description, language, stars, forks)) = main_conn.query_row(
                             "SELECT name, url, description, languages, stars, forks FROM projects WHERE id = ?",
@@ -196,9 +195,7 @@ pub async fn three_layer_search(
                             });
                         }
                     }
-                    if !local_results.is_empty() {
-                        write_debug_log(&format!("[DEBUG] local_search: 向量搜索成功，返回 {} 个结果", local_results.len()));
-                    }
+                    write_debug_log(&format!("[DEBUG] local_search: 向量搜索返回 {} 个结果", local_results.len()));
                 }
                 Err(e) => {
                     write_debug_log(&format!("[DEBUG] local_search: 向量搜索失败: {}，将降级到关键词搜索", e));
@@ -214,31 +211,34 @@ pub async fn three_layer_search(
         if local_results.is_empty() || used_keyword_search {
             write_debug_log("[DEBUG] local_search: 执行关键词搜索...");
             let search_pattern = format!("%{}%", query.to_lowercase());
-            let prepare_result = main_conn
-                .prepare("SELECT id, name, url, description, languages, stars, forks FROM projects WHERE lifecycle_status != 'DELETED' AND (name LIKE ? OR description LIKE ? OR languages LIKE ?)");
-
-            if let Ok(mut stmt) = prepare_result {
-                let rows = stmt
-                    .query_map(params![&search_pattern, &search_pattern, &search_pattern], |row| {
-                        Ok(ProjectMatch {
-                            name: row.get::<_, String>(1).unwrap_or_default(),
-                            url: row.get::<_, String>(2).unwrap_or_default(),
-                            description: row.get(3).ok(),
-                            stars: row.get(5).ok(),
-                            forks: row.get(6).ok(),
-                            language: row.get(4).ok(),
-                            health_score: None,
-                            source: "local".to_string(),
-                            match_score: 1.0,
-                        })
-                    });
-
-                if let Ok(rows) = rows {
+            let db_guard = crate::db::DATABASE.lock().unwrap();
+            let db = match db_guard.as_ref() {
+                Some(db) => db,
+                None => return local_results,
+            };
+            let main_conn = db.get_connection();
+            if let Ok(mut stmt) = main_conn.prepare(
+                "SELECT id, name, url, description, languages, stars, forks FROM projects WHERE lifecycle_status != 'DELETED' AND (name LIKE ? OR description LIKE ? OR languages LIKE ?)"
+            ) {
+                if let Ok(rows) = stmt.query_map(params![&search_pattern, &search_pattern, &search_pattern], |row| {
+                    Ok(ProjectMatch {
+                        name: row.get::<_, String>(1).unwrap_or_default(),
+                        url: row.get::<_, String>(2).unwrap_or_default(),
+                        description: row.get(3).ok(),
+                        stars: row.get(5).ok(),
+                        forks: row.get(6).ok(),
+                        language: row.get(4).ok(),
+                        health_score: None,
+                        source: "local".to_string(),
+                        match_score: 1.0,
+                    })
+                }) {
                     for row in rows.flatten() {
                         local_results.push(row);
                     }
                 }
             }
+            write_debug_log(&format!("[DEBUG] local_search: 关键词搜索返回 {} 个结果", local_results.len()));
         }
 
         local_results

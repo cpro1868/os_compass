@@ -26,29 +26,42 @@ pub struct SearchSource {
     pub enabled: bool,
 }
 
+fn resolve_vault_dir(path: &str) -> Result<std::path::PathBuf, String> {
+    if path.trim().is_empty() {
+        return Err("Vault not initialized".to_string());
+    }
+
+    let path = std::path::Path::new(path);
+    if path.file_name().and_then(|name| name.to_str()) == Some("os_compass.db") {
+        return path
+            .parent()
+            .map(std::path::Path::to_path_buf)
+            .ok_or_else(|| "Invalid vault path".to_string());
+    }
+
+    Ok(path.to_path_buf())
+}
+
 fn get_search_conn() -> Result<rusqlite::Connection, String> {
     let config = CURRENT_VAULT_CONFIG.lock().unwrap();
     let path = config.as_ref().ok_or("No vault opened")?;
-    if path.path.is_empty() {
-        return Err("Vault not initialized".to_string());
-    }
-    let vault_dir = std::path::Path::new(&path.path);
-    crate::plugins::search::init_search_db(vault_dir)
+    let vault_dir = resolve_vault_dir(&path.path)?;
+    crate::plugins::search::init_search_db(&vault_dir)
 }
 
 #[command]
-pub fn intent_search(query: String, _conversation_id: Option<String>) -> Result<SearchResult, String> {
+pub async fn intent_search(query: String, _conversation_id: Option<String>) -> Result<SearchResult, String> {
     eprintln!("[DEBUG] intent_search: 开始处理查询 '{}'", query);
     let vault_dir = {
         let config = CURRENT_VAULT_CONFIG.lock().unwrap();
         eprintln!("[DEBUG] intent_search: 获取 vault config 成功");
         let path = config.as_ref().ok_or("No vault opened")?;
         eprintln!("[DEBUG] intent_search: vault path: {:?}", path.path);
-        std::path::PathBuf::from(&path.path)
+        resolve_vault_dir(&path.path)?
     };
 
     eprintln!("[DEBUG] intent_search: 调用 three_layer_search...");
-    let result = tauri::async_runtime::block_on(three_layer_search(&vault_dir, &query));
+    let result = three_layer_search(&vault_dir, &query).await;
     eprintln!("[DEBUG] intent_search: three_layer_search 完成，结果: {:?}", result.is_ok());
     result
 }
