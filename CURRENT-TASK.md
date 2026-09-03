@@ -1,5 +1,14 @@
 # OS-Compass 当前任务
 
+## 2026-09-03 意图搜索回归修复
+
+- 根因：`intent_search` 使用 `block_on` 调用异步搜索，且 `three_layer_search` 在异步网络搜索期间持有 `DATABASE` 锁
+- 另外修复：仓库配置统一保存目录路径；兼容旧版数据库文件路径与空配置
+- 验证：`cargo check --lib`、`pnpm typecheck`、`pnpm test`（61 passed）、`pnpm tauri build` 均通过
+- 最新安装包：`release/` 下 MSI + NSIS；`Previous/` 已更新
+
+---
+
 ## ⚠️ 已延后问题
 
 | 问题编号 | 模块 | 问题 | 状态 |

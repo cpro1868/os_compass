@@ -189,7 +189,7 @@ pub fn create_vault(app: AppHandle, name: String, base_path: String) -> Result<V
     log::info!("[vault] Generated new crypto key for new vault: {:?}", vault_dir);
 
     let config = VaultConfig {
-        path: db_path.to_string_lossy().to_string(),
+        path: vault_dir.to_string_lossy().to_string(),
     };
     save_vault_config(&vault_dir.to_string_lossy(), &config)?;
 
@@ -399,7 +399,7 @@ pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
     write_log("[vault] Database switched successfully");
 
     let config = VaultConfig {
-        path: db_path_str.clone(),
+        path: path.clone(),
     };
     write_log(&format!("[vault] Setting CURRENT_VAULT_CONFIG.path = '{}'", db_path_str));
     {

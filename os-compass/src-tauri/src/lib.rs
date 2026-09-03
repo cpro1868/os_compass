@@ -307,7 +307,10 @@ pub fn run() {
                         if db_path.exists() {
                             log::info!("Auto-opening last vault: {:?}", path);
                             if db::switch_database(db_path).is_ok() {
-                                let config = vault::load_vault_config(&path);
+                                let mut config = vault::load_vault_config(&path);
+                                if config.path.trim().is_empty() {
+                                    config.path = path.clone();
+                                }
                                 let mut current = vault::CURRENT_VAULT_CONFIG.lock().unwrap();
                                 *current = Some(config);
                                 vault_path_loaded = true;
@@ -324,7 +327,7 @@ pub fn run() {
                     let vault_name = "默认仓库".to_string();
 
                     let config = vault::VaultConfig {
-                        path: default_vault_path.to_string_lossy().to_string(),
+                        path: default_vault_dir.to_string_lossy().to_string(),
                     };
 
                     let mut current = vault::CURRENT_VAULT_CONFIG.lock().unwrap();

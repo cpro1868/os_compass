@@ -2,6 +2,19 @@
 
 # Session Log
 
+## 2026-09-03 14:05 - 意图搜索回归修复
+
+### 结果
+
+- 定位到 `block_on` + 异步期间持有 DATABASE 锁导致搜索阻塞
+- `intent_search` 改为 async/await
+- 本地数据库锁限制在 SQL 查询期间
+- 统一仓库目录路径，并兼容旧配置
+- cargo check、typecheck、61 个前端测试、Tauri MSI/NSIS 构建均通过
+- `release/` 和 `Previous/` 已更新
+
+---
+
 ## 2026-09-03 - M23 安装包归档目录
 
 ### 完成内容
