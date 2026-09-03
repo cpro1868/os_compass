@@ -1,5 +1,26 @@
 # OS-Compass 当前任务
 
+## 2026-09-03 18:21 - 意图搜索“永远显示正在搜索”前端渲染 Bug 修复
+
+### 铁证
+
+`plugin_search.db.search_history` 表中用户最后一次搜索（id=3, query="你好，请给我推荐几款开源视频处理工具", result_count=8, created_at=2026-09-03 17:51:26）证明：后端已成功完成并写入 8 条结果。前端 SearchView 仍显示“正在搜索”，问题在**前端**而非后端。
+
+### 根因（基于代码与数据库证据）
+
+`SearchView.tsx:428` 原代码 `{msg.phase ? <TypingIndicator /> : 内容}`。`updatePhase('idle', ...)` 将 msg.phase 设置为 `'idle'`，但 `'idle'` 是非空字符串，条件仍为真，结果完成态消息被持续渲染为打字动画。
+
+同时发现测试脱节：`intentSearch.test.ts` 与 `full-system.test.ts` 测试的是各自复刻的 `shouldShowTypingIndicator(MessageItem)` 函数，而生产组件从未使用该函数。61 个测试全过，但测的是测试自己的代码副本。
+
+### 修复
+
+- `SearchView.tsx` 抽出并 export `shouldShowTypingIndicator(phase?: SearchPhase): boolean`，生产渲染改为调用它。
+- 两个测试文件改为 import 生产函数，删除本地副本，所有调用从传 `MessageItem` 改为传 `msg.phase`。
+- 验证：`pnpm test` 61 个全过、`pnpm typecheck` 通过、`cargo check --lib` 通过、`pnpm tauri build` MSI+NSIS 成功。
+- `release/` 与 `Previous/` 已更新到 18:20 构建。
+
+---
+
 ## 2026-09-03 意图搜索回归修复（第二轮）
 
 - 根因：`llm_parser.rs` 的 `parse_content_with_llm` 仍用 `block_on` 阻塞；联网依赖 `localhost:8080/crawl`、爬虫不可用时无 LLM 直接推荐兜底。

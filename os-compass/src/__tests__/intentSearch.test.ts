@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { shouldShowTypingIndicator } from "../components/SearchView";
 
 interface IntentAnalysis {
   intent: string;
@@ -22,10 +23,6 @@ interface MessageItem {
 
 describe("意图搜索 off_topic 处理逻辑", () => {
   
-  function shouldShowTypingIndicator(msg: MessageItem): boolean {
-    return msg.phase === 'analyzing' || msg.phase === 'searching';
-  }
-
   function updatePhase(messages: MessageItem[], loadingId: string, phase: SearchPhase, content: string): MessageItem[] {
     return messages.map(msg => {
       return msg.id === loadingId ? { ...msg, phase, content } : msg;
@@ -60,7 +57,7 @@ describe("意图搜索 off_topic 处理逻辑", () => {
       phase: 'idle'
     };
 
-    const showTyping = shouldShowTypingIndicator(msg);
+    const showTyping = shouldShowTypingIndicator(msg.phase);
     expect(showTyping).toBe(false);
   });
 
@@ -72,7 +69,7 @@ describe("意图搜索 off_topic 处理逻辑", () => {
       phase: 'analyzing'
     };
 
-    const showTyping = shouldShowTypingIndicator(msg);
+    const showTyping = shouldShowTypingIndicator(msg.phase);
     expect(showTyping).toBe(true);
   });
 
@@ -84,7 +81,7 @@ describe("意图搜索 off_topic 处理逻辑", () => {
       phase: 'searching'
     };
 
-    const showTyping = shouldShowTypingIndicator(msg);
+    const showTyping = shouldShowTypingIndicator(msg.phase);
     expect(showTyping).toBe(true);
   });
 
@@ -96,7 +93,7 @@ describe("意图搜索 off_topic 处理逻辑", () => {
       phase: undefined
     };
 
-    const showTyping = shouldShowTypingIndicator(msg);
+    const showTyping = shouldShowTypingIndicator(msg.phase);
     expect(showTyping).toBe(false);
   });
 
@@ -113,7 +110,7 @@ describe("意图搜索 off_topic 处理逻辑", () => {
       { id: '123', role: 'assistant', content: '正在分析语义...', phase: 'analyzing' }
     ];
 
-    expect(shouldShowTypingIndicator(messages[0])).toBe(true);
+    expect(shouldShowTypingIndicator(messages[0].phase)).toBe(true);
 
     // 处理 off_topic 意图
     if (intent.intent === 'off_topic' && intent.guidance) {
@@ -124,7 +121,7 @@ describe("意图搜索 off_topic 处理逻辑", () => {
     const updatedMsg = messages.find(m => m.id === loadingId);
     expect(updatedMsg?.phase).toBe('idle');
     expect(updatedMsg?.content).toBe('你好！我是开源项目助手。你想找什么类型的开源项目？');
-    expect(shouldShowTypingIndicator(updatedMsg!)).toBe(false);
+    expect(shouldShowTypingIndicator(updatedMsg!.phase)).toBe(false);
   });
 
   it("unclear 意图应正确设置 phase 为 idle", () => {

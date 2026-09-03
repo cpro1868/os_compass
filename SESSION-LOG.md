@@ -2,6 +2,22 @@
 
 # Session Log
 
+## 2026-09-03 18:21 - 意图搜索前端“永远正在搜索”渲染 Bug
+
+### 证据
+
+- `plugin_search.db.search_history` id=3（result_count=8，17:51:26）证明后端已完成
+- `SearchView.tsx:428` 原条件 `msg.phase ?` 对 `'idle'` 仍为真，TypingIndicator 永久显示
+
+### 修复
+
+- SearchView.tsx 抽出并使用 `shouldShowTypingIndicator(phase?: SearchPhase)`
+- intentSearch.test.ts / full-system.test.ts 改为 import 生产函数，删除本地副本
+- 验证：pnpm test 61 passed、typecheck、cargo check --lib、tauri build MSI+NSIS 均成功
+- release/、Previous/ 已更新
+
+---
+
 ## 2026-09-03 16:09 - 意图搜索卡死第二轮修复
 
 ### 结果

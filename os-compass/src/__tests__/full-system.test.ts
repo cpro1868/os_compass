@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { shouldShowTypingIndicator } from "../components/SearchView";
 
 type SearchPhase = 'idle' | 'analyzing' | 'searching';
 
@@ -152,10 +153,6 @@ function handleSubmit(state: SearchState, input: string): SearchState {
   return newState;
 }
 
-function shouldShowTypingIndicator(msg: MessageItem): boolean {
-  return msg.phase === 'analyzing' || msg.phase === 'searching';
-}
-
 describe("意图搜索完整系统测试", () => {
   let state: SearchState;
   
@@ -196,7 +193,7 @@ describe("意图搜索完整系统测试", () => {
       state = handleSubmit(state, '你好');
       const assistantMsg = state.messages[1];
       
-      expect(shouldShowTypingIndicator(assistantMsg)).toBe(false);
+      expect(shouldShowTypingIndicator(assistantMsg.phase)).toBe(false);
       expect(assistantMsg.content).toBeDefined();
     });
     
@@ -231,7 +228,7 @@ describe("意图搜索完整系统测试", () => {
       state = handleSubmit(state, '推荐');
       const assistantMsg = state.messages[1];
       
-      expect(shouldShowTypingIndicator(assistantMsg)).toBe(false);
+      expect(shouldShowTypingIndicator(assistantMsg.phase)).toBe(false);
       expect(assistantMsg.content).toContain('想要什么类型');
     });
   });
@@ -256,34 +253,34 @@ describe("意图搜索完整系统测试", () => {
       state = handleSubmit(state, 'Rust Web');
       const assistantMsg = state.messages[1];
       
-      expect(shouldShowTypingIndicator(assistantMsg)).toBe(true);
+      expect(shouldShowTypingIndicator(assistantMsg.phase)).toBe(true);
     });
   });
   
   describe("5. 渲染逻辑边界测试", () => {
     it("phase=idle 应显示内容", () => {
       const msg: MessageItem = { id: '1', role: 'assistant', content: '测试', phase: 'idle' };
-      expect(shouldShowTypingIndicator(msg)).toBe(false);
+      expect(shouldShowTypingIndicator(msg.phase)).toBe(false);
     });
     
     it("phase=analyzing 应显示 TypingIndicator", () => {
       const msg: MessageItem = { id: '1', role: 'assistant', content: '正在分析', phase: 'analyzing' };
-      expect(shouldShowTypingIndicator(msg)).toBe(true);
+      expect(shouldShowTypingIndicator(msg.phase)).toBe(true);
     });
     
     it("phase=searching 应显示 TypingIndicator", () => {
       const msg: MessageItem = { id: '1', role: 'assistant', content: '正在搜索', phase: 'searching' };
-      expect(shouldShowTypingIndicator(msg)).toBe(true);
+      expect(shouldShowTypingIndicator(msg.phase)).toBe(true);
     });
     
     it("phase=undefined 应显示内容", () => {
       const msg: MessageItem = { id: '1', role: 'assistant', content: '测试' };
-      expect(shouldShowTypingIndicator(msg)).toBe(false);
+      expect(shouldShowTypingIndicator(msg.phase)).toBe(false);
     });
     
     it("phase=null 应显示内容", () => {
       const msg: MessageItem = { id: '1', role: 'assistant', content: '测试', phase: undefined };
-      expect(shouldShowTypingIndicator(msg)).toBe(false);
+      expect(shouldShowTypingIndicator(msg.phase)).toBe(false);
     });
   });
   
@@ -394,7 +391,7 @@ describe("意图搜索完整系统测试", () => {
       expect(state.messages.length).toBe(2);
       expect(state.messages[1].content).toContain('开源');
       expect(state.messages[1].phase).toBe('idle');
-      expect(shouldShowTypingIndicator(state.messages[1])).toBe(false);
+      expect(shouldShowTypingIndicator(state.messages[1].phase)).toBe(false);
     });
     
     it("完整用户体验：unclear 追问", () => {
@@ -418,7 +415,7 @@ describe("意图搜索完整系统测试", () => {
       state = handleSubmit(state, query);
       
       expect(state.messages[1].phase).toBe('searching');
-      expect(shouldShowTypingIndicator(state.messages[1])).toBe(true);
+      expect(shouldShowTypingIndicator(state.messages[1].phase)).toBe(true);
     });
   });
 });
