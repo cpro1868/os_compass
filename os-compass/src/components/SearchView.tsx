@@ -9,6 +9,10 @@ import type { Project } from '../types';
 
 type SearchPhase = 'idle' | 'analyzing' | 'searching';
 
+export function shouldShowTypingIndicator(phase?: SearchPhase): boolean {
+  return phase === 'analyzing' || phase === 'searching';
+}
+
 const STATUS_CONFIG: Record<string, { emoji: string; label: string }> = {
   TO_EXPLORE: { emoji: "💡", label: "待探索" },
   DIVING: { emoji: "🔬", label: "深度研究中" },
@@ -425,7 +429,7 @@ export function SearchView() {
                     ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm p-4'
                     : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-sm p-4'
                 }>
-                  {msg.phase ? (
+                  {shouldShowTypingIndicator(msg.phase) ? (
                     <TypingIndicator phase={msg.phase} />
                   ) : (
                     <>
