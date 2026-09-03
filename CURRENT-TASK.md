@@ -1,5 +1,21 @@
 # OS-Compass 当前任务
 
+## 2026-09-03 22:14 - 意图搜索完成态不退出（真实组件测试复现）
+
+### 证据
+
+- 新增 `SearchView.render.test.tsx`，用 testing-library 真实渲染 `SearchView` 组件，mock IPC API 后模拟“输入 → 点击发送 → intentSearch 返回结果”的完整流程
+- 修复前：测试在 3 秒超时内仍显示 “正在分析语义...” 文本，断言失败
+- 定位：`updatePhase` 用 `startTransition` 异步执行 `setMessages`，等到批处理执行时读取 `loadingIdRef.current`；但 `finally` 块在此之前已把它置为 `null`，导致原消息找不到，`msg.phase` 始终是 `analyzing`
+- 第二次 `setMessages`（注入 results）也读取了同一个 ref，同样失效
+
+### 修复
+
+- `SearchView.tsx` handleSubmit 内改为使用本次请求固定的局部变量 `loadingId` 作为消息匹配键，不再读取会被 finally 清空的 ref
+- 验证：组件测试通过、全量 62 passed、typecheck、cargo check --lib、pnpm tauri build MSI+NSIS 均成功；构建产物与 Previous/os-compass.exe SHA-256 一致
+
+---
+
 ## 2026-09-03 18:21 - 意图搜索“永远显示正在搜索”前端渲染 Bug 修复
 
 ### 铁证

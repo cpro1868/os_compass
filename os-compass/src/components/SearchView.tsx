@@ -172,11 +172,9 @@ export function SearchView() {
     const updatePhase = (phase: SearchPhase, content: string) => {
       startTransition(() => {
         setSearchPhase(phase);
-        if (loadingIdRef.current) {
-          setMessages(prev => prev.map(msg =>
-            msg.id === loadingIdRef.current ? { ...msg, phase, content } : msg
-          ));
-        }
+        setMessages(prev => prev.map(msg =>
+          msg.id === loadingId ? { ...msg, phase, content } : msg
+        ));
       });
     };
 
@@ -222,13 +220,11 @@ export function SearchView() {
         }
 
         updatePhase('idle', `根据您的需求，我找到了 ${result.total} 个相关项目。`);
-        if (loadingIdRef.current) {
-          setMessages(prev => prev.map(msg =>
-            msg.id === loadingIdRef.current 
-              ? { ...msg, content: `根据您的需求，我找到了 ${result.total} 个相关项目。`, results: result }
-              : msg
-          ));
-        }
+        setMessages(prev => prev.map(msg =>
+          msg.id === loadingId
+            ? { ...msg, content: `根据您的需求，我找到了 ${result.total} 个相关项目。`, results: result }
+            : msg
+        ));
         loadHistory();
       }
     } catch {
