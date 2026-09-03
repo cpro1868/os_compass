@@ -177,64 +177,98 @@ fn ensure_vec_table_exists_internal(conn: &rusqlite::Connection) -> Result<(), S
 
 pub async fn semantic_search(query: &str, limit: usize) -> Result<Vec<(i64, f32)>, String> {
     log::info!("[semantic_search] 开始语义搜索，query: {}, limit: {}", query, limit);
-    
+
     if !is_enabled() {
         log::error!("[semantic_search] Embedding 未启用");
         return Err("Embedding not configured or disabled".to_string());
     }
     log::info!("[semantic_search] Embedding 已启用");
 
-    if let Err(e) = ensure_vec_loaded() {
-        log::warn!("[semantic_search] sqlite-vec 未加载: {}", e);
-    } else {
-        log::info!("[semantic_search] sqlite-vec 已加载");
-    }
-
     log::info!("[semantic_search] 开始生成查询向量...");
     let query_embedding = generate_embedding(query).await?;
     log::info!("[semantic_search] 查询向量生成成功，长度: {}", query_embedding.len());
-    
+
     log::info!("[semantic_search] 开始数据库查询...");
     let db_guard = DATABASE.lock().unwrap();
     let db = db_guard.as_ref().ok_or("Database not initialized")?;
     let conn = db.get_connection();
 
-    let query_json = serde_json::to_string(&query_embedding)
-        .map_err(|e| format!("Serialize query embedding failed: {}", e))?;
-
     let mut stmt = conn.prepare(
-        "SELECT project_id, distance
-         FROM project_embeddings
-         WHERE embedding MATCH ?
-         AND k = ?
-         ORDER BY distance"
-    ).map_err(|e| e.to_string())?;
+        "SELECT project_id, embedding FROM project_embeddings"
+    ).map_err(|e| format!("准备查询 embedding 失败: {}", e))?;
 
-    let results = stmt.query_map(params![query_json, limit as i64], |row| {
-        Ok((row.get(0)?, row.get(1)?))
-    }).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], |row| {
+        Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+    }).map_err(|e| format!("查询 embedding 失败: {}", e))?;
 
-    let mut matches = Vec::new();
-    for row in results {
-        if let Ok((project_id, distance)) = row {
-            matches.push((project_id, distance));
+    let mut scored: Vec<(i64, f32)> = Vec::new();
+    let mut parse_failures = 0usize;
+    for row in rows {
+        let (project_id, emb_json) = match row {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        match serde_json::from_str::<Vec<f32>>(&emb_json) {
+            Ok(vec) => {
+                if vec.is_empty() {
+                    parse_failures += 1;
+                    continue;
+                }
+                let score = cosine_similarity(&query_embedding, &vec);
+                scored.push((project_id, score));
+            }
+            Err(_) => parse_failures += 1,
         }
     }
 
-    log::info!("[semantic_search] 向量搜索返回 {} 个结果", matches.len());
-    Ok(matches)
+    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    scored.truncate(limit);
+
+    log::info!(
+        "[semantic_search] 完成：候选 {} 条，解析失败 {} 条，返回 top {}",
+        scored.len(),
+        parse_failures,
+        limit.min(scored.len())
+    );
+
+    Ok(scored)
+}
+
+fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    let n = a.len().min(b.len());
+    if n == 0 {
+        return 0.0;
+    }
+    let mut dot = 0.0f64;
+    let mut na = 0.0f64;
+    let mut nb = 0.0f64;
+    for i in 0..n {
+        let x = a[i] as f64;
+        let y = b[i] as f64;
+        dot += x * y;
+        na += x * x;
+        nb += y * y;
+    }
+    let denom = (na * nb).sqrt();
+    if denom == 0.0 {
+        return 0.0;
+    }
+    (dot / denom) as f32
 }
 
 fn load_embedding_settings() -> Result<EmbeddingConfig, String> {
     let base_dirs = directories::BaseDirs::new().ok_or("Cannot find base directories")?;
     let app_data = base_dirs.data_dir().join(".os-compass");
     let db_path = app_data.join("plugins.db");
-    
-    let conn = rusqlite::Connection::open(&db_path).map_err(|e| e.to_string())?;
 
+    let conn = rusqlite::Connection::open(&db_path).map_err(|e| e.to_string())?;
+    load_embedding_settings_from_conn(&conn)
+}
+
+fn load_embedding_settings_from_conn(conn: &rusqlite::Connection) -> Result<EmbeddingConfig, String> {
     let result: Result<EmbeddingConfig, _> = conn.query_row(
-        "SELECT embedding_enabled, embedding_api_type, embedding_api_url, embedding_api_key, 
-         embedding_model, embedding_dimension, vec_extension_path 
+        "SELECT embedding_enabled, embedding_api_type, embedding_api_url, embedding_api_key,
+         embedding_model, embedding_dimension, vss_extension_path
          FROM embedding_settings WHERE id = 1",
         [],
         |row| {
@@ -250,22 +284,25 @@ fn load_embedding_settings() -> Result<EmbeddingConfig, String> {
         },
     );
 
-    result.or_else(|_| {
-        conn.execute_batch(
-            "CREATE TABLE IF NOT EXISTS embedding_settings (
-                id INTEGER PRIMARY KEY,
-                embedding_enabled INTEGER DEFAULT 1,
+    if let Ok(cfg) = result {
+        return Ok(cfg);
+    }
+
+    log::warn!("[embedding] embedding_settings 列名或行不匹配，尝试重建兼容表");
+    let _ = conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS embedding_settings (
+            id INTEGER PRIMARY KEY,
+            embedding_enabled INTEGER DEFAULT 1,
                 embedding_api_type TEXT DEFAULT 'openai',
                 embedding_api_url TEXT DEFAULT '',
                 embedding_api_key TEXT DEFAULT '',
                 embedding_model TEXT DEFAULT 'text-embedding-3-small',
                 embedding_dimension INTEGER DEFAULT 1536,
-                vec_extension_path TEXT DEFAULT ''
+                vss_extension_path TEXT DEFAULT ''
             );
             INSERT OR IGNORE INTO embedding_settings (id) VALUES (1);"
-        ).ok();
-        Ok(EmbeddingConfig::default())
-    })
+    );
+    Ok(EmbeddingConfig::default())
 }
 
 pub fn init_vec_extension() -> Result<(), String> {
