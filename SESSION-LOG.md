@@ -2,6 +2,21 @@
 
 # Session Log
 
+## 2026-09-03 22:14 - 意图搜索完成态不退出（组件测试复现并修复）
+
+### 证据
+
+- 新增真实 SearchView 组件渲染测试，完整模拟输入→发送→intentSearch 返回结果
+- 修复前测试失败（3 秒仍显示“正在分析语义...”），准确复现问题
+- 根因：startTransition 异步 setMessages 读取 loadingIdRef.current，已被 finally 置 null，消息永远停在 analyzing
+
+### 修复
+
+- SearchView.tsx 改用本次请求固定的 loadingId 局部变量匹配消息
+- 验证：62 passed、typecheck、cargo check、tauri build 均通过；构建产物与 Previous SHA-256 一致
+
+---
+
 ## 2026-09-03 18:21 - 意图搜索前端“永远正在搜索”渲染 Bug
 
 ### 证据
