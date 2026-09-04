@@ -78,6 +78,14 @@ export async function clearSearchHistory(): Promise<void> {
   return invoke('clear_search_history');
 }
 
+export async function deleteSearchHistoryItem(id: number): Promise<void> {
+  return invoke('delete_search_history_item', { id });
+}
+
+export async function recommendMoreByLLM(query: string, limit?: number): Promise<{ items: ProjectMatch[] }> {
+  return invoke('recommend_more_projects', { query, limit });
+}
+
 export async function listSearchSources(): Promise<SearchSource[]> {
   return invoke<SearchSource[]>('list_search_sources');
 }

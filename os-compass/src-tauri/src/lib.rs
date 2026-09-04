@@ -637,6 +637,8 @@ pub fn run() {
             commands::analyze_user_intent,
             commands::get_search_history,
             commands::clear_search_history,
+            commands::delete_search_history_item,
+            commands::recommend_more_projects,
             commands::list_search_sources,
             commands::add_search_source,
             commands::update_search_source,

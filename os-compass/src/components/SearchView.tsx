@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback, useRef, startTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
-import { intentSearch, getSearchHistory, analyzeIntent } from '../api/search';
+import {
+  intentSearch,
+  getSearchHistory,
+  analyzeIntent,
+  deleteSearchHistoryItem,
+  recommendMoreByLLM,
+} from '../api/search';
 import { getRecentProjects } from '../api';
 import { useToastStore } from '../stores/toastStore';
 import type { SearchResult, SearchHistoryItem, ProjectMatch, IntentAnalysis } from '../api/search';
@@ -255,6 +261,49 @@ export function SearchView() {
     setTimeout(handleSubmit, 0);
   };
 
+  const handleDeleteHistoryItem = async (id: number) => {
+    try {
+      await deleteSearchHistoryItem(id);
+      setHistory((prev) => prev.filter((item) => item.id !== id));
+    } catch (e) {
+      console.error('Failed to delete history item:', e);
+      showToast(t('search.historyDeleteFailed') || '删除失败', 'error');
+    }
+  };
+
+  const askMoreForQuery = async (messageId: string, baseQuery: string) => {
+    try {
+      const res = await recommendMoreByLLM(baseQuery, 5);
+      const appended: ProjectMatch[] = (res?.items || []).map((it) => ({
+        ...it,
+        source: 'llm' as const,
+      }));
+      if (appended.length === 0) {
+        showToast(t('search.recommendEmpty') || '暂无更多推荐', 'info');
+        return;
+      }
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id !== messageId || !msg.results) return msg;
+          const existing = msg.results.web_results || [];
+          const seen = new Set(existing.map((it) => it.url));
+          const merged = [...existing, ...appended.filter((it) => !seen.has(it.url))];
+          return {
+            ...msg,
+            results: {
+              ...msg.results,
+              web_results: merged,
+              total: (msg.results.total || 0) + merged.length - existing.length,
+            },
+          };
+        })
+      );
+    } catch (e) {
+      console.error('recommendMore failed:', e);
+      showToast(t('search.recommendFailed') || '推荐失败，请稍后重试', 'error');
+    }
+  };
+
   const handleProjectClick = async (projectUrl: string) => {
     try {
       await invoke('open_project_detail', { url: projectUrl });
@@ -279,6 +328,63 @@ export function SearchView() {
     if (score >= 80) return 'text-green-500';
     if (score >= 60) return 'text-yellow-500';
     return 'text-red-500';
+  };
+
+  const ResultsList = (props: {
+    local: ProjectMatch[];
+    web: ProjectMatch[];
+    query: string;
+    messageId: string;
+    onAskMore: (messageId: string, query: string) => Promise<void>;
+  }) => {
+    const { local, web, query, messageId, onAskMore } = props;
+    const [expanded, setExpanded] = useState(false);
+    const [asking, setAsking] = useState(false);
+    const all = [...local, ...web];
+    const COLLAPSE_THRESHOLD = 5;
+    const shouldCollapse = all.length > COLLAPSE_THRESHOLD;
+    const visible = shouldCollapse && !expanded ? all.slice(0, COLLAPSE_THRESHOLD) : all;
+    return (
+      <div className="space-y-3">
+        {visible.map((item, idx) => (
+          <ProjectCard key={`${item.url}-${idx}`} item={item} />
+        ))}
+        {shouldCollapse && (
+          <div className="flex justify-center pt-1">
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="text-xs text-blue-500 hover:text-blue-400 transition flex items-center gap-1"
+            >
+              <i className={`fa-solid ${expanded ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
+              {expanded
+                ? (t('search.collapse') || '收起')
+                : (t('search.showAll', { count: all.length }) || `展开全部（共 ${all.length} 条）`)}
+            </button>
+          </div>
+        )}
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            disabled={asking}
+            onClick={async () => {
+              setAsking(true);
+              try {
+                await onAskMore(messageId, query);
+              } finally {
+                setAsking(false);
+              }
+            }}
+            className="text-xs px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 disabled:opacity-50 text-purple-600 dark:text-purple-400 rounded-md border border-purple-200 dark:border-purple-800 transition flex items-center gap-1.5"
+          >
+            <i className={`fa-solid ${asking ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
+            {asking
+              ? (t('search.recommending') || '正在让大模型推荐...')
+              : (t('search.recommendMore') || '让大模型再推荐 5 个')}
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const ProjectCard = (props: { item: ProjectMatch }) => {
@@ -448,11 +554,13 @@ export function SearchView() {
                               </span>
                             </div>
                           </div>
-                          <div className="space-y-3">
-                            {[...(msg.results.local_results || []), ...(msg.results.web_results || [])].map((item, idx) => (
-                              <ProjectCard key={idx} item={item} />
-                            ))}
-                          </div>
+                          <ResultsList
+                            local={msg.results.local_results || []}
+                            web={msg.results.web_results || []}
+                            query={msg.results.query}
+                            messageId={msg.id}
+                            onAskMore={askMoreForQuery}
+                          />
                           {msg.results.recommendation && (
                             <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700">
                               <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
@@ -591,14 +699,31 @@ export function SearchView() {
           ) : (
             <div className="space-y-1">
               {history.map((item) => (
-                <button
+                <div
                   key={item.id}
-                  onClick={() => handleHistoryClick(item.query)}
-                  className="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition flex items-center gap-2 truncate"
+                  className="group flex items-center gap-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                 >
-                  <i className="fa-regular fa-message text-gray-400 text-xs"></i>
-                  <span className="truncate">{item.query}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleHistoryClick(item.query)}
+                    className="flex-1 min-w-0 text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 truncate flex items-center gap-2"
+                  >
+                    <i className="fa-regular fa-message text-gray-400 text-xs"></i>
+                    <span className="truncate">{item.query}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t('search.deleteHistoryItem') || '删除该条历史'}
+                    title={t('search.deleteHistoryItem') || '删除该条历史'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteHistoryItem(item.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 mr-1 text-gray-400 hover:text-red-500 rounded transition"
+                  >
+                    <i className="fa-solid fa-xmark text-xs"></i>
+                  </button>
+                </div>
               ))}
             </div>
           )}

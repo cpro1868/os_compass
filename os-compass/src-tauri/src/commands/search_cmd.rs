@@ -1,6 +1,9 @@
 use crate::db::DATABASE;
 use crate::embedding::{EmbeddingConfig, update_config as update_embedding_config};
-use crate::plugins::search::{three_layer_search, SearchResult, ProjectMatch, IntentAnalysis, analyze_intent};
+use crate::plugins::search::{
+    three_layer_search, SearchResult, ProjectMatch, IntentAnalysis, analyze_intent,
+};
+use crate::source_engine::llm_parser::{recommend_projects_with_llm, ParsedProjectInfo};
 use crate::vault::CURRENT_VAULT_CONFIG;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
@@ -104,6 +107,38 @@ pub fn clear_search_history() -> Result<(), String> {
     conn.execute("DELETE FROM search_history", [])
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[command]
+pub fn delete_search_history_item(id: i64) -> Result<(), String> {
+    let conn = get_search_conn()?;
+    conn.execute("DELETE FROM search_history WHERE id = ?", params![id])
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RecommendMoreResult {
+    pub items: Vec<ProjectMatch>,
+}
+
+#[command]
+pub async fn recommend_more_projects(query: String, limit: Option<usize>) -> Result<RecommendMoreResult, String> {
+    let lim = limit.unwrap_or(5);
+    let settings = crate::settings::get_settings();
+    let parsed = recommend_projects_with_llm(&query, &settings, lim).await?;
+    let items: Vec<ProjectMatch> = parsed.into_iter().map(|p| ProjectMatch {
+        name: p.project_name.unwrap_or_else(|| query.clone()),
+        url: p.project_url.unwrap_or_else(|| "https://github.com/".to_string()),
+        description: p.description,
+        stars: None,
+        forks: None,
+        language: p.language,
+        health_score: None,
+        source: "llm_recommend".to_string(),
+        match_score: 0.6,
+    }).collect();
+    Ok(RecommendMoreResult { items })
 }
 
 #[command]

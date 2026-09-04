@@ -941,6 +941,14 @@
     "noHistory": "No search history",
     "clearHistory": "Clear History",
     "historyCleared": "History cleared",
+    "deleteHistoryItem": "Delete this entry",
+    "historyDeleteFailed": "Failed to delete history entry",
+    "showAll": "Show all ({{count}})",
+    "collapse": "Collapse",
+    "recommendMore": "Ask LLM for 5 more",
+    "recommending": "Asking LLM...",
+    "recommendFailed": "LLM recommendation failed, try again later",
+    "recommendEmpty": "No more recommendations from LLM",
     "clarification": {
       "prompt": "Please select or supplement your need:",
       "placeholder": "Add more details..."

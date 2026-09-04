@@ -941,6 +941,14 @@
     "noHistory": "暂无搜索历史",
     "clearHistory": "清除历史",
     "historyCleared": "历史已清除",
+    "deleteHistoryItem": "删除这条历史",
+    "historyDeleteFailed": "删除历史失败",
+    "showAll": "展开全部（共 {{count}} 条）",
+    "collapse": "收起",
+    "recommendMore": "让大模型再推荐 5 个",
+    "recommending": "正在让大模型推荐...",
+    "recommendFailed": "大模型推荐失败，请稍后再试",
+    "recommendEmpty": "大模型暂无更多推荐",
     "clarification": {
       "prompt": "请选择或补充您的需求：",
       "placeholder": "补充您的具体需求..."
