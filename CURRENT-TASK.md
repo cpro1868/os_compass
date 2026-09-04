@@ -1,5 +1,33 @@
 # OS-Compass 当前任务
 
+## 2026-09-04 16:18 - 意图搜索三项体验优化全部完成并验证通过
+
+### 需求
+1. web_results/local_results 合计超过 5 条时默认折叠，下方提供“展开全部（共 N 条）/ 收起”按钮。
+2. 结果列表末尾“让大模型再推荐 5 个”按钮，调用后端 `recommend_more_projects` 并把返回按 url 去重追加到对应消息的 `web_results`。
+3. 搜索历史每条加 hover 可见 ✕，点击调用 `delete_search_history_item(id)`，单独删除该条。
+
+### 实施
+- 后端：`src-tauri/src/commands/search_cmd.rs` 新增 `delete_search_history_item(id)` 与异步 `recommend_more_projects(query, limit?) -> RecommendMoreResult { items }`（复用 `recommend_projects_with_llm`，source=`llm_recommend`），在 `lib.rs` invoke_handler 注册。
+- 前端 API：`src/api/search.ts` 新增 `deleteSearchHistoryItem(id)` 与 `recommendMoreByLLM(query, limit?)`。
+- 前端 UI：`SearchView.tsx` 新增内部 `ResultsList` 组件（折叠阈值 5、展开/收起按钮、“让大模型再推荐 5 个”按钮，内部 `useState(expanded/asking)`）；新增 `handleDeleteHistoryItem` 与 `askMoreForQuery(messageId, baseQuery)` handler；历史每行改成 `<div group>` 包裹查询按钮 + hover ✕ 删除按钮（`aria-label="search.deleteHistoryItem"`）。
+- i18n：zh/en 新增 `search.deleteHistoryItem/showAll/collapse/recommendMore/recommending/recommendFailed/recommendEmpty/historyDeleteFailed`，实现 `{{count}}` 插值。
+
+### TDD 验证
+- 新增 `src/__tests__/SearchView.improvements.test.tsx`，3 用例（折叠、追加推荐、✕ 删除单项），用 `vi.mock('../api/search', …)` 替换整个模块（named import captured binding 不被 spy 替换）。
+- 三个用例一次运行全绿。
+
+### 全量验证
+- 前端：65 tests passed（SearchView.improvements 3 + SearchView.render 1 + 既有 61）
+- typecheck：passed
+- 后端：cargo check --lib passed
+- 构建：pnpm tauri build MSI + NSIS 成功，已同步到 `Previous/os-compass.exe`（SHA-256 `131492A9AE0C657B35F51506B91A6E9814802428FD802FD24919280BBA670C6E`）与 `release/` 安装包。
+
+### 清理
+- 删除上一轮向量取证遗留的 `scripts/embedding_connectivity_check.py`（含读取真实 API key 逻辑，不应入库）。
+
+---
+
 ## 2026-09-03 23:39 - 向量模型连通性与配置读取修复（端到端验证）
 
 ### 用户线索验证结果

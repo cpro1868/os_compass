@@ -2,6 +2,22 @@
 
 # Session Log
 
+## 2026-09-04 16:18 - 意图搜索三项体验优化全部完成
+
+### 实施
+- 后端新增 `delete_search_history_item(id)` 与 `recommend_more_projects(query, limit?)`，在 `lib.rs` invoke_handler 注册
+- 前端 API 新增 `deleteSearchHistoryItem` 与 `recommendMoreByLLM`
+- `SearchView.tsx`：抽出 `ResultsList` 内部组件（折叠/展开 + 让大模型再推荐），新增 `handleDeleteHistoryItem`/`askMoreForQuery` handler；历史每行 hover ✕
+- i18n：zh/en 新增 7 个键，含 `{{count}}` 插值
+
+### TDD
+- 新增 `SearchView.improvements.test.tsx`，3 用例（折叠、追加、✕ 删除），使用 `vi.mock('../api/search', …)` 替换整个模块（named import captured binding 不被 spy 替换）；最终全绿
+
+### 验证
+- 65 tests passed / typecheck / cargo check --lib / tauri build MSI+NSIS 全部成功
+- `Previous/os-compass.exe` 已同步（SHA-256 `131492A9AE0C657B35F51506B91A6E9814802428FD802FD24919280BBA670C6E`）
+- 删除临时取证脚本 `scripts/embedding_connectivity_check.py`（含读取真实 API key 逻辑）
+
 ## 2026-09-03 23:39 - 向量模型连通性与配置读取修复
 
 ### 关键结论
