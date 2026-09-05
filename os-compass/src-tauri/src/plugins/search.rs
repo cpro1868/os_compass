@@ -4,11 +4,7 @@ use crate::feature_plugin::{
 };
 use crate::llm::{LlmClient, LlmMessage};
 use crate::settings::get_settings;
-use crate::source_engine::{
-    get_adapter,
-    llm_parser::{parse_content_with_llm, recommend_projects_with_llm},
-    SourceType,
-};
+use crate::source_engine::llm_parser::recommend_projects_with_llm;
 use async_trait::async_trait;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
@@ -88,6 +84,24 @@ pub struct ProjectMatch {
     pub health_score: Option<i64>,
     pub source: String,
     pub match_score: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<i64>,
+}
+
+/// 把 projects.languages 里存的 GitHub 多语言 JSON 数组串归一化为展示用的主语言
+pub(crate) fn primary_language(raw: Option<String>) -> Option<String> {
+    let raw = raw?.trim().to_string();
+    if raw.is_empty() {
+        return None;
+    }
+    if let Ok(serde_json::Value::Array(list)) = serde_json::from_str::<serde_json::Value>(&raw) {
+        return list
+            .iter()
+            .filter_map(|v| v.as_str())
+            .map(|s| s.trim().to_string())
+            .find(|s| !s.is_empty());
+    }
+    Some(raw)
 }
 
 pub fn init_search_db(vault_dir: &std::path::Path) -> Result<rusqlite::Connection, String> {
@@ -150,21 +164,15 @@ pub async fn three_layer_search(
     let settings = get_settings();
     write_debug_log("[DEBUG] three_layer_search: settings 加载完成");
 
-    let local_search = async {
-        write_debug_log("[DEBUG] local_search: 开始...");
-        let mut local_results: Vec<ProjectMatch> = Vec::new();
-        let mut used_keyword_search = false;
-
-        if crate::embedding::is_enabled() {
-            write_debug_log("[DEBUG] local_search: embedding 已启用，调用 semantic_search...");
-            match crate::embedding::semantic_search(query, 10).await {
-                Ok(matches) => {
-                    write_debug_log(&format!("[DEBUG] local_search: 向量搜索返回 {} 个结果", matches.len()));
-                    let db_guard = crate::db::DATABASE.lock().unwrap();
-                    let db = match db_guard.as_ref() {
-                        Some(db) => db,
-                        None => return Vec::new(),
-                    };
+    write_debug_log("[DEBUG] local_search: 开始向量搜索...");
+    let mut local_results: Vec<ProjectMatch> = Vec::new();
+    let local_search_error = if !crate::embedding::is_enabled() {
+        Some("embedding 未启用".to_string())
+    } else {
+        match crate::embedding::semantic_search(query, 10).await {
+            Ok(matches) => {
+                let db_guard = crate::db::DATABASE.lock().unwrap();
+                if let Some(db) = db_guard.as_ref() {
                     let main_conn = db.get_connection();
                     for (project_id, distance) in matches {
                         if let Ok((name, url, description, language, stars, forks)) = main_conn.query_row(
@@ -185,157 +193,40 @@ pub async fn three_layer_search(
                                 description,
                                 stars,
                                 forks,
-                                language,
+                                language: primary_language(language),
                                 health_score: None,
                                 source: "local".to_string(),
                                 match_score: ((1.0f32 - distance).max(0.0f32) as f64),
+                                project_id: Some(project_id),
                             });
                         }
                     }
-                    write_debug_log(&format!("[DEBUG] local_search: 向量搜索返回 {} 个结果", local_results.len()));
                 }
-                Err(e) => {
-                    write_debug_log(&format!("[DEBUG] local_search: 向量搜索失败: {}，将降级到关键词搜索", e));
-                    log::warn!("向量搜索失败，降级到关键词搜索: {}", e);
-                    used_keyword_search = true;
-                }
+                None
             }
-        } else {
-            write_debug_log("[DEBUG] local_search: embedding 未启用，直接使用关键词搜索");
-            used_keyword_search = true;
+            Err(e) => Some(e),
         }
-
-        if local_results.is_empty() || used_keyword_search {
-            write_debug_log("[DEBUG] local_search: 执行关键词搜索...");
-            let search_pattern = format!("%{}%", query.to_lowercase());
-            let db_guard = crate::db::DATABASE.lock().unwrap();
-            let db = match db_guard.as_ref() {
-                Some(db) => db,
-                None => return local_results,
-            };
-            let main_conn = db.get_connection();
-            if let Ok(mut stmt) = main_conn.prepare(
-                "SELECT id, name, url, description, languages, stars, forks FROM projects WHERE lifecycle_status != 'DELETED' AND (name LIKE ? OR description LIKE ? OR languages LIKE ?)"
-            ) {
-                if let Ok(rows) = stmt.query_map(params![&search_pattern, &search_pattern, &search_pattern], |row| {
-                    Ok(ProjectMatch {
-                        name: row.get::<_, String>(1).unwrap_or_default(),
-                        url: row.get::<_, String>(2).unwrap_or_default(),
-                        description: row.get(3).ok(),
-                        stars: row.get(5).ok(),
-                        forks: row.get(6).ok(),
-                        language: row.get(4).ok(),
-                        health_score: None,
-                        source: "local".to_string(),
-                        match_score: 1.0,
-                    })
-                }) {
-                    for row in rows.flatten() {
-                        local_results.push(row);
-                    }
-                }
-            }
-            write_debug_log(&format!("[DEBUG] local_search: 关键词搜索返回 {} 个结果", local_results.len()));
-        }
-
-        local_results
     };
 
-    let llm_search = async {
-        let mut web_results: Vec<ProjectMatch> = Vec::new();
-        let started = std::time::Instant::now();
+    write_debug_log(&format!("[DEBUG] local_search: 向量搜索完成，结果={}，错误={:?}", local_results.len(), local_search_error));
 
-        let proxy = if settings.proxy_host.is_empty() {
-            None
-        } else {
-            Some(settings.proxy_host.as_str())
-        };
-
-        let mut adapter = get_adapter(SourceType::WebCrawl);
-        let search_url = format!("https://api.github.com/search/repositories?q={}", urlencoding::encode(query));
-
-        let mut crawl_ok = false;
-        match adapter.fetch(&search_url, proxy, None).await {
-            Ok(contents) if !contents.is_empty() => {
-                crawl_ok = true;
-                write_debug_log(&format!("[DEBUG] llm_search: 爬虫返回 {} 条内容", contents.len()));
-                for content in contents.iter().take(10) {
-                    let parsed = parse_content_with_llm(content, &settings).await.unwrap_or_default();
-
-                    let name = parsed
-                        .first()
-                        .and_then(|p| p.project_name.clone())
-                        .unwrap_or_else(|| content.title.clone());
-
-                    let url = parsed
-                        .first()
-                        .and_then(|p| p.project_url.clone())
-                        .unwrap_or_else(|| content.url.clone());
-
-                    let description = parsed.first().and_then(|p| p.description.clone());
-
-                    web_results.push(ProjectMatch {
-                        name,
-                        url,
-                        description,
-                        stars: None,
-                        forks: None,
-                        language: None,
-                        health_score: None,
-                        source: "llm".to_string(),
-                        match_score: 0.5,
-                    });
+    let mut llm_text = None;
+    if local_results.len() < 3 {
+        write_debug_log(&format!("[DEBUG] local_search: 结果不足 3 条，调用 LLM 知识推荐，当前={}，错误={:?}", local_results.len(), local_search_error));
+        match recommend_projects_with_llm(query, &settings, 5).await {
+            Ok(recommended) => {
+                if !recommended.is_empty() {
+                    llm_text = Some(format_llm_recommendations(&recommended));
                 }
+                write_debug_log(&format!("[DEBUG] llm_search: LLM 知识推荐完成，项目数={}", recommended.len()));
             }
-            Ok(_) => {
-                write_debug_log("[DEBUG] llm_search: 爬虫返回空内容");
-            }
-            Err(e) => {
-                write_debug_log(&format!("[DEBUG] llm_search: 爬虫失败: {}（耗时 {:?}）", e, started.elapsed()));
-            }
+            Err(e) => write_debug_log(&format!("[DEBUG] llm_search: LLM 知识推荐失败: {}", e)),
         }
+    } else {
+        write_debug_log("[DEBUG] local_search: 结果达到 3 条，不调用 LLM 推荐");
+    }
 
-        if !crawl_ok {
-            write_debug_log(&format!("[DEBUG] llm_search: 启用 LLM 直接推荐兜底（耗时 {:?}）", started.elapsed()));
-            match recommend_projects_with_llm(query, &settings, 8).await {
-                Ok(recommended) => {
-                    write_debug_log(&format!("[DEBUG] llm_search: LLM 直接推荐 {} 个项目", recommended.len()));
-                    for proj in recommended.into_iter() {
-                        let name = proj.project_name.unwrap_or_else(|| query.to_string());
-                        let url = proj.project_url.unwrap_or_else(|| {
-                            let slug = name.replace('/', "-").to_lowercase();
-                            format!("https://github.com/{}", slug)
-                        });
-                        web_results.push(ProjectMatch {
-                            name,
-                            url,
-                            description: proj.description,
-                            stars: None,
-                            forks: None,
-                            language: proj.language,
-                            health_score: None,
-                            source: "llm_recommend".to_string(),
-                            match_score: 0.6,
-                        });
-                    }
-                }
-                Err(e) => {
-                    write_debug_log(&format!("[DEBUG] llm_search: LLM 直接推荐失败: {}", e));
-                }
-            }
-        }
-
-        write_debug_log(&format!(
-            "[DEBUG] llm_search: 完成，web_results={}（总耗时 {:?}）",
-            web_results.len(),
-            started.elapsed()
-        ));
-
-        web_results
-    };
-
-    let (local_results, web_results) = tokio::join!(local_search, llm_search);
-
+    let web_results = Vec::new();
     let total = (local_results.len() + web_results.len()) as i64;
     let conversation_id = format!("conv_{}", std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -349,10 +240,7 @@ pub async fn three_layer_search(
 
     log::info!("[three_layer_search] 生成本地推荐");
     let recommendation = generate_smart_recommendation(&local_results, &web_results, query);
-    
-    log::info!("[three_layer_search] 生成 LLM 分析文本");
-    let llm_text = generate_llm_summary(&local_results, &web_results, query);
-    
+
     log::info!("[three_layer_search] ====== 搜索完成 ======");
     log::info!("[three_layer_search] 总结果数: {}", total);
     log::info!("[three_layer_search] 本地结果: {}, 联网结果: {}", local_results.len(), web_results.len());
@@ -364,8 +252,18 @@ pub async fn three_layer_search(
         total,
         conversation_id,
         recommendation: Some(recommendation),
-        llm_text: Some(llm_text),
+        llm_text,
     })
+}
+
+fn format_llm_recommendations(projects: &[crate::source_engine::llm_parser::ParsedProjectInfo]) -> String {
+    projects.iter().enumerate().map(|(index, project)| {
+        let name = project.project_name.as_deref().unwrap_or("未命名项目");
+        let url = project.project_url.as_deref().unwrap_or("暂无仓库地址");
+        let description = project.description.as_deref().unwrap_or("暂无项目描述");
+        let language = project.language.as_deref().unwrap_or("Unknown");
+        format!("{}. **{}**\n   - GitHub/Gitee：{}\n   - 推荐理由：{}\n   - 主要语言：{}", index + 1, name, url, description, language)
+    }).collect::<Vec<_>>().join("\n\n")
 }
 
 fn generate_smart_recommendation(

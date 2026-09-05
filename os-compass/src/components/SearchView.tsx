@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, startTransition } from 'react';
 import { useTranslation } from 'react-i18next';
-import { invoke } from '@tauri-apps/api/core';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import {
   intentSearch,
   getSearchHistory,
@@ -44,6 +44,7 @@ export function SearchView() {
   const [, setSearchPhase] = useState<SearchPhase>('idle');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
+  const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -282,6 +283,7 @@ export function SearchView() {
         showToast(t('search.recommendEmpty') || '暂无更多推荐', 'info');
         return;
       }
+      setExpandedMessages((prev) => ({ ...prev, [messageId]: true }));
       setMessages((prev) =>
         prev.map((msg) => {
           if (msg.id !== messageId || !msg.results) return msg;
@@ -304,147 +306,159 @@ export function SearchView() {
     }
   };
 
-  const handleProjectClick = async (projectUrl: string) => {
+  const handleProjectItemClick = async (item: ProjectMatch) => {
+    if (item.source === 'local' && item.project_id) {
+      window.dispatchEvent(
+        new CustomEvent('openProjectDetail', {
+          detail: { projectId: item.project_id },
+        })
+      );
+      return;
+    }
+
+    if (!item.url) {
+      showToast(t('search.error.openFailed') || '打开项目详情失败', 'error');
+      return;
+    }
+
+    let target = item.url.trim();
+    if (!target) {
+      showToast(t('search.error.openFailed') || '打开项目详情失败', 'error');
+      return;
+    }
+    if (!/^https?:\/\//i.test(target)) {
+      target = `https://${target}`;
+    }
+
     try {
-      await invoke('open_project_detail', { url: projectUrl });
-    } catch {
+      await openUrl(target);
+    } catch (e) {
+      console.error('openUrl failed:', e);
       showToast(t('search.error.openFailed') || '打开项目详情失败', 'error');
     }
   };
 
-  const getSourceIcon = (source: string) => {
-    switch (source) {
-      case 'local':
-        return { icon: 'fa-database', color: 'text-blue-500' };
-      case 'llm':
-        return { icon: 'fa-wand-magic-sparkles', color: 'text-purple-500' };
-      default:
-        return { icon: 'globe', color: 'text-gray-400' };
+function normalizeLanguage(lang?: string | null): string | null {
+  if (!lang) return null;
+  const trimmed = lang.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        const first = parsed.find((x) => typeof x === 'string' && x.trim());
+        return first ? first.trim() : null;
+      }
+    } catch {
+      // ignore
     }
-  };
+  }
+  return trimmed;
+}
 
-  const getHealthColor = (score?: number) => {
-    if (!score) return 'text-gray-400';
-    if (score >= 80) return 'text-green-500';
-    if (score >= 60) return 'text-yellow-500';
-    return 'text-red-500';
-  };
+interface ProjectCardProps {
+  item: ProjectMatch;
+  onClick: (item: ProjectMatch) => void;
+}
 
-  const ResultsList = (props: {
-    local: ProjectMatch[];
-    web: ProjectMatch[];
-    query: string;
-    messageId: string;
-    onAskMore: (messageId: string, query: string) => Promise<void>;
-  }) => {
-    const { local, web, query, messageId, onAskMore } = props;
-    const [expanded, setExpanded] = useState(false);
-    const [asking, setAsking] = useState(false);
-    const all = [...local, ...web];
-    const COLLAPSE_THRESHOLD = 5;
-    const shouldCollapse = all.length > COLLAPSE_THRESHOLD;
-    const visible = shouldCollapse && !expanded ? all.slice(0, COLLAPSE_THRESHOLD) : all;
-    return (
-      <div className="space-y-3">
-        {visible.map((item, idx) => (
-          <ProjectCard key={`${item.url}-${idx}`} item={item} />
-        ))}
-        {shouldCollapse && (
-          <div className="flex justify-center pt-1">
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="text-xs text-blue-500 hover:text-blue-400 transition flex items-center gap-1"
-            >
-              <i className={`fa-solid ${expanded ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
-              {expanded
-                ? (t('search.collapse') || '收起')
-                : (t('search.showAll', { count: all.length }) || `展开全部（共 ${all.length} 条）`)}
-            </button>
-          </div>
-        )}
-        <div className="flex justify-center pt-2">
+function ProjectCard({ item, onClick }: ProjectCardProps) {
+  const lang = normalizeLanguage(item.language);
+  return (
+    <div
+      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-blue-500 cursor-pointer transition"
+      onClick={() => onClick(item)}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-gray-900 dark:text-white text-base leading-snug truncate">
+            {item.name}
+          </h4>
+          {item.description ? (
+            <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mt-1 leading-relaxed">
+              {item.description}
+            </p>
+          ) : null}
+        </div>
+        {lang ? (
+          <span className="flex-shrink-0 text-xs px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md font-medium border border-gray-200 dark:border-gray-600">
+            {lang}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+interface ResultsListProps {
+  local: ProjectMatch[];
+  web: ProjectMatch[];
+  query: string;
+  messageId: string;
+  expanded?: boolean;
+  onToggleExpand?: (expanded: boolean) => void;
+  onAskMore: (messageId: string, query: string) => Promise<void>;
+  onItemClick: (item: ProjectMatch) => void;
+}
+
+function ResultsList(props: ResultsListProps) {
+  const { local, web, query, messageId, expanded: controlledExpanded, onToggleExpand, onAskMore, onItemClick } = props;
+  const { t } = useTranslation();
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const expanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
+  const setExpanded = (val: boolean | ((prev: boolean) => boolean)) => {
+    const next = typeof val === 'function' ? val(expanded) : val;
+    setInternalExpanded(next);
+    onToggleExpand?.(next);
+  };
+  const all = [...local, ...web];
+  const COLLAPSE_THRESHOLD = 5;
+  const shouldCollapse = all.length > COLLAPSE_THRESHOLD;
+  const visible = shouldCollapse && !expanded ? all.slice(0, COLLAPSE_THRESHOLD) : all;
+
+  return (
+    <div className="space-y-3">
+      {visible.map((item, idx) => (
+        <ProjectCard key={`${item.url}-${item.project_id || idx}`} item={item} onClick={onItemClick} />
+      ))}
+      {shouldCollapse && (
+        <div className="flex justify-center pt-1">
           <button
             type="button"
-            disabled={asking}
-            onClick={async () => {
-              setAsking(true);
-              try {
-                await onAskMore(messageId, query);
-              } finally {
-                setAsking(false);
-              }
-            }}
-            className="text-xs px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 disabled:opacity-50 text-purple-600 dark:text-purple-400 rounded-md border border-purple-200 dark:border-purple-800 transition flex items-center gap-1.5"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs text-blue-500 hover:text-blue-400 transition flex items-center gap-1"
           >
-            <i className={`fa-solid ${asking ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
-            {asking
-              ? (t('search.recommending') || '正在让大模型推荐...')
-              : (t('search.recommendMore') || '让大模型再推荐 5 个')}
+            <i className={`fa-solid ${expanded ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
+            {expanded
+              ? (t('search.collapse') || '收起')
+              : (t('search.showAll', { count: all.length }) || `展开全部（共 ${all.length} 条）`)}
           </button>
         </div>
+      )}
+      <div className="flex justify-center pt-2">
+        <button
+          type="button"
+          disabled={asking}
+          onClick={async () => {
+            setAsking(true);
+            try {
+              await onAskMore(messageId, query);
+              setExpanded(true);
+            } finally {
+              setAsking(false);
+            }
+          }}
+          className="text-xs px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 disabled:opacity-50 text-purple-600 dark:text-purple-400 rounded-md border border-purple-200 dark:border-purple-800 transition flex items-center gap-1.5"
+        >
+          <i className={`fa-solid ${asking ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
+          {asking
+            ? (t('search.recommending') || '正在让大模型推荐...')
+            : (t('search.recommendMore') || '让大模型再推荐 5 个')}
+        </button>
       </div>
-    );
-  };
-
-  const ProjectCard = (props: { item: ProjectMatch }) => {
-    const { item } = props;
-    const source = getSourceIcon(item.source);
-    const healthColor = getHealthColor(item.health_score);
-
-    return (
-      <div
-        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-blue-500 cursor-pointer transition"
-        onClick={() => item.url && handleProjectClick(item.url)}
-      >
-        <div className="flex items-start gap-3">
-          <div className="w-11 h-11 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <i className={`fa-solid ${source.icon} ${source.color} text-xl`}></i>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h4 className="font-semibold text-gray-900 dark:text-white">{item.name}</h4>
-              <span className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
-                item.source === 'local'
-                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700'
-                  : 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-700'
-              }`}>
-                <i className={`fa-solid ${source.icon} text-[10px]`}></i>
-                {item.source === 'local' ? t('search.source.local') : t('search.source.llm')}
-              </span>
-              {item.health_score && (
-                <span className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-700 ${healthColor}`}>
-                  <i className="fa-solid fa-heart text-[10px]"></i>
-                  {item.health_score}
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{item.description || ''}</p>
-            <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 dark:text-gray-500">
-              {item.stars && (
-                <span className="flex items-center gap-1">
-                  <i className="fa-solid fa-star text-yellow-500"></i>
-                  {item.stars >= 1000 ? `${(item.stars / 1000).toFixed(0)}k` : item.stars}
-                </span>
-              )}
-              {item.language && (
-                <span className="flex items-center gap-1">
-                  <i className="fa-solid fa-code"></i>
-                  {item.language}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex-shrink-0">
-            <span className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg text-xs">
-              <i className="fa-solid fa-check"></i>
-              {t('search.inLibrary') || '已入库'}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  };
+    </div>
+  );
+}
 
   const TypingIndicator = (props: { phase?: SearchPhase }) => (
     <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400 text-sm">
@@ -538,9 +552,14 @@ export function SearchView() {
                       <p className={msg.role === 'user' ? '' : 'text-gray-700 dark:text-gray-300 leading-relaxed'}>
                         {msg.content}
                       </p>
-                      {msg.results && (
-                        <>
-                          <div className="flex flex-wrap gap-3 my-4">
+                       {msg.results && (
+                         <>
+                           {msg.results.llm_text && (
+                             <div className="mt-4 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                               {msg.results.llm_text}
+                             </div>
+                           )}
+                           <div className="flex flex-wrap gap-3 my-4">
                             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg text-xs">
                               <i className="fa-solid fa-database text-blue-500"></i>
                               <span className="text-blue-600 dark:text-blue-400">
@@ -559,7 +578,12 @@ export function SearchView() {
                             web={msg.results.web_results || []}
                             query={msg.results.query}
                             messageId={msg.id}
+                            expanded={expandedMessages[msg.id]}
+                            onToggleExpand={(val) =>
+                              setExpandedMessages((prev) => ({ ...prev, [msg.id]: val }))
+                            }
                             onAskMore={askMoreForQuery}
+                            onItemClick={handleProjectItemClick}
                           />
                           {msg.results.recommendation && (
                             <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700">
@@ -741,7 +765,17 @@ export function SearchView() {
               recentProjects.map((project) => (
                 <div
                   key={project.id}
-                  onClick={() => project.url && handleProjectClick(project.url)}
+                  onClick={() =>
+                    handleProjectItemClick({
+                      name: project.name,
+                      url: project.url || '',
+                      description: project.description || undefined,
+                      language: project.languages || undefined,
+                      source: 'local',
+                      match_score: 1.0,
+                      project_id: project.id,
+                    })
+                  }
                   className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700 hover:border-blue-500 cursor-pointer transition"
                 >
                   <div className="flex items-center gap-2">

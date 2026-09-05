@@ -2,6 +2,19 @@
 
 # Session Log
 
+## 2026-09-05 22:06 - 意图搜索结果卡片三项缺陷修复
+
+### 关键操作
+1. 取证定位：
+   - 杂乱问题：`projects.languages` 存 JSON 数组（`["C++","QML"]`），Rust 侧原样塞入 `ProjectMatch.language`，前端无解析直出；卡片上充斥 source/已入库/Star/健康分等冗余信息。
+   - 详情失败：`invoke('open_project_detail')` 命令在 Rust 侧根本不存在，主应用实际通过 `openProjectDetail` CustomEvent 接收 `projectId` 打开弹窗。
+   - 推荐无反应：新结果追加在 `web_results` 尾部，而列表按 5 条截断；本地结果已满时新项目全被折叠；且内部 `expanded` state 随重渲染丢失。
+2. 修复实施：
+   - `search.rs` / `embedding.rs` / `search_cmd.rs`：`ProjectMatch` 增 `project_id: Option<i64>`，多语言 JSON 自动解析提取首个主语言。
+   - `SearchView.tsx`：精简 `ProjectCard`（只保留名称/2行描述/语言）；本地点击派发 `openProjectDetail`，外链调用 `openUrl`；`ResultsList` 接入父级 `expandedMessages`，追加推荐成功后自动展开全部。
+   - `api/search.ts`：补齐 TS 类型。
+3. TDD 验证：新增 `SearchView.cardIssues.test.tsx` 5 用例，全量 71 tests passed，typecheck/cargo check/tauri build 均通过。产物归档至 Previous 和 release。
+
 ## 2026-09-04 16:18 - 意图搜索三项体验优化全部完成
 
 ### 实施
