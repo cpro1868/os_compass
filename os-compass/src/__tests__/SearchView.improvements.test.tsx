@@ -64,6 +64,26 @@ describe("SearchView 三个优化项", () => {
     });
   });
 
+  it("本地无结果时应显示 LLM 返回的文字推荐", async () => {
+    searchApiMock.intentSearch.mockResolvedValue({
+      query: "视频处理",
+      local_results: [],
+      web_results: [],
+      total: 0,
+      conversation_id: "c1",
+      llm_text: "推荐使用 FFmpeg 和 Shotcut。",
+    });
+
+    render(<SearchView />);
+    fireEvent.change(screen.getByPlaceholderText("search.placeholder"), {
+      target: { value: "推荐视频处理" },
+    });
+    const sendBtn = screen.getAllByRole("button").find((b) => b.querySelector(".fa-paper-plane"))!;
+    fireEvent.click(sendBtn);
+
+    expect(await screen.findByText("推荐使用 FFmpeg 和 Shotcut。")).not.toBeNull();
+  });
+
   it("需求 1: web_results 超过 5 条时默认折叠，只渲染前 5 条", async () => {
     searchApiMock.intentSearch.mockResolvedValue({
       query: "视频处理",

@@ -481,10 +481,11 @@ pub async fn semantic_search_projects(query: String, limit: Option<usize>) -> Re
                 description,
                 stars,
                 forks,
-                language,
+                language: crate::plugins::search::primary_language(language),
                 health_score: None,
                 source: "local".to_string(),
                 match_score: ((1.0f32 - distance).max(0.0f32) as f64),
+                project_id: Some(project_id),
             });
         }
     }

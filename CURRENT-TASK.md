@@ -1,6 +1,39 @@
 # OS-Compass 当前任务
 
-## 2026-09-04 16:18 - 意图搜索三项体验优化全部完成并验证通过
+## 2026-09-05 22:06 - 意图搜索三项缺陷修复（卡片精简/详情跳转/追加推荐）
+
+### 需求
+1. 项目信息卡片去除杂乱内容：不显示 URL，只展示名称、描述（2 行截断）、语言（单语言标签，从 DB 存的 JSON 数组如 `["C++","QML"]` 提取首项）；去除已入库/来源徽标/Star/健康分等杂音；`llm_text` 原样保留。
+2. 点击卡片提示“打开项目详情失败”：本地项目（带 `project_id`）改为派发全局 `openProjectDetail` CustomEvent，复用主应用详情弹窗；非本地项目（LLM 推荐）用系统默认浏览器（`openUrl`）打开外部链接并自动补齐 `https://`。
+3. 点击“让大模型再推荐 5 个”无反应：修复追加到 `web_results` 后因折叠阈值（5 条）导致新结果全被隐藏的问题；点击推荐并成功返回后自动展开全部，且追加后的结果立即可见；返回 0 条给出 Toast 提示。
+
+### 根因
+- 杂乱问题：Rust 侧 `ProjectMatch.language` 直接将 `projects.languages`（GitHub API 存下的 JSON 数组字面量）原样字符串塞给前端；前端卡片原版带有 source 徽标、已入库徽标、star、fork、health_score、url 导致信息密集。
+- 打开详情失败：前端调用 `invoke('open_project_detail', { url })`，但全 Rust 侧根本不存在该命令（零定义）；主应用真正监听的是 `openProjectDetail` 事件（接收 `{ projectId }`）。
+- 再推荐无反应：`ResultsList` 内部 state `expanded` 与父级消息流脱节；且本地已有≥5 条时，追加在末尾的 5 条 LLM 推荐被 `all.slice(0, 5)` 截断在外，用户视觉上“无任何反应”。
+
+### 实施
+- 后端：
+  - `src-tauri/src/plugins/search.rs`：`ProjectMatch` 新增 `pub project_id: Option<i64>`；新增 `primary_language(raw)` 提取多语言 JSON 数组首项并回落单语言字面量；`three_layer_search` 注入 `project_id: Some(project_id)`。
+  - `src-tauri/src/embedding.rs`：`semantic_search_projects` 同样调用 `primary_language` 并注入 `project_id: Some(project_id)`。
+  - `src-tauri/src/commands/search_cmd.rs`：`recommend_more_projects` 补充 `project_id: None` 字段。
+- 前端：
+  - `src/api/search.ts`：`ProjectMatch` 新增 `project_id?: number`，`source` 扩展 `'llm_recommend'`。
+  - `src/components/SearchView.tsx`：
+    - `ProjectCard` 移到外层静态组件，仅渲染名称、描述（line-clamp-2）、语言（`normalizeLanguage` 兜底解析），去除 URL/徽标/已入库等杂质。
+    - `handleProjectItemClick`：本地带 `project_id` 时派发 `openProjectDetail` 事件；非本地调用 `@tauri-apps/plugin-opener` 的 `openUrl`，自动补全协议。
+    - `ResultsList` 受控 `expanded`（由 `SearchView.expandedMessages[msg.id]` 维护），点击“再推荐 5 个”成功后自动设置 `expanded=true`，确保追加结果立即展示在视口内；空结果 Toast 提示。
+    - 最近项目点击同步调用 `handleProjectItemClick`。
+
+### TDD 与全量验证
+- 新增 `src/__tests__/SearchView.cardIssues.test.tsx`（5 个用例：语言清洗、本地点击派发事件、外链点击 openUrl、追加后立即可见、空推荐提示），先红后绿。
+- 前端测试：8 测试文件，71 tests passed（含 SearchView.improvements 4 + cardIssues 5 + render 1 + 既有 61）。
+- 类型检查：`pnpm typecheck` 通过。
+- 后端编译：`cargo check --lib` 通过。
+- 构建发布：`pnpm tauri build` 成功产出 MSI 与 NSIS 安装包。
+- 产物归档：已同步至 `Previous/os-compass.exe`（SHA-256：`893BA3148CE0893E4136C0F56C5E15934D1E635CE1384AD7001F66C5C8BA0F50`）与 `release/`。
+
+---
 
 ### 需求
 1. web_results/local_results 合计超过 5 条时默认折叠，下方提供“展开全部（共 N 条）/ 收起”按钮。

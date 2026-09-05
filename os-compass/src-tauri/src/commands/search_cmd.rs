@@ -3,7 +3,7 @@ use crate::embedding::{EmbeddingConfig, update_config as update_embedding_config
 use crate::plugins::search::{
     three_layer_search, SearchResult, ProjectMatch, IntentAnalysis, analyze_intent,
 };
-use crate::source_engine::llm_parser::{recommend_projects_with_llm, ParsedProjectInfo};
+use crate::source_engine::llm_parser::recommend_projects_with_llm;
 use crate::vault::CURRENT_VAULT_CONFIG;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
@@ -137,6 +137,7 @@ pub async fn recommend_more_projects(query: String, limit: Option<usize>) -> Res
         health_score: None,
         source: "llm_recommend".to_string(),
         match_score: 0.6,
+        project_id: None,
     }).collect();
     Ok(RecommendMoreResult { items })
 }

@@ -9,7 +9,8 @@ export interface ProjectMatch {
   language?: string;
   health_score?: number;
   match_score: number;
-  source: 'local' | 'llm';
+  source: 'local' | 'llm' | 'llm_recommend';
+  project_id?: number;
 }
 
 export interface SmartRecommendation {
