@@ -1,5 +1,33 @@
 # OS-Compass 当前任务
 
+## 2026-09-06 11:14 - 意图搜索质量回归与"再推荐 5 个"无响应修复
+
+### 现象
+用户验收：搜索"地图工具"命中 AI-Cubby、shotcut、OpenHarness 等毫无关联项目；"让大模型再推荐 5 个"点击后无任何返回。
+
+### 根因
+1. 仓库库 42 个项目里仅 20 个存有 embedding 向量；"奇幻地图生成器"等地图相关项目根本没被向量化。
+2. `generate_project_embeddings` / `rebuild_embeddings` 仅以 `"{name}: {description}"` 生成 embedding 文本，丢失 `languages` 关键语义信号，bge-m3 无法定位真实相关项目。
+3. `recommend_more_projects` 仅依赖 LLM 直推。LLM API 180s 超时或返回 0 条时，前端只显示"暂无更多推荐"，无兜底。
+
+### 修复
+- `embedding.rs` 新增 `build_project_embedding_text(name, description, languages)`；`generate_project_embeddings` 与 `rebuild_embeddings` 同步接入。
+- `search_cmd.rs` `recommend_more_projects`：先调 `recommend_projects_with_llm`；为空 / 出错时降级走 `embedding::semantic_search` 在本地库找最相关项目并补足条目。
+- `embedding_tests.rs` 新增 9 个 Rust 单元测试覆盖 `primary_language`、cosine、embedding 文本拼装、ProjectMatch 构造。
+
+### 验证
+- `cargo check --lib --tests`：通过
+- `pnpm test`：71 tests passed
+- `pnpm typecheck`：通过
+- `pnpm tauri build`：MSI + NSIS 成功
+- 端到端："地图工具"真实排序为 奇幻地图生成器 → MarkWrite → 真实住宅地址生成器 → AI-Cubby
+- 产物：`Previous/os-compass.exe` SHA-256 `3222152F0F702B9BE93A240D3AD47893C3086F97E89981B3BEBFB1D898AF9581`
+
+### 用户侧一次性操作
+首次运行新版本后调用"重建全部向量"（看板页向量按钮），22 个新向量化项才能参与搜索。
+
+---
+
 ## 2026-09-05 22:06 - 意图搜索三项缺陷修复（卡片精简/详情跳转/追加推荐）
 
 ### 需求
