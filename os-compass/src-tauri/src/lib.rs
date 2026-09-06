@@ -26,6 +26,8 @@ mod prompts;
 
 #[cfg(test)]
 mod db_tests;
+#[cfg(test)]
+mod embedding_tests;
 
 use std::sync::Mutex;
 use tauri::Manager;

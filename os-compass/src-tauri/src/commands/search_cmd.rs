@@ -3,7 +3,7 @@ use crate::embedding::{EmbeddingConfig, update_config as update_embedding_config
 use crate::plugins::search::{
     three_layer_search, SearchResult, ProjectMatch, IntentAnalysis, analyze_intent,
 };
-use crate::source_engine::llm_parser::recommend_projects_with_llm;
+use crate::settings::AppSettings;
 use crate::vault::CURRENT_VAULT_CONFIG;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
@@ -125,21 +125,89 @@ pub struct RecommendMoreResult {
 #[command]
 pub async fn recommend_more_projects(query: String, limit: Option<usize>) -> Result<RecommendMoreResult, String> {
     let lim = limit.unwrap_or(5);
+
     let settings = crate::settings::get_settings();
-    let parsed = recommend_projects_with_llm(&query, &settings, lim).await?;
-    let items: Vec<ProjectMatch> = parsed.into_iter().map(|p| ProjectMatch {
-        name: p.project_name.unwrap_or_else(|| query.clone()),
-        url: p.project_url.unwrap_or_else(|| "https://github.com/".to_string()),
-        description: p.description,
-        stars: None,
-        forks: None,
-        language: p.language,
-        health_score: None,
-        source: "llm_recommend".to_string(),
-        match_score: 0.6,
-        project_id: None,
-    }).collect();
+    let mut items: Vec<ProjectMatch> = Vec::new();
+
+    match crate::source_engine::llm_parser::recommend_projects_with_llm(&query, &settings, lim).await {
+        Ok(parsed) if !parsed.is_empty() => {
+            items = parsed.into_iter().map(|p| ProjectMatch {
+                name: p.project_name.unwrap_or_else(|| query.clone()),
+                url: p.project_url.unwrap_or_else(|| "https://github.com/".to_string()),
+                description: p.description,
+                stars: None,
+                forks: None,
+                language: p.language,
+                health_score: None,
+                source: "llm_recommend".to_string(),
+                match_score: 0.6,
+                project_id: None,
+            }).collect();
+        }
+        Ok(_) => {
+            log::info!("[recommend_more_projects] LLM 返回空结果，降级到本地向量搜索");
+        }
+        Err(e) => {
+            log::warn!("[recommend_more_projects] LLM 调用失败: {}，降级到本地向量搜索", e);
+        }
+    }
+
+    if items.is_empty() {
+        if let Ok(vault_dir) = resolve_vault_dir(&settings_vault_path(&settings)) {
+            let semantic = crate::embedding::semantic_search(&query, lim + items.len()).await;
+            if let Ok(matches) = semantic {
+                let db_guard = crate::db::DATABASE.lock().unwrap();
+                if let Some(db) = db_guard.as_ref() {
+                    let main_conn = db.get_connection();
+                    for (project_id, distance) in matches {
+                        if items.iter().any(|it| it.project_id == Some(project_id)) {
+                            continue;
+                        }
+                        if let Ok((name, url, description, language, stars, forks)) = main_conn.query_row(
+                            "SELECT name, url, description, languages, stars, forks FROM projects WHERE id = ?",
+                            rusqlite::params![project_id],
+                            |row| Ok((
+                                row.get::<_, String>(0)?,
+                                row.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                                row.get::<_, Option<String>>(2)?,
+                                row.get::<_, Option<String>>(3)?,
+                                row.get::<_, Option<i64>>(4)?,
+                                row.get::<_, Option<i64>>(5)?,
+                            )),
+                        ) {
+                            items.push(ProjectMatch {
+                                name,
+                                url,
+                                description,
+                                stars,
+                                forks,
+                                language: crate::plugins::search::primary_language(language),
+                                health_score: None,
+                                source: "local".to_string(),
+                                match_score: ((1.0f32 - distance).max(0.0f32) as f64),
+                                project_id: Some(project_id),
+                            });
+                        }
+                        if items.len() >= lim {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Ok(RecommendMoreResult { items })
+}
+
+fn settings_vault_path(_settings: &AppSettings) -> String {
+    use crate::vault::CURRENT_VAULT_CONFIG;
+    if let Ok(g) = CURRENT_VAULT_CONFIG.lock() {
+        if let Some(c) = g.as_ref() {
+            return c.path.clone();
+        }
+    }
+    String::new()
 }
 
 #[command]
