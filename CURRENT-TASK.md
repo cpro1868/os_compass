@@ -1,5 +1,12 @@
 # OS-Compass 当前任务
 
+## 2026-09-07 19:26 - 再推荐原文接入 Markdown 渲染 ✅ 已完成
+
+- `SearchView.tsx`：`rawText` 改用 `MarkdownRenderer`（prose + dark:prose-invert）解析渲染，列表/加粗/链接正常展示。
+- 验证：76 tests 全绿 / typecheck / MSI+NSIS 构建成功；`Previous/os-compass.exe` SHA-256 `CDFF287363A0ED5274CDDCF1ECB16DF888AC2A1A150EE06E33AB1968D9533A60`。
+
+---
+
 ## 2026-09-07 17:26 - 意图搜索多轮对话记忆与智能收敛 ✅ 已完成
 
 ### 需求（用户验收反馈）
