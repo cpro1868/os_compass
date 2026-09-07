@@ -20,7 +20,7 @@ fn get_debug_log_path() -> PathBuf {
     }
 }
 
-fn write_debug_log(msg: &str) {
+pub fn write_debug_log(msg: &str) {
     if let Ok(mut file) = OpenOptions::new()
         .create(true)
         .append(true)

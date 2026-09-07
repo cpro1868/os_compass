@@ -126,36 +126,72 @@ pub struct RecommendMoreResult {
 pub async fn recommend_more_projects(query: String, limit: Option<usize>) -> Result<RecommendMoreResult, String> {
     let lim = limit.unwrap_or(5);
 
+    crate::plugins::search::write_debug_log(&format!(
+        "[DEBUG] recommend_more_projects: 开始 query='{}' limit={}",
+        query, lim
+    ));
+
     let settings = crate::settings::get_settings();
+    crate::plugins::search::write_debug_log(&format!(
+        "[DEBUG] recommend_more_projects: api_base='{}' model='{}' key_len={}",
+        settings.llm_api_base, settings.llm_model, settings.llm_api_key.len()
+    ));
+
     let mut items: Vec<ProjectMatch> = Vec::new();
 
-    match crate::source_engine::llm_parser::recommend_projects_with_llm(&query, &settings, lim).await {
+    let started = std::time::Instant::now();
+    let llm_result = crate::source_engine::llm_parser::recommend_projects_with_llm(&query, &settings, lim).await;
+    crate::plugins::search::write_debug_log(&format!(
+        "[DEBUG] recommend_more_projects: LLM 调用结束 (耗时 {:?})",
+        started.elapsed()
+    ));
+
+    match &llm_result {
         Ok(parsed) if !parsed.is_empty() => {
-            items = parsed.into_iter().map(|p| ProjectMatch {
-                name: p.project_name.unwrap_or_else(|| query.clone()),
-                url: p.project_url.unwrap_or_else(|| "https://github.com/".to_string()),
-                description: p.description,
-                stars: None,
-                forks: None,
-                language: p.language,
-                health_score: None,
-                source: "llm_recommend".to_string(),
-                match_score: 0.6,
-                project_id: None,
-            }).collect();
+            crate::plugins::search::write_debug_log(&format!(
+                "[DEBUG] recommend_more_projects: LLM 返回 {} 条结果",
+                parsed.len()
+            ));
+            items = llm_result
+                .unwrap()
+                .into_iter()
+                .map(|p| ProjectMatch {
+                    name: p.project_name.unwrap_or_else(|| query.clone()),
+                    url: p.project_url.unwrap_or_else(|| "https://github.com/".to_string()),
+                    description: p.description,
+                    stars: None,
+                    forks: None,
+                    language: p.language,
+                    health_score: None,
+                    source: "llm_recommend".to_string(),
+                    match_score: 0.6,
+                    project_id: None,
+                })
+                .collect();
         }
         Ok(_) => {
-            log::info!("[recommend_more_projects] LLM 返回空结果，降级到本地向量搜索");
+            crate::plugins::search::write_debug_log("[DEBUG] recommend_more_projects: LLM 返回空结果，降级到本地向量搜索");
         }
         Err(e) => {
-            log::warn!("[recommend_more_projects] LLM 调用失败: {}，降级到本地向量搜索", e);
+            crate::plugins::search::write_debug_log(&format!(
+                "[DEBUG] recommend_more_projects: LLM 调用失败: {}，降级到本地向量搜索",
+                e
+            ));
         }
     }
 
     if items.is_empty() {
         if let Ok(vault_dir) = resolve_vault_dir(&settings_vault_path(&settings)) {
+            crate::plugins::search::write_debug_log(&format!(
+                "[DEBUG] recommend_more_projects: 降级到本地向量搜索, vault={:?}",
+                vault_dir
+            ));
             let semantic = crate::embedding::semantic_search(&query, lim + items.len()).await;
             if let Ok(matches) = semantic {
+                crate::plugins::search::write_debug_log(&format!(
+                    "[DEBUG] recommend_more_projects: 本地向量搜索返回 {} 条",
+                    matches.len()
+                ));
                 let db_guard = crate::db::DATABASE.lock().unwrap();
                 if let Some(db) = db_guard.as_ref() {
                     let main_conn = db.get_connection();
@@ -193,9 +229,25 @@ pub async fn recommend_more_projects(query: String, limit: Option<usize>) -> Res
                         }
                     }
                 }
+            } else if let Err(e) = semantic {
+                crate::plugins::search::write_debug_log(&format!(
+                    "[DEBUG] recommend_more_projects: 本地向量搜索失败: {}",
+                    e
+                ));
             }
+        } else {
+            crate::plugins::search::write_debug_log(
+                "[DEBUG] recommend_more_projects: 无法解析 vault path, 降级失败",
+            );
         }
     }
+
+    crate::plugins::search::write_debug_log(&format!(
+        "[DEBUG] recommend_more_projects: 返回 {} 条 (总耗时 {:?}) urls={:?}",
+        items.len(),
+        started.elapsed(),
+        items.iter().map(|it| it.url.clone()).collect::<Vec<_>>()
+    ));
 
     Ok(RecommendMoreResult { items })
 }

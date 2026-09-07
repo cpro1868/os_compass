@@ -197,4 +197,20 @@ mod tests {
         };
         assert_eq!(pm.project_id, Some(42));
     }
+
+    #[test]
+    fn threshold_constant_is_in_sane_range() {
+        assert!(SEMANTIC_SEARCH_MIN_SCORE > 0.0 && SEMANTIC_SEARCH_MIN_SCORE < 1.0);
+    }
+
+    #[test]
+    fn threshold_filters_low_similarity_vectors() {
+        let query = vec![1.0f32, 0.0, 0.0];
+        let relevant = vec![1.0f32, 0.0, 0.0];
+        let garbage = vec![0.0f32, 1.0, 0.0];
+        let s_rel = cosine_similarity(&query, &relevant);
+        let s_gar = cosine_similarity(&query, &garbage);
+        assert!(s_rel >= SEMANTIC_SEARCH_MIN_SCORE);
+        assert!(s_gar < SEMANTIC_SEARCH_MIN_SCORE);
+    }
 }

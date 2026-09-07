@@ -175,6 +175,10 @@ fn ensure_vec_table_exists_internal(conn: &rusqlite::Connection) -> Result<(), S
     Ok(())
 }
 
+/// 语义搜索相关性阈值：余弦相似度低于该值的结果视为不相关，直接丢弃。
+/// 验收后可调整。
+pub(crate) const SEMANTIC_SEARCH_MIN_SCORE: f32 = 0.45;
+
 pub async fn semantic_search(query: &str, limit: usize) -> Result<Vec<(i64, f32)>, String> {
     log::info!("[semantic_search] 开始语义搜索，query: {}, limit: {}", query, limit);
 
@@ -203,6 +207,7 @@ pub async fn semantic_search(query: &str, limit: usize) -> Result<Vec<(i64, f32)
 
     let mut scored: Vec<(i64, f32)> = Vec::new();
     let mut parse_failures = 0usize;
+    let mut below_threshold = 0usize;
     for row in rows {
         let (project_id, emb_json) = match row {
             Ok(v) => v,
@@ -214,7 +219,21 @@ pub async fn semantic_search(query: &str, limit: usize) -> Result<Vec<(i64, f32)
                     parse_failures += 1;
                     continue;
                 }
+                if vec.len() != query_embedding.len() {
+                    log::warn!(
+                        "[semantic_search] 项目 {} 向量维度不匹配（库={} 查询={}），已跳过",
+                        project_id,
+                        vec.len(),
+                        query_embedding.len()
+                    );
+                    parse_failures += 1;
+                    continue;
+                }
                 let score = cosine_similarity(&query_embedding, &vec);
+                if score < SEMANTIC_SEARCH_MIN_SCORE {
+                    below_threshold += 1;
+                    continue;
+                }
                 scored.push((project_id, score));
             }
             Err(_) => parse_failures += 1,
@@ -225,9 +244,11 @@ pub async fn semantic_search(query: &str, limit: usize) -> Result<Vec<(i64, f32)
     scored.truncate(limit);
 
     log::info!(
-        "[semantic_search] 完成：候选 {} 条，解析失败 {} 条，返回 top {}",
+        "[semantic_search] 完成：候选 {} 条，解析/维度失败 {} 条，低于阈值({}) {} 条，返回 top {}",
         scored.len(),
         parse_failures,
+        SEMANTIC_SEARCH_MIN_SCORE,
+        below_threshold,
         limit.min(scored.len())
     );
 
