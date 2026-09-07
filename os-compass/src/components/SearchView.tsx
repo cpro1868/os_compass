@@ -9,6 +9,7 @@ import {
   recommendMoreByLLM,
 } from '../api/search';
 import { getRecentProjects } from '../api';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import { useToastStore } from '../stores/toastStore';
 import type { SearchResult, SearchHistoryItem, ProjectMatch, IntentAnalysis } from '../api/search';
 import type { Project } from '../types';
@@ -597,8 +598,8 @@ function ResultsList(props: ResultsListProps) {
                   ) : (
                     <>
                       {msg.rawText ? (
-                        <div className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                          {msg.rawText}
+                        <div className="text-sm text-gray-700 dark:text-gray-300">
+                          <MarkdownRenderer content={msg.rawText} className="prose prose-sm dark:prose-invert max-w-none" />
                         </div>
                       ) : (
                         <p className={msg.role === 'user' ? '' : 'text-gray-700 dark:text-gray-300 leading-relaxed'}>
