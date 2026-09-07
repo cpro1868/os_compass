@@ -2105,3 +2105,17 @@ M18 智能意图搜索（20h 工时）
 3. 触发雷达采集 → 检查日志 `[AD-FILTER]`
 
 ### 状态：⚠️ 编译通过，功能待手动验证
+
+## 2026-09-07 11:36 - 搜索相关性阈值 + 再推荐反馈优化实施完成
+
+### 关键操作
+1. 按已确认的修复计划实施：A1 阈值过滤（SEMANTIC_SEARCH_MIN_SCORE = 0.45）+ 维度不一致跳过；A2 兜底条件经阈值过滤后语义自动正确；A3 向量诊断（45 项目/20 向量/全部 1024 维/25 个未向量化含最相关项目）；B1-B3 前端去重扩展到本地结果、0 新增 Toast、内联 loading、滚动定位、后端 URL 日志。
+2. TDD：新增 SearchView.recommend-feedback.test.tsx 3 用例，首跑抓出真 bug（去重漏比对本地结果），修复后全绿。
+3. 验证：75 tests / typecheck / cargo check --lib --tests / tauri build 全过；Previous 已同步（SHA-256 AFCBF92B...）。
+4. cargo test CLI 运行报 STATUS_ENTRYPOINT_NOT_FOUND，属 AGENTS.md 已记录的环境限制。
+
+### 用户侧待办
+运行新版本后点看板页"向量化全部"补齐 25 个缺失向量。
+
+### 提交
+见 git log（fix(search): ...）
