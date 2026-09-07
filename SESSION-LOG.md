@@ -2119,3 +2119,14 @@ M18 智能意图搜索（20h 工时）
 
 ### 提交
 见 git log（fix(search): ...）
+
+## 2026-09-07 14:16 - 再推荐改为直接返回大模型原文
+
+### 关键操作
+1. llm_parser.rs 新增 sk_llm_direct，跳过 JSON schema 约束。
+2. search_cmd.rs 调整 prompt，直接生成自然语言推荐正文，返回 aw_text。
+3. SearchView.tsx 新消息直接渲染 awText，不渲染选项卡。
+4. 验证：75 tests / typecheck / tauri build 全绿；Previous 同步（SHA-256 D35BEBD9...）。
+
+### 提交
+fix(search): 再推荐 5 个直接返回大模型原文文本，不再渲染卡片

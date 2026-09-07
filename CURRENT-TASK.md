@@ -1,5 +1,17 @@
 # OS-Compass 当前任务
 
+## 2026-09-07 14:16 - "再推荐 5 个"直接返回大模型原文（无选项卡） ✅ 已完成
+
+### 需求
+点击“让大模型再推荐 5 个”后，在新聊天记录中直接展示大模型返回的自然语言原文，不使用项目选项卡。
+
+### 实施
+- 后端：`ask_llm_direct` 直接对话，prompt 要求自然语言列出名称/URL/用途/语言；返回 `RecommendMoreResult.raw_text`。
+- 前端：`SearchView.tsx` 新消息直接渲染 `rawText`（whitespace-pre-wrap），无选项卡/卡片。
+- 验证：75 tests / typecheck / tauri build 均通过；Previous/os-compass.exe SHA-256 `D35BEBD9AD185437D292907C6123FA556EAF3F2570F209185D05E2961D6E2311`。
+
+---
+
 ## 2026-09-07 13:30 - "再推荐 5 个"改为新开聊天消息直接返回 ✅ 已完成
 
 ### 需求（用户验收反馈）
