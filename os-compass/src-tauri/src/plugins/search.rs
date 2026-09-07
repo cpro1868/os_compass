@@ -404,8 +404,25 @@ fn generate_llm_summary(
     summary
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchContextMessage {
+    pub role: String,
+    pub content: String,
+}
+
 pub async fn analyze_intent(user_input: &str) -> Result<IntentAnalysis, String> {
-    write_debug_log(&format!("[DEBUG] analyze_intent: 开始分析意图，输入: {}", user_input));
+    analyze_intent_with_history(user_input, &[]).await
+}
+
+pub async fn analyze_intent_with_history(
+    user_input: &str,
+    history: &[SearchContextMessage],
+) -> Result<IntentAnalysis, String> {
+    write_debug_log(&format!(
+        "[DEBUG] analyze_intent: 开始分析意图，输入: '{}'，上下文条数: {}",
+        user_input,
+        history.len()
+    ));
 
     let client = LlmClient::from_settings()
         .ok_or_else(|| {
@@ -413,9 +430,7 @@ pub async fn analyze_intent(user_input: &str) -> Result<IntentAnalysis, String> 
             "LLM not configured".to_string()
         })?;
 
-    write_debug_log("[DEBUG] analyze_intent: LLM 客户端已创建");
-
-    let prompt = build_intent_analysis_prompt(user_input);
+    let prompt = build_intent_analysis_prompt_with_history(user_input, history);
     write_debug_log("[DEBUG] analyze_intent: Prompt 构建完成，调用 LLM...");
 
     let messages = vec![LlmMessage {
@@ -431,7 +446,8 @@ pub async fn analyze_intent(user_input: &str) -> Result<IntentAnalysis, String> 
 
     write_debug_log(&format!("[DEBUG] analyze_intent: LLM 返回: {}", response));
 
-    let parsed: IntentAnalysis = serde_json::from_str(&response)
+    let cleaned = strip_json_code_fence(&response);
+    let parsed: IntentAnalysis = serde_json::from_str(cleaned)
         .map_err(|e| {
             write_debug_log(&format!("[DEBUG] analyze_intent: JSON 解析失败: {}", e));
             format!("Failed to parse LLM response: {}\nResponse: {}", e, response)
@@ -441,23 +457,64 @@ pub async fn analyze_intent(user_input: &str) -> Result<IntentAnalysis, String> 
     Ok(parsed)
 }
 
-fn build_intent_analysis_prompt(user_input: &str) -> String {
+fn strip_json_code_fence(s: &str) -> &str {
+    let trimmed = s.trim();
+    if let Some(stripped) = trimmed.strip_prefix("```json") {
+        if let Some(inner) = stripped.strip_suffix("```") {
+            return inner.trim();
+        }
+    }
+    if let Some(stripped) = trimmed.strip_prefix("```") {
+        if let Some(inner) = stripped.strip_suffix("```") {
+            return inner.trim();
+        }
+    }
+    trimmed
+}
+
+pub(crate) fn build_intent_analysis_prompt_with_history(
+    user_input: &str,
+    history: &[SearchContextMessage],
+) -> String {
+    let mut history_str = String::new();
+    if !history.is_empty() {
+        history_str.push_str("【前文对话历史】:\n");
+        for msg in history {
+            let role_name = if msg.role == "user" { "用户" } else { "助手" };
+            history_str.push_str(&format!("{}: {}\n", role_name, msg.content.trim()));
+        }
+        history_str.push('\n');
+    }
+
     format!(
-        r#"你是一个开源项目推荐助手。用户输入：「{}」
+        r#"你是一个资深开源项目选型顾问。你的职责是：结合用户对话历史与当前输入，深入理解用户的真实意图，提取高质量的搜索关键词用于检索开源项目。
 
-请分析用户意图：
-1. 明确意图：直接描述需求（如"找 Vue 状态管理库"）
-2. 不明确意图：模糊描述、闲聊、无法直接搜索
+{}【用户最新输入】:
+「{}」
 
-如果是明确意图，返回：
-{{"intent": "clear", "intent_type": "技术栈/语言/领域/场景", "keywords": ["关键词1", "关键词2"]}}
+【核心判定与收敛规则】：
+1. 承接上下文（严防跑题与脱节）：
+   - 用户的简短回复（如"完整应用"、"不限"、"桌面端"、"Python"）是在回答前文助手的追问，必须结合上文理解！
+   - 严禁脱离前文已确立的业务领域（例如前文已讨论"视频制作/处理"，用户的"完整应用"是指"视频处理的完整应用程序/软件"，绝不能发散为通用软件开发）。
+2. 适时收敛（严禁无休止追问）：
+   - 一旦收集到的信息（业务领域 + 关键偏好）已经足够锁定一批有代表性的开源项目，必须判定为 clear，立即进入搜索！
+   - 例如"视频处理 + 完整应用"已经非常具体（足以匹配 Shotcut、HandBrake、LosslessCut、OBS 等），绝对不需要再问技术栈或细节。
+3. 追问纪律：
+   - 仅在用户初次提问极度泛化（如"求推荐项目"、"有什么好用的软件"），且完全没有任何领域名词时，才判定为 unclear。
+   - 追问问题必须紧扣上文未定分歧，不得问"你想用什么语言开发"这类反客为主的开发者废话。
 
-如果意图不明，返回：
-{{"intent": "unclear", "questions": ["追问问题1", "追问问题2"], "options": ["选项A", "选项B"]}}
+【输出格式（严格 JSON，不要代码块或解释）】：
+如果意图已足够明确或已收敛：
+{{"intent": "clear", "intent_type": "领域/形态描述", "keywords": ["关键词1", "关键词2", "关键词3"]}}
 
-只返回JSON，不要有其他内容。"#,
-        user_input
+如果信息严重缺失确实无法给出建议：
+{{"intent": "unclear", "questions": ["针对性追问问题"], "options": ["选项1", "选项2", "选项3"]}}"#,
+        history_str, user_input
     )
+}
+
+fn build_intent_analysis_prompt(user_input: &str) -> String {
+    build_intent_analysis_prompt_with_history(user_input, &[])
 }
 
 #[async_trait]

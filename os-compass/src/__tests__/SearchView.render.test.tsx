@@ -67,7 +67,7 @@ describe("SearchView 组件渲染端到端测试", () => {
     fireEvent.click(buttons.find((button) => button.querySelector(".fa-paper-plane"))!);
 
     await waitFor(() => {
-      expect(searchApi.analyzeIntent).toHaveBeenCalledWith("推荐视频处理工具");
+      expect(searchApi.analyzeIntent).toHaveBeenCalledWith("推荐视频处理工具", expect.any(Array));
     });
     await waitFor(() => {
       expect(searchApi.intentSearch).toHaveBeenCalledWith("视频处理", undefined);

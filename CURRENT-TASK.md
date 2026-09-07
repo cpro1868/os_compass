@@ -1,5 +1,24 @@
 # OS-Compass 当前任务
 
+## 2026-09-07 17:26 - 意图搜索多轮对话记忆与智能收敛 ✅ 已完成
+
+### 需求（用户验收反馈）
+解决意图搜索在多轮对话中“无上下文记忆、追问废话、前言不搭后语、死循环追问”的问题。
+
+### 实施
+- 后端：
+  - `search.rs` / `search_cmd.rs`：新增 `SearchContextMessage` 与 `analyze_intent_with_history`；
+  - 重塑 System Prompt：承接前文领域，智能收敛（领域+形态齐备立即进入搜索），约束追问纪律，支持 markdown 代码块清洗。
+- 前端：
+  - `api/search.ts`：类型扩展支持 history；
+  - `SearchView.tsx`：上下文抽取（最近 6 条问答），复合缓存键（`contextDigest#query`），澄清选项点击同步触发 `handleSubmit(val)`，消除异步丢词。
+- 验证：
+  - 新增 `SearchView.context-intent.test.tsx` 与 Rust 单元测试；
+  - 11 文件 76 tests 全绿，typecheck 通过，MSI+NSIS 构建成功；
+  - 产物归档至 `Previous/os-compass.exe`（SHA-256：`75C87DB5C062468E4B5123D784F9A6E7381005BA34AC1208368C126104E1F245`）。
+
+---
+
 ## 2026-09-07 14:16 - "再推荐 5 个"直接返回大模型原文（无选项卡） ✅ 已完成
 
 ### 需求

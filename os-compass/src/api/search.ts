@@ -67,8 +67,16 @@ export async function intentSearch(query: string, conversationId?: string): Prom
   return invoke<SearchResult>('intent_search', { query, conversationId });
 }
 
-export async function analyzeIntent(userInput: string): Promise<IntentAnalysis> {
-  return invoke<IntentAnalysis>('analyze_user_intent', { userInput });
+export interface SearchContextMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export async function analyzeIntent(
+  userInput: string,
+  history?: SearchContextMessage[]
+): Promise<IntentAnalysis> {
+  return invoke<IntentAnalysis>('analyze_user_intent', { userInput, history });
 }
 
 export async function getSearchHistory(limit?: number): Promise<SearchHistoryItem[]> {

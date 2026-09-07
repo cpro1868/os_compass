@@ -145,13 +145,14 @@ export function SearchView() {
     return () => window.removeEventListener('vault-changed', handleVaultChanged);
   }, [loadHistory, loadRecentProjects]);
 
-  const handleSubmit = async () => {
-    if (!query.trim() || isLoading) return;
+  const handleSubmit = async (overrideQuery?: string) => {
+    const textToSubmit = typeof overrideQuery === 'string' ? overrideQuery : query;
+    if (!textToSubmit.trim() || isLoading) return;
 
     const userMessage: MessageItem = {
       id: Date.now().toString(),
       role: 'user',
-      content: query,
+      content: textToSubmit,
     };
 
     const loadingId = (Date.now() + 1).toString();
@@ -188,28 +189,44 @@ export function SearchView() {
     };
 
     try {
-      const cacheKey = generateCacheKey(query);
+      const historyContext: Array<{ role: 'user' | 'assistant'; content: string }> = messages
+        .filter((msg) => msg.id !== loadingId && (msg.phase === 'idle' || !msg.phase))
+        .slice(-6)
+        .map((msg) => {
+          let text = msg.content || '';
+          if (msg.clarification?.questions) {
+            text = msg.clarification.questions.join(' ');
+          } else if (msg.rawText) {
+            text = msg.rawText;
+          }
+          return {
+            role: msg.role,
+            content: text.trim(),
+          };
+        })
+        .filter((it) => it.content.length > 0);
+
+      const contextDigest = historyContext.map((it) => `${it.role}:${it.content}`).join('|');
+      const cacheKey = generateCacheKey(`${contextDigest}#${textToSubmit}`);
       let intent = getIntentFromCache(cacheKey);
 
       if (!intent) {
         try {
           updatePhase('analyzing', '正在分析语义...');
-          intent = await withTimeout(analyzeIntent(query), 30000);
+          intent = await withTimeout(analyzeIntent(textToSubmit, historyContext), 30000);
           setIntentToCache(cacheKey, intent);
         } catch {
-          intent = { intent: 'clear', keywords: [query] };
+          intent = { intent: 'clear', keywords: [textToSubmit] };
         }
       }
 
       if (intent.intent === 'unclear' && intent.questions) {
         updatePhase('idle', intent.questions.join('\n'));
-        if (loadingIdRef.current) {
-          setMessages(prev => prev.map(msg =>
-            msg.id === loadingIdRef.current ? { ...msg, clarification: intent } : msg
-          ));
-        }
+        setMessages(prev => prev.map(msg =>
+          msg.id === loadingId ? { ...msg, clarification: intent } : msg
+        ));
       } else {
-        const searchQuery = intent.keywords?.join(' ') || query;
+        const searchQuery = intent.keywords?.join(' ') || textToSubmit;
         const searchCacheKey = generateCacheKey(searchQuery);
         let result = getSearchFromCache(searchCacheKey);
 
@@ -261,7 +278,7 @@ export function SearchView() {
 
   const handleHistoryClick = (searchQuery: string) => {
     setQuery(searchQuery);
-    setTimeout(handleSubmit, 0);
+    handleSubmit(searchQuery);
   };
 
   const handleDeleteHistoryItem = async (id: number) => {
@@ -545,7 +562,7 @@ function ResultsList(props: ResultsListProps) {
                       key={hint}
                       onClick={() => {
                         setQuery(hint);
-                        setTimeout(handleSubmit, 0);
+                        handleSubmit(hint);
                       }}
                       className="px-3 py-1.5 text-xs bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 hover:border-blue-500 rounded-full transition flex items-center gap-1.5 text-gray-700 dark:text-gray-300"
                     >
@@ -660,7 +677,7 @@ function ResultsList(props: ResultsListProps) {
                                         key={idx}
                                         onClick={() => {
                                           setQuery(suggestion);
-                                          setTimeout(handleSubmit, 0);
+                                          handleSubmit(suggestion);
                                         }}
                                         className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs rounded-md hover:bg-purple-200 dark:hover:bg-purple-900/50 transition"
                                       >
@@ -694,7 +711,7 @@ function ResultsList(props: ResultsListProps) {
                                 key={idx}
                                 onClick={() => {
                                   setQuery(option);
-                                  setTimeout(handleSubmit, 0);
+                                  handleSubmit(option);
                                 }}
                                 className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-gray-200 dark:border-gray-600 hover:border-blue-500 rounded-lg transition flex items-center gap-1.5"
                               >
@@ -708,9 +725,10 @@ function ResultsList(props: ResultsListProps) {
                             placeholder={t('search.clarification.placeholder') || '补充您的具体需求...'}
                             className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:border-blue-500"
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                                setQuery((e.target as HTMLInputElement).value);
-                                setTimeout(handleSubmit, 0);
+                              const val = (e.target as HTMLInputElement).value.trim();
+                              if (e.key === 'Enter' && val) {
+                                setQuery(val);
+                                handleSubmit(val);
                               }
                             }}
                           />
@@ -736,9 +754,9 @@ function ResultsList(props: ResultsListProps) {
                 placeholder={t('search.placeholder') || '描述您的需求，例如：找一个人工智能相关的开源项目...'}
                 className="w-full px-4 py-3 pr-14 text-gray-900 dark:text-white rounded-2xl resize-none focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 bg-transparent"
               />
-              <button
-                onClick={handleSubmit}
-                disabled={!query.trim() || isLoading}
+                <button
+                  onClick={() => handleSubmit()}
+                  disabled={!query.trim() || isLoading}
                 className="absolute right-2 bottom-2 w-9 h-9 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center justify-center transition shadow-lg"
               >
                 <i className="fa-solid fa-paper-plane text-sm"></i>
