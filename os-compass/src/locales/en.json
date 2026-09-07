@@ -951,6 +951,7 @@
     "recommendEmpty": "No more recommendations from LLM",
     "recommendAllExists": "Recommended projects are already in the results",
     "recommendLoading": "Asking LLM for recommendations, this may take 20-30s...",
+    "recommendTitle": "Here are more recommended projects:",
     "clarification": {
       "prompt": "Please select or supplement your need:",
       "placeholder": "Add more details..."

@@ -33,6 +33,7 @@ interface MessageItem {
   results?: SearchResult;
   clarification?: IntentAnalysis;
   phase?: SearchPhase;
+  recommendResults?: ProjectMatch[];
 }
 
 export function SearchView() {
@@ -272,49 +273,50 @@ export function SearchView() {
     }
   };
 
-  const askMoreForQuery = async (messageId: string, baseQuery: string): Promise<number> => {
+  const askMoreForQuery = async (messageId: string, baseQuery: string): Promise<void> => {
+    const newId = `${messageId}-more-${Date.now()}`;
+    const loadingText = t('search.recommendLoading') || '正在让大模型推荐，约需 20~30 秒，请稍候...';
+    setMessages((prev) => [
+      ...prev,
+      { id: newId, role: 'assistant', content: loadingText },
+    ]);
     try {
       const res = await recommendMoreByLLM(baseQuery, 5);
-      const appended: ProjectMatch[] = (res?.items || []).map((it) => ({
+      const items: ProjectMatch[] = (res?.items || []).map((it) => ({
         ...it,
         source: 'llm' as const,
       }));
-      if (appended.length === 0) {
-        showToast(t('search.recommendEmpty') || '暂无更多推荐', 'info');
-        return 0;
+      if (items.length === 0) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === newId
+              ? { ...msg, phase: 'idle', content: t('search.recommendEmpty') || '暂无更多推荐' }
+              : msg
+          )
+        );
+        return;
       }
-      const target = messages.find((msg) => msg.id === messageId && msg.results);
-      const existingWeb = target?.results?.web_results || [];
-      const existingLocal = target?.results?.local_results || [];
-      const seen = new Set([...existingWeb, ...existingLocal].map((it) => it.url));
-      const newItems = appended.filter((it) => it.url && !seen.has(it.url));
-      if (newItems.length === 0) {
-        showToast(t('search.recommendAllExists') || '推荐的项目已在结果中', 'info');
-        setExpandedMessages((prev) => ({ ...prev, [messageId]: true }));
-        return 0;
-      }
-      setExpandedMessages((prev) => ({ ...prev, [messageId]: true }));
       setMessages((prev) =>
-        prev.map((msg) => {
-          if (msg.id !== messageId || !msg.results) return msg;
-          const exist = msg.results.web_results || [];
-          const localUrls = new Set((msg.results.local_results || []).map((it) => it.url));
-          const merged = [...exist, ...newItems.filter((it) => !localUrls.has(it.url))];
-          return {
-            ...msg,
-            results: {
-              ...msg.results,
-              web_results: merged,
-              total: (msg.results.total || 0) + merged.length - exist.length,
-            },
-          };
-        })
+        prev.map((msg) =>
+          msg.id === newId
+            ? {
+                ...msg,
+                phase: 'idle',
+                content: t('search.recommendTitle') || '为你补充推荐以下项目：',
+                recommendResults: items,
+              }
+            : msg
+        )
       );
-      return newItems.length;
     } catch (e) {
       console.error('recommendMore failed:', e);
-      showToast(t('search.recommendFailed') || '推荐失败，请稍后重试', 'error');
-      return 0;
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === newId
+            ? { ...msg, phase: 'idle', content: t('search.recommendFailed') || '推荐失败，请稍后重试' }
+            : msg
+        )
+      );
     }
   };
 
@@ -408,7 +410,7 @@ interface ResultsListProps {
   messageId: string;
   expanded?: boolean;
   onToggleExpand?: (expanded: boolean) => void;
-  onAskMore: (messageId: string, query: string) => Promise<number>;
+  onAskMore: (messageId: string, query: string) => Promise<void>;
   onItemClick: (item: ProjectMatch) => void;
 }
 
@@ -417,7 +419,6 @@ function ResultsList(props: ResultsListProps) {
   const { t } = useTranslation();
   const [internalExpanded, setInternalExpanded] = useState(false);
   const [asking, setAsking] = useState(false);
-  const listEndRef = useRef<HTMLDivElement | null>(null);
   const expanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
   const setExpanded = (val: boolean | ((prev: boolean) => boolean)) => {
     const next = typeof val === 'function' ? val(expanded) : val;
@@ -448,13 +449,6 @@ function ResultsList(props: ResultsListProps) {
           </button>
         </div>
       )}
-      {asking && (
-        <div className="flex items-center justify-center gap-2 py-4 text-sm text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-900">
-          <i className="fa-solid fa-spinner fa-spin"></i>
-          <span>{t('search.recommendLoading') || '正在让大模型推荐，约需 20~30 秒，请稍候...'}</span>
-        </div>
-      )}
-      <div ref={listEndRef} />
       <div className="flex justify-center pt-2">
         <button
           type="button"
@@ -462,13 +456,7 @@ function ResultsList(props: ResultsListProps) {
           onClick={async () => {
             setAsking(true);
             try {
-              const added = await onAskMore(messageId, query);
-              if (added > 0) {
-                setExpanded(true);
-                setTimeout(() => {
-                  listEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 150);
-              }
+              await onAskMore(messageId, query);
             } finally {
               setAsking(false);
             }
@@ -662,6 +650,17 @@ function ResultsList(props: ResultsListProps) {
                             </div>
                           )}
                         </>
+                      )}
+                      {msg.recommendResults && msg.recommendResults.length > 0 && (
+                        <div className="mt-4 space-y-3">
+                          {msg.recommendResults.map((item, idx) => (
+                            <ProjectCard
+                              key={`${item.url}-${idx}`}
+                              item={item}
+                              onClick={handleProjectItemClick}
+                            />
+                          ))}
+                        </div>
                       )}
                       {msg.clarification && (
                         <div className="mt-4 space-y-3">

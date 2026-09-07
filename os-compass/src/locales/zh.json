@@ -951,6 +951,7 @@
     "recommendEmpty": "大模型暂无更多推荐",
     "recommendAllExists": "推荐的项目已在结果中",
     "recommendLoading": "正在让大模型推荐，约需 20~30 秒，请稍候...",
+    "recommendTitle": "为你补充推荐以下项目：",
     "clarification": {
       "prompt": "请选择或补充您的需求：",
       "placeholder": "补充您的具体需求..."

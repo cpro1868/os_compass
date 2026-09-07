@@ -65,7 +65,7 @@ async function runSearch() {
   fireEvent.click(sendBtn);
 }
 
-describe("再推荐 5 个反馈优化", () => {
+describe("再推荐以新聊天消息返回", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     searchApiMock.getSearchHistory.mockResolvedValue([]);
@@ -79,28 +79,7 @@ describe("再推荐 5 个反馈优化", () => {
     });
   });
 
-  it("LLM 返回的项目全部与已有结果重复时，提示已在结果中且不追加卡片", async () => {
-    searchApiMock.recommendMoreByLLM.mockResolvedValue({
-      items: [
-        { name: "Dup-1", url: "https://github.com/org/local-1", description: "d1", language: "Go", match_score: 0.6 },
-        { name: "Dup-2", url: "https://github.com/org/local-2", description: "d2", language: "Go", match_score: 0.6 },
-      ],
-    });
-
-    render(<SearchView />);
-    runSearch();
-    await screen.findByText("Local-1");
-
-    fireEvent.click(screen.getByText(/search\.recommendMore/));
-
-    await waitFor(() => {
-      expect(showToastMock).toHaveBeenCalledWith("search.recommendAllExists", "info");
-    });
-    expect(screen.queryByText("Dup-1")).toBeNull();
-    expect(screen.queryByText("Dup-2")).toBeNull();
-  });
-
-  it("等待 LLM 推荐期间显示内联 loading 提示", async () => {
+  it("点击后新开一条聊天消息显示 loading，返回后在新消息中展示推荐项目", async () => {
     let resolveRecommend: (v: unknown) => void = () => {};
     searchApiMock.recommendMoreByLLM.mockReturnValue(
       new Promise((resolve) => {
@@ -124,16 +103,12 @@ describe("再推荐 5 个反馈优化", () => {
     await waitFor(() => {
       expect(screen.queryByText("New-1")).not.toBeNull();
     });
+    expect(screen.queryByText(/search\.recommendTitle/)).not.toBeNull();
     expect(screen.queryByText(/search\.recommendLoading/)).toBeNull();
   });
 
-  it("正常追加后新卡片可见且 loading 消失", async () => {
-    searchApiMock.recommendMoreByLLM.mockResolvedValue({
-      items: [
-        { name: "Fresh-1", url: "https://github.com/org/fresh-1", description: "f1", language: "Go", match_score: 0.6 },
-        { name: "Fresh-2", url: "https://github.com/org/fresh-2", description: "f2", language: "Go", match_score: 0.6 },
-      ],
-    });
+  it("LLM 返回 0 条时新消息提示暂无推荐", async () => {
+    searchApiMock.recommendMoreByLLM.mockResolvedValue({ items: [] });
 
     render(<SearchView />);
     runSearch();
@@ -142,9 +117,41 @@ describe("再推荐 5 个反馈优化", () => {
     fireEvent.click(screen.getByText(/search\.recommendMore/));
 
     await waitFor(() => {
+      expect(screen.queryByText(/search\.recommendEmpty/)).not.toBeNull();
+    });
+  });
+
+  it("LLM 调用失败时新消息提示失败", async () => {
+    searchApiMock.recommendMoreByLLM.mockRejectedValue(new Error("timeout"));
+
+    render(<SearchView />);
+    runSearch();
+    await screen.findByText("Local-1");
+
+    fireEvent.click(screen.getByText(/search\.recommendMore/));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/search\.recommendFailed/)).not.toBeNull();
+    });
+  });
+
+  it("推荐结果不追加到原消息的卡片列表（原消息结果数不变）", async () => {
+    searchApiMock.recommendMoreByLLM.mockResolvedValue({
+      items: [
+        { name: "Fresh-1", url: "https://github.com/org/fresh-1", description: "f1", language: "Go", match_score: 0.6 },
+      ],
+    });
+
+    render(<SearchView />);
+    runSearch();
+    await screen.findByText("Local-1");
+
+    const llmCountBefore = screen.getAllByText(/search\.llmOnline/).length;
+    fireEvent.click(screen.getByText(/search\.recommendMore/));
+
+    await waitFor(() => {
       expect(screen.queryByText("Fresh-1")).not.toBeNull();
     });
-    expect(screen.queryByText("Fresh-2")).not.toBeNull();
-    expect(screen.queryByText(/search\.recommendLoading/)).toBeNull();
+    expect(screen.getAllByText(/search\.llmOnline/).length).toBe(llmCountBefore);
   });
 });

@@ -194,7 +194,7 @@ describe("意图搜索结果卡片三项修复", () => {
     expect(screen.queryByText("More-5")).not.toBeNull();
   });
 
-  it("再推荐返回 0 条时给出提示而不是静默", async () => {
+  it("再推荐返回 0 条时新聊天消息给出提示而不是静默", async () => {
     searchApiMock.intentSearch.mockResolvedValue({
       query: "视频处理",
       local_results: makeLocal(2),
@@ -214,7 +214,7 @@ describe("意图搜索结果卡片三项修复", () => {
       expect(searchApiMock.recommendMoreByLLM).toHaveBeenCalled();
     });
     await waitFor(() => {
-      expect(showToastMock).toHaveBeenCalledWith("search.recommendEmpty", "info");
+      expect(screen.queryByText(/search\.recommendEmpty/)).not.toBeNull();
     });
   });
 });

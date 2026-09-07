@@ -1,5 +1,20 @@
 # OS-Compass 当前任务
 
+## 2026-09-07 13:30 - "再推荐 5 个"改为新开聊天消息直接返回 ✅ 已完成
+
+### 需求（用户验收反馈）
+再推荐结果不再追加到当前搜索消息的选项卡列表，而是新开一条聊天记录，将大模型返回的信息直接展示。
+
+### 实施（仅前端）
+- `MessageItem.recommendResults?: ProjectMatch[]`；`askMoreForQuery` 新开 assistant 消息：loading 文案 → 返回后渲染标题+项目卡片（无折叠/无按钮）；0 条/失败分别显示提示文案。
+- `ResultsList` 移除内联 loading/滚动/added 逻辑；i18n 新增 `search.recommendTitle`（zh/en）。
+
+### 验证
+- pnpm test 76 全绿（重写 recommend-feedback 4 用例 + 修正 cardIssues 断言）/ typecheck / tauri build MSI+NSIS 成功
+- `Previous/os-compass.exe` SHA-256 `6B6C73E4C2C5E019A789BFCAEBF286803BD595C80BF47EC2AB38B5258EF78A4F`
+
+---
+
 ## 2026-09-07 11:36 - 意图搜索相关性阈值 + "再推荐 5 个"反馈优化 ✅ 已完成
 
 ### 现象
