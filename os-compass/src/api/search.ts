@@ -83,7 +83,12 @@ export async function deleteSearchHistoryItem(id: number): Promise<void> {
   return invoke('delete_search_history_item', { id });
 }
 
-export async function recommendMoreByLLM(query: string, limit?: number): Promise<{ items: ProjectMatch[] }> {
+export interface RecommendMoreResult {
+  items: ProjectMatch[];
+  raw_text?: string;
+}
+
+export async function recommendMoreByLLM(query: string, limit?: number): Promise<RecommendMoreResult> {
   return invoke('recommend_more_projects', { query, limit });
 }
 

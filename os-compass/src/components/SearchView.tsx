@@ -34,6 +34,7 @@ interface MessageItem {
   clarification?: IntentAnalysis;
   phase?: SearchPhase;
   recommendResults?: ProjectMatch[];
+  rawText?: string;
 }
 
 export function SearchView() {
@@ -282,6 +283,22 @@ export function SearchView() {
     ]);
     try {
       const res = await recommendMoreByLLM(baseQuery, 5);
+      const text = res?.raw_text?.trim();
+      if (text) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === newId
+              ? {
+                  ...msg,
+                  phase: 'idle',
+                  content: '',
+                  rawText: text,
+                }
+              : msg
+          )
+        );
+        return;
+      }
       const items: ProjectMatch[] = (res?.items || []).map((it) => ({
         ...it,
         source: 'llm' as const,
@@ -562,9 +579,15 @@ function ResultsList(props: ResultsListProps) {
                     <TypingIndicator phase={msg.phase} />
                   ) : (
                     <>
-                      <p className={msg.role === 'user' ? '' : 'text-gray-700 dark:text-gray-300 leading-relaxed'}>
-                        {msg.content}
-                      </p>
+                      {msg.rawText ? (
+                        <div className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                          {msg.rawText}
+                        </div>
+                      ) : (
+                        <p className={msg.role === 'user' ? '' : 'text-gray-700 dark:text-gray-300 leading-relaxed'}>
+                          {msg.content}
+                        </p>
+                      )}
                        {msg.results && (
                          <>
                            {msg.results.llm_text && (

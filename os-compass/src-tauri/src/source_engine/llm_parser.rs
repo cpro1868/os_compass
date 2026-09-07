@@ -62,6 +62,19 @@ pub async fn parse_content_with_llm(raw_content: &RawContent, settings: &AppSett
     Ok(results)
 }
 
+pub async fn ask_llm_direct(prompt: &str, settings: &AppSettings) -> Result<String, String> {
+    if settings.llm_api_key.is_empty() || settings.llm_api_base.is_empty() {
+        return Err("LLM 未配置 API Key 或 Base URL".to_string());
+    }
+    let client = LlmClient::from_settings()
+        .ok_or_else(|| "LLM not configured".to_string())?;
+    let messages = vec![LlmMessage {
+        role: "user".to_string(),
+        content: prompt.to_string(),
+    }];
+    client.chat(messages).await.map_err(|e| format!("LLM 调用失败: {}", e))
+}
+
 pub async fn recommend_projects_with_llm(query: &str, settings: &AppSettings, limit: usize) -> Result<Vec<ParsedProjectInfo>, String> {
     if settings.llm_api_key.is_empty() || settings.llm_api_base.is_empty() {
         return Ok(Vec::new());

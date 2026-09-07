@@ -120,6 +120,8 @@ pub fn delete_search_history_item(id: i64) -> Result<(), String> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RecommendMoreResult {
     pub items: Vec<ProjectMatch>,
+    #[serde(default)]
+    pub raw_text: Option<String>,
 }
 
 #[command]
@@ -137,119 +139,76 @@ pub async fn recommend_more_projects(query: String, limit: Option<usize>) -> Res
         settings.llm_api_base, settings.llm_model, settings.llm_api_key.len()
     ));
 
-    let mut items: Vec<ProjectMatch> = Vec::new();
+    let prompt = format!(
+        "你是开源项目专家。用户正在寻找关于「{}」的开源项目。\n\n请直接推荐 {} 个真实存在的优秀开源项目（优先 GitHub/Gitee 活跃项目），并用自然语言清晰列出：\n1. 项目名称与仓库地址（URL）\n2. 项目用途与核心特色（一两句话说明）\n3. 主要编程语言\n\n请直接输出推荐内容，排版清晰美观，不需要多余的问候语。",
+        query, lim
+    );
 
     let started = std::time::Instant::now();
-    let llm_result = crate::source_engine::llm_parser::recommend_projects_with_llm(&query, &settings, lim).await;
+    let direct_text = crate::source_engine::llm_parser::ask_llm_direct(&prompt, &settings).await;
     crate::plugins::search::write_debug_log(&format!(
-        "[DEBUG] recommend_more_projects: LLM 调用结束 (耗时 {:?})",
+        "[DEBUG] recommend_more_projects: ask_llm_direct 结束 (耗时 {:?})",
         started.elapsed()
     ));
 
-    match &llm_result {
-        Ok(parsed) if !parsed.is_empty() => {
+    if let Ok(text) = direct_text {
+        if !text.trim().is_empty() {
             crate::plugins::search::write_debug_log(&format!(
-                "[DEBUG] recommend_more_projects: LLM 返回 {} 条结果",
-                parsed.len()
+                "[DEBUG] recommend_more_projects: LLM 返回原文长度={}",
+                text.len()
             ));
-            items = llm_result
-                .unwrap()
-                .into_iter()
-                .map(|p| ProjectMatch {
-                    name: p.project_name.unwrap_or_else(|| query.clone()),
-                    url: p.project_url.unwrap_or_else(|| "https://github.com/".to_string()),
-                    description: p.description,
-                    stars: None,
-                    forks: None,
-                    language: p.language,
-                    health_score: None,
-                    source: "llm_recommend".to_string(),
-                    match_score: 0.6,
-                    project_id: None,
-                })
-                .collect();
-        }
-        Ok(_) => {
-            crate::plugins::search::write_debug_log("[DEBUG] recommend_more_projects: LLM 返回空结果，降级到本地向量搜索");
-        }
-        Err(e) => {
-            crate::plugins::search::write_debug_log(&format!(
-                "[DEBUG] recommend_more_projects: LLM 调用失败: {}，降级到本地向量搜索",
-                e
-            ));
+            return Ok(RecommendMoreResult {
+                items: Vec::new(),
+                raw_text: Some(text),
+            });
         }
     }
 
-    if items.is_empty() {
-        if let Ok(vault_dir) = resolve_vault_dir(&settings_vault_path(&settings)) {
-            crate::plugins::search::write_debug_log(&format!(
-                "[DEBUG] recommend_more_projects: 降级到本地向量搜索, vault={:?}",
-                vault_dir
-            ));
-            let semantic = crate::embedding::semantic_search(&query, lim + items.len()).await;
-            if let Ok(matches) = semantic {
-                crate::plugins::search::write_debug_log(&format!(
-                    "[DEBUG] recommend_more_projects: 本地向量搜索返回 {} 条",
-                    matches.len()
-                ));
-                let db_guard = crate::db::DATABASE.lock().unwrap();
-                if let Some(db) = db_guard.as_ref() {
-                    let main_conn = db.get_connection();
-                    for (project_id, distance) in matches {
-                        if items.iter().any(|it| it.project_id == Some(project_id)) {
-                            continue;
-                        }
-                        if let Ok((name, url, description, language, stars, forks)) = main_conn.query_row(
-                            "SELECT name, url, description, languages, stars, forks FROM projects WHERE id = ?",
-                            rusqlite::params![project_id],
-                            |row| Ok((
-                                row.get::<_, String>(0)?,
-                                row.get::<_, Option<String>>(1)?.unwrap_or_default(),
-                                row.get::<_, Option<String>>(2)?,
-                                row.get::<_, Option<String>>(3)?,
-                                row.get::<_, Option<i64>>(4)?,
-                                row.get::<_, Option<i64>>(5)?,
-                            )),
-                        ) {
-                            items.push(ProjectMatch {
-                                name,
-                                url,
-                                description,
-                                stars,
-                                forks,
-                                language: crate::plugins::search::primary_language(language),
-                                health_score: None,
-                                source: "local".to_string(),
-                                match_score: ((1.0f32 - distance).max(0.0f32) as f64),
-                                project_id: Some(project_id),
-                            });
-                        }
-                        if items.len() >= lim {
-                            break;
-                        }
+    crate::plugins::search::write_debug_log(
+        "[DEBUG] recommend_more_projects: 直推未返回，回落到本地向量并格式化为文字"
+    );
+
+    let mut local_text = String::new();
+    if let Ok(vault_dir) = resolve_vault_dir(&settings_vault_path(&settings)) {
+        let semantic = crate::embedding::semantic_search(&query, lim).await;
+        if let Ok(matches) = semantic {
+            let db_guard = crate::db::DATABASE.lock().unwrap();
+            if let Some(db) = db_guard.as_ref() {
+                let main_conn = db.get_connection();
+                let mut lines: Vec<String> = Vec::new();
+                for (idx, (project_id, _)) in matches.into_iter().enumerate() {
+                    if let Ok((name, url, desc, lang)) = main_conn.query_row(
+                        "SELECT name, url, description, languages FROM projects WHERE id = ?",
+                        rusqlite::params![project_id],
+                        |row| Ok((
+                            row.get::<_, String>(0)?,
+                            row.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                            row.get::<_, Option<String>>(2)?.unwrap_or_default(),
+                            row.get::<_, Option<String>>(3)?,
+                        )),
+                    ) {
+                        let l = crate::plugins::search::primary_language(lang).unwrap_or_else(|| "Unknown".to_string());
+                        lines.push(format!("{}. **{}** ({})\n   - 仓库：{}\n   - 简介：{}", idx + 1, name, l, url, desc));
                     }
                 }
-            } else if let Err(e) = semantic {
-                crate::plugins::search::write_debug_log(&format!(
-                    "[DEBUG] recommend_more_projects: 本地向量搜索失败: {}",
-                    e
-                ));
+                if !lines.is_empty() {
+                    local_text = format!("本地库中与「{}」相关的项目：\n\n{}", query, lines.join("\n\n"));
+                }
             }
-        } else {
-            crate::plugins::search::write_debug_log(
-                "[DEBUG] recommend_more_projects: 无法解析 vault path, 降级失败",
-            );
         }
     }
 
-    crate::plugins::search::write_debug_log(&format!(
-        "[DEBUG] recommend_more_projects: 返回 {} 条 (总耗时 {:?}) urls={:?}",
-        items.len(),
-        started.elapsed(),
-        items.iter().map(|it| it.url.clone()).collect::<Vec<_>>()
-    ));
+    if local_text.is_empty() {
+        return Ok(RecommendMoreResult {
+            items: Vec::new(),
+            raw_text: None,
+        });
+    }
 
-    Ok(RecommendMoreResult { items })
+    Ok(RecommendMoreResult {
+        items: Vec::new(),
+        raw_text: Some(local_text),
+    })
 }
 
 fn settings_vault_path(_settings: &AppSettings) -> String {
