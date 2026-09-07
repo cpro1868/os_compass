@@ -69,9 +69,15 @@ pub async fn intent_search(query: String, _conversation_id: Option<String>) -> R
     result
 }
 
+pub use crate::plugins::search::SearchContextMessage;
+
 #[command]
-pub async fn analyze_user_intent(user_input: String) -> Result<IntentAnalysis, String> {
-    analyze_intent(&user_input).await
+pub async fn analyze_user_intent(
+    user_input: String,
+    history: Option<Vec<SearchContextMessage>>,
+) -> Result<IntentAnalysis, String> {
+    let hist = history.unwrap_or_default();
+    crate::plugins::search::analyze_intent_with_history(&user_input, &hist).await
 }
 
 #[command]

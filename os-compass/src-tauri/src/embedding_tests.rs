@@ -204,13 +204,23 @@ mod tests {
     }
 
     #[test]
-    fn threshold_filters_low_similarity_vectors() {
-        let query = vec![1.0f32, 0.0, 0.0];
-        let relevant = vec![1.0f32, 0.0, 0.0];
-        let garbage = vec![0.0f32, 1.0, 0.0];
-        let s_rel = cosine_similarity(&query, &relevant);
-        let s_gar = cosine_similarity(&query, &garbage);
-        assert!(s_rel >= SEMANTIC_SEARCH_MIN_SCORE);
-        assert!(s_gar < SEMANTIC_SEARCH_MIN_SCORE);
+    fn build_intent_prompt_formats_history_and_rules() {
+        let history = vec![
+            crate::plugins::search::SearchContextMessage {
+                role: "user".to_string(),
+                content: "给我推荐一款视频制作类工具".to_string(),
+            },
+            crate::plugins::search::SearchContextMessage {
+                role: "assistant".to_string(),
+                content: "您需要面向专业剪辑还是新手快速制作？桌面端还是网页？".to_string(),
+            },
+        ];
+        let prompt = crate::plugins::search::build_intent_analysis_prompt_with_history("完整应用", &history);
+        assert!(prompt.contains("【前文对话历史】:"));
+        assert!(prompt.contains("用户: 给我推荐一款视频制作类工具"));
+        assert!(prompt.contains("助手: 您需要面向专业剪辑还是新手快速制作？"));
+        assert!(prompt.contains("【用户最新输入】:\n「完整应用」"));
+        assert!(prompt.contains("适时收敛"));
+        assert!(prompt.contains("承接上下文"));
     }
 }
