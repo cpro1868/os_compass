@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, getSupportedPlatformDomains, RadarSource, RadarItem, RadarSourceInput, getRadarSchedule, updateRadarSchedule, RadarSchedule, RadarScheduleUpdate } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
@@ -51,6 +51,15 @@ export function RadarInbox() {
   const [searchSourceIds, setSearchSourceIds] = useState<string>('');
   const [searchStartDate, setSearchStartDate] = useState<string>(getOneWeekAgo());
   const [searchEndDate, setSearchEndDate] = useState<string>(getToday());
+  // 记忆常规流（全部/未读）与收藏夹各自的日期状态，确保双向严格隔离
+  const generalDateRangeRef = useRef<{ start: string; end: string }>({
+    start: getOneWeekAgo(),
+    end: getToday(),
+  });
+  const starredDateRangeRef = useRef<{ start: string; end: string }>({
+    start: '',
+    end: '',
+  });
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [translatingId, setTranslatingId] = useState<number | null>(null);
@@ -59,8 +68,71 @@ export function RadarInbox() {
   const [adMarkResult, setAdMarkResult] = useState<AdMarkResult | null>(null);
   const [adMarking, setAdMarking] = useState(false);
 
-  const [schedule, setSchedule] = useState<RadarSchedule | null>(null);
+  const handleTabChange = (newTab: string) => {
+    if (newTab === activeTab) return;
+
+    // 1. 保存当前 Tab 离开时的日期设定
+    if (activeTab === 'collected') {
+      starredDateRangeRef.current = { start: searchStartDate, end: searchEndDate };
+    } else {
+      generalDateRangeRef.current = { start: searchStartDate, end: searchEndDate };
+    }
+
+    // 2. 切换到新 Tab 时恢复其专属的日期范围
+    if (newTab === 'collected') {
+      // 收藏页：恢复收藏专属的起止日期（默认空，不限制时间）
+      setSearchStartDate(starredDateRangeRef.current.start);
+      setSearchEndDate(starredDateRangeRef.current.end);
+    } else if (activeTab === 'collected') {
+      // 从收藏页切回全部/未读等常规流：恢复常规流离开前的时间范围（默认即为最近一周）
+      const fallbackStart = generalDateRangeRef.current.start || getOneWeekAgo();
+      const fallbackEnd = generalDateRangeRef.current.end || getToday();
+      setSearchStartDate(fallbackStart);
+      setSearchEndDate(fallbackEnd);
+    }
+
+    setActiveTab(newTab);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleStartDateChange = (val: string) => {
+    setSearchStartDate(val);
+    if (activeTab === 'collected') {
+      starredDateRangeRef.current.start = val;
+    } else {
+      generalDateRangeRef.current.start = val;
+    }
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleEndDateChange = (val: string) => {
+    setSearchEndDate(val);
+    if (activeTab === 'collected') {
+      starredDateRangeRef.current.end = val;
+    } else {
+      generalDateRangeRef.current.end = val;
+    }
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleResetFilters = () => {
+    setSearchKeyword('');
+    setSearchSourceIds('');
+    if (activeTab === 'collected') {
+      setSearchStartDate('');
+      setSearchEndDate('');
+      starredDateRangeRef.current = { start: '', end: '' };
+    } else {
+      const defStart = getOneWeekAgo();
+      const defEnd = getToday();
+      setSearchStartDate(defStart);
+      setSearchEndDate(defEnd);
+      generalDateRangeRef.current = { start: defStart, end: defEnd };
+    }
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
   const [showScheduleSettings, setShowScheduleSettings] = useState(false);
+  const [schedule, setSchedule] = useState<RadarSchedule | null>(null);
   const [scheduleUpdate, setScheduleUpdate] = useState<RadarScheduleUpdate>({});
 
   const loadSupportedDomains = useCallback(async () => {
@@ -543,7 +615,7 @@ export function RadarInbox() {
             {tabs.map(tab => (
               <button
                 key={tab.key}
-                onClick={() => { setActiveTab(tab.key); setPagination(prev => ({ ...prev, page: 1 })); }}
+                onClick={() => handleTabChange(tab.key)}
                 className={`px-3 py-1.5 text-sm rounded-lg transition ${
                   activeTab === tab.key
                     ? 'bg-blue-600 text-white font-medium'
@@ -585,14 +657,14 @@ export function RadarInbox() {
             <input
               type="date"
               value={searchStartDate}
-              onChange={e => { setSearchStartDate(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}
+              onChange={e => handleStartDateChange(e.target.value)}
               className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
             <span className="text-gray-400">-</span>
             <input
               type="date"
               value={searchEndDate}
-              onChange={e => { setSearchEndDate(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}
+              onChange={e => handleEndDateChange(e.target.value)}
               className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
             <button
@@ -601,9 +673,9 @@ export function RadarInbox() {
             >
               搜索
             </button>
-            {(searchKeyword || searchSourceIds || searchStartDate !== getOneWeekAgo() || searchEndDate !== getToday()) && (
+            {(searchKeyword || searchSourceIds || (activeTab === 'collected' ? (searchStartDate || searchEndDate) : (searchStartDate !== getOneWeekAgo() || searchEndDate !== getToday()))) && (
               <button
-                onClick={() => { setSearchKeyword(''); setSearchSourceIds(''); setSearchStartDate(getOneWeekAgo()); setSearchEndDate(getToday()); }}
+                onClick={handleResetFilters}
                 className="px-3 py-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm transition"
               >
                 重置
