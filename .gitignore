@@ -70,6 +70,8 @@ docs/SEC-**
 # 内部测试记录（敏感测试细节）
 docs/测试记录/
 docs/测试记录/**
+docs/templates/
+docs/templates/**
 
 # 涉及项目战略/反思/沟通细节的内部文档
 docs/需求初步沟通记录.md
