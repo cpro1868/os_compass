@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 归档列表</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+  <div x-data="archiveView()">
+    <div class="flex h-full">
+      <!-- 左侧功能菜单 -->
+      <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+        <!-- Logo -->
+        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
+          <i class="fa-solid fa-compass text-xl"></i>
+        </div>
+        
+        <!-- 功能按钮 -->
+        <button onclick="location.href='import-form.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition" title="导入项目">
+          <i class="fa-solid fa-plus text-lg mb-1"></i>
+          <span class="text-xs">导入</span>
+        </button>
+        
+        <button onclick="location.href='list-view.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition" title="智能搜索">
+          <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
+          <span class="text-xs">搜索</span>
+        </button>
+        
+        <!-- 视图切换 -->
+        <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+          <button onclick="location.href='main-interface.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition" title="看板视图">
+            <i class="fa-solid fa-table-columns"></i>
+          </button>
+          <button onclick="location.href='list-view.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition" title="列表视图">
+            <i class="fa-solid fa-list"></i>
+          </button>
+        </div>
+        
+        <!-- 分类管理 -->
+        <button onclick="location.href='category-manager.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition mt-auto" title="分类管理">
+          <i class="fa-solid fa-folder-tree text-lg mb-1"></i>
+          <span class="text-xs">分类</span>
+        </button>
+        
+        <!-- 底部 -->
+        <div class="border-t border-gray-700 pt-4 mt-4 w-full flex flex-col items-center gap-3">
+          <button onclick="location.href='settings.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition" title="设置">
+            <i class="fa-solid fa-gear"></i>
+          </button>
+          <button onclick="location.href='plugin-manager.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition" title="插件">
+            <i class="fa-solid fa-plug"></i>
+          </button>
+        </div>
+      </aside>
+
+      <!-- 主内容区 -->
+      <main class="flex-1 flex flex-col min-w-0">
+        <!-- 批量操作栏 -->
+        <div x-show="selectedIds.size > 0" x-transition class="bg-amber-600 text-white px-6 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <span x-text="`已选中 ${selectedIds.size} 项`"></span>
+            <button @click="selectAll()" class="text-sm underline hover:text-amber-100">全选</button>
+            <button @click="clearSelection()" class="text-sm underline hover:text-amber-100">取消选择</button>
+          </div>
+          <div class="flex items-center gap-3">
+            <button @click="batchRestore()" class="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm flex items-center gap-2">
+              <i class="fa-solid fa-rotate-left"></i>批量恢复
+            </button>
+            <button @click="showDeleteModal = true" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-lg text-sm flex items-center gap-2">
+              <i class="fa-solid fa-trash"></i>永久删除
+            </button>
+          </div>
+        </div>
+
+        <!-- 顶部栏 -->
+        <header class="bg-white border-b border-gray-200 px-6 py-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <button onclick="location.href='list-view.html'" class="text-gray-500 hover:text-gray-700">
+                <i class="fa-solid fa-arrow-left mr-2"></i>
+              </button>
+              <div class="flex items-center gap-3">
+                <i class="fa-solid fa-box-archive text-amber-600"></i>
+                <h1 class="text-xl font-bold">归档列表</h1>
+              </div>
+              <span class="text-sm text-gray-500">共 <span x-text="filteredProjects.length"></span> 个</span>
+            </div>
+          </div>
+          <!-- 搜索框 -->
+          <div class="mt-3">
+            <div class="relative">
+              <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+              <input
+                type="text"
+                x-model="searchQuery"
+                placeholder="搜索归档项目..."
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+            </div>
+          </div>
+        </header>
+        
+        <!-- 归档列表 -->
+        <div class="flex-1 overflow-auto p-6">
+          <!-- 空状态 -->
+          <div x-show="filteredProjects.length === 0" class="text-center py-12">
+            <i class="fa-solid fa-trash text-4xl mb-4 text-gray-300"></i>
+            <p class="text-gray-500">归档列表为空</p>
+            <p class="text-sm text-gray-400 mt-1">归档的项目将显示在这里</p>
+            <button onclick="location.href='list-view.html'" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              返回项目列表
+            </button>
+          </div>
+
+          <!-- 归档项目卡片（按删除时间倒序） -->
+          <div x-show="filteredProjects.length > 0" class="space-y-4">
+            <template x-for="project in filteredProjects" :key="project.id">
+              <div class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition" :class="{ 'border-amber-300 bg-amber-50': selectedIds.has(project.id) }">
+                <div class="flex items-start gap-4">
+                  <!-- 复选框 -->
+                  <input type="checkbox" :value="project.id" x-model="selectedArray" @change="syncSelection()" class="mt-1 rounded">
+                  
+                  <!-- 项目图标 -->
+                  <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
+                    <i class="fa-solid fa-box-archive text-xl"></i>
+                  </div>
+                  
+                  <!-- 项目信息 -->
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-3">
+                      <h3 class="font-medium text-gray-700" x-text="project.name"></h3>
+                      <span class="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded">已归档</span>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-1" x-text="project.url"></p>
+                    <div class="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                      <span><i class="fa-solid fa-folder mr-1"></i><span x-text="project.category"></span></span>
+                      <span><i class="fa-solid fa-clock mr-1"></i>归档于 <span x-text="project.archivedAt"></span></span>
+                      <span><i class="fa-solid fa-calendar mr-1"></i>原更新 <span x-text="project.updated"></span></span>
+                    </div>
+                  </div>
+                  
+                  <!-- 操作按钮 -->
+                  <div class="flex items-center gap-2">
+                    <button @click="restoreProject(project.id)" class="px-3 py-1.5 text-sm border border-green-600 text-green-600 rounded-lg hover:bg-green-50 flex items-center gap-2">
+                      <i class="fa-solid fa-rotate-left"></i>恢复
+                    </button>
+                    <button @click="permanentDelete(project.id)" class="px-3 py-1.5 text-sm border border-red-600 text-red-600 rounded-lg hover:bg-red-50 flex items-center gap-2">
+                      <i class="fa-solid fa-trash"></i>永久删除
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- 永久删除确认弹窗 -->
+    <div x-show="showDeleteModal" x-transition class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div @click.away="showDeleteModal = false" class="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+            <i class="fa-solid fa-triangle-exclamation text-red-600 text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-lg">永久删除</h3>
+            <p class="text-sm text-gray-500">此操作不可恢复</p>
+          </div>
+        </div>
+        <p class="text-gray-600 mb-4">
+          确定要永久删除选中的 <span x-text="selectedIds.size"></span> 个项目吗？
+        </p>
+        <p class="text-sm text-red-500 mb-4">
+          <i class="fa-solid fa-exclamation-circle mr-1"></i>
+          永久删除后，所有数据将无法恢复，包括：
+        </p>
+        <ul class="text-sm text-gray-500 mb-6 ml-4 list-disc">
+          <li>项目基本信息</li>
+          <li>AI 分析报告</li>
+          <li>本地笔记</li>
+          <li>保存的凭证</li>
+        </ul>
+        <div class="flex justify-end gap-3">
+          <button @click="showDeleteModal = false" class="px-4 py-2 border rounded-lg hover:bg-gray-50">取消</button>
+          <button @click="batchPermanentDelete()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">确认删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function archiveView() {
+      return {
+        // 归档项目数据（按删除时间倒序排列）
+        archivedProjects: [
+          { id: '1', name: 'lodash/lodash', url: 'https://github.com/lodash/lodash', category: '工具类', archivedAt: '2024-03-20', updated: '2024-01-15' },
+          { id: '2', name: 'moment/moment', url: 'https://github.com/moment/moment', category: '工具类', archivedAt: '2024-03-18', updated: '2023-12-01' },
+          { id: '3', name: 'expressjs/express', url: 'https://github.com/expressjs/express', category: '后端服务', archivedAt: '2024-03-15', updated: '2023-11-20' },
+        ],
+        // 搜索关键词
+        searchQuery: '',
+        selectedIds: new Set(),
+        selectedArray: [],
+        showDeleteModal: false,
+        // 过滤后的项目（按删除时间倒序）
+        get filteredProjects() {
+          if (!this.searchQuery) {
+            return this.archivedProjects;
+          }
+          const query = this.searchQuery.toLowerCase();
+          return this.archivedProjects.filter(p =>
+            p.name.toLowerCase().includes(query) ||
+            p.url.toLowerCase().includes(query) ||
+            p.category.toLowerCase().includes(query)
+          );
+        },
+        syncSelection() {
+          this.selectedIds = new Set(this.selectedArray);
+        },
+        selectAll() {
+          this.selectedArray = this.filteredProjects.map(p => p.id);
+          this.selectedIds = new Set(this.selectedArray);
+        },
+        clearSelection() {
+          this.selectedArray = [];
+          this.selectedIds = new Set();
+        },
+        restoreProject(id) {
+          if (confirm('确定要恢复此项目吗？')) {
+            this.archivedProjects = this.archivedProjects.filter(p => p.id !== id);
+            alert('项目已恢复到项目列表');
+          }
+        },
+        permanentDelete(id) {
+          if (confirm('确定要永久删除此项目吗？此操作不可恢复！')) {
+            this.archivedProjects = this.archivedProjects.filter(p => p.id !== id);
+            alert('项目已永久删除');
+          }
+        },
+        batchRestore() {
+          if (confirm(`确定要恢复选中的 ${this.selectedIds.size} 个项目吗？`)) {
+            this.archivedProjects = this.archivedProjects.filter(p => !this.selectedIds.has(p.id));
+            this.clearSelection();
+            alert('批量恢复成功');
+          }
+        },
+        batchPermanentDelete() {
+          this.showDeleteModal = false;
+          this.archivedProjects = this.archivedProjects.filter(p => !this.selectedIds.has(p.id));
+          this.clearSelection();
+          alert('批量永久删除成功');
+        }
+      }
+    }
+  </script>
+</body>
+</html>

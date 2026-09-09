@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>初始化向导 - OS-Compass</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+    .option-card { transition: all 0.3s ease; }
+    .option-card:hover { transform: translateY(-4px); }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="text-gray-100 min-h-screen flex items-center justify-center p-6">
+  
+  <div class="w-full max-w-4xl">
+    
+    <!-- Logo 和标题 -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mb-6 shadow-2xl">
+        <i class="fa-solid fa-compass text-4xl"></i>
+      </div>
+      <h1 class="text-4xl font-bold mb-3 bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+        欢迎使用 OS-Compass
+      </h1>
+      <p class="text-slate-400 text-lg">开源项目智能管家 · 本地优先数据管理</p>
+    </div>
+    
+    <!-- ========== 步骤指示器 ========== -->
+    <div class="flex items-center justify-center mb-8">
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <div id="step1Indicator" class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-medium">1</div>
+          <span class="text-sm">选择仓库</span>
+        </div>
+        <div class="w-12 h-px bg-slate-600"></div>
+        <div class="flex items-center gap-2">
+          <div id="step2Indicator" class="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-medium">2</div>
+          <span class="text-sm text-slate-500">初始化</span>
+        </div>
+        <div class="w-12 h-px bg-slate-600"></div>
+        <div class="flex items-center gap-2">
+          <div id="step3Indicator" class="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-medium">3</div>
+          <span class="text-sm text-slate-500">完成</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ========== 步骤 1: 选择/创建/导入仓库 ========== -->
+    <div id="step1" class="fade-in">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        
+        <!-- 选项 1: 选择已有仓库 -->
+        <div class="option-card bg-slate-800/80 backdrop-blur rounded-2xl p-6 border border-slate-700 hover:border-blue-500/50 cursor-pointer">
+          <div class="w-14 h-14 bg-blue-600/20 rounded-xl flex items-center justify-center mb-4">
+            <i class="fa-solid fa-folder-open text-blue-400 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">选择已有仓库</h3>
+          <p class="text-slate-400 text-sm mb-4">打开您之前创建的仓库</p>
+          <div class="space-y-2">
+            <div class="bg-slate-700/50 rounded-lg p-3 flex items-center gap-3 hover:bg-slate-700 transition cursor-pointer">
+              <i class="fa-solid fa-folder text-amber-400"></i>
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-sm truncate">工作仓库</div>
+                <div class="text-xs text-slate-500 truncate">D:\Projects\vaults\work</div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-slate-500"></i>
+            </div>
+            <div class="bg-slate-700/50 rounded-lg p-3 flex items-center gap-3 hover:bg-slate-700 transition cursor-pointer">
+              <i class="fa-solid fa-folder text-amber-400"></i>
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-sm truncate">个人仓库</div>
+                <div class="text-xs text-slate-500 truncate">D:\Projects\vaults\personal</div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-slate-500"></i>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 选项 2: 创建新仓库 -->
+        <div class="option-card bg-slate-800/80 backdrop-blur rounded-2xl p-6 border border-slate-700 hover:border-emerald-500/50">
+          <div class="w-14 h-14 bg-emerald-600/20 rounded-xl flex items-center justify-center mb-4">
+            <i class="fa-solid fa-plus text-emerald-400 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">创建新仓库</h3>
+          <p class="text-slate-400 text-sm mb-4">创建一个新的本地仓库</p>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">仓库名称</label>
+              <input type="text" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500" value="我的仓库">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">存储位置</label>
+              <div class="relative">
+                <input type="text" class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500 pr-20" value="D:\Projects\vaults">
+                <button class="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs transition">浏览</button>
+              </div>
+            </div>
+            <button onclick="showStep2()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-arrow-right"></i>创建并继续
+            </button>
+          </div>
+        </div>
+        
+        <!-- 选项 3: 从备份导入 -->
+        <div class="option-card bg-slate-800/80 backdrop-blur rounded-2xl p-6 border border-slate-700 hover:border-purple-500/50 cursor-pointer" onclick="showImportFlow()">
+          <div class="w-14 h-14 bg-purple-600/20 rounded-xl flex items-center justify-center mb-4">
+            <i class="fa-solid fa-file-import text-purple-400 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">从备份导入</h3>
+          <p class="text-slate-400 text-sm mb-4">恢复之前导出的仓库备份</p>
+          <button class="w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-2.5 rounded-lg transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrow-right"></i>开始导入
+          </button>
+        </div>
+        
+      </div>
+    </div>
+    
+    <!-- ========== 步骤 1.5: 导入流程 ========== -->
+    <div id="step1_5" class="hidden fade-in">
+      <div class="bg-slate-800/80 backdrop-blur rounded-2xl p-8 border border-slate-700 max-w-xl mx-auto">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-purple-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <i class="fa-solid fa-file-import text-purple-400 text-3xl"></i>
+          </div>
+          <h2 class="text-2xl font-bold mb-2">导入仓库</h2>
+          <p class="text-slate-400">按照以下步骤导入备份</p>
+        </div>
+        
+        <!-- 导入步骤 -->
+        <div class="space-y-4 text-sm">
+          
+          <!-- 步骤 1: 选择备份源 -->
+          <div id="importStep1" class="bg-slate-700/50 rounded-xl p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-xs font-medium">1</div>
+              <span class="font-medium">选择备份文件/目录</span>
+            </div>
+            <div class="ml-9 space-y-3">
+              <div class="relative">
+                <input type="text" class="w-full bg-slate-600/50 border border-slate-500 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-400" placeholder="选择备份所在目录">
+                <button class="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-slate-500 hover:bg-slate-400 rounded text-xs transition">浏览</button>
+              </div>
+              <button class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs transition flex items-center gap-2">
+                <i class="fa-solid fa-check-circle"></i>验证备份
+              </button>
+              <div class="text-xs text-emerald-400">
+                <i class="fa-solid fa-check-circle mr-1"></i>验证通过：发现 os_compass.db 和 .cryptokey
+              </div>
+            </div>
+          </div>
+          
+          <!-- 步骤 2: 选择目标位置 -->
+          <div class="bg-slate-700/50 rounded-xl p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center text-xs font-medium">2</div>
+              <span class="font-medium">选择导入目标位置</span>
+            </div>
+            <div class="ml-9 space-y-3">
+              <div class="relative">
+                <input type="text" class="w-full bg-slate-600/50 border border-slate-500 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-400" value="D:\Projects\vaults">
+                <button class="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-slate-500 hover:bg-slate-400 rounded text-xs transition">浏览</button>
+              </div>
+              <div class="text-xs text-slate-400">
+                <i class="fa-solid fa-info-circle mr-1"></i>备份将复制到目标位置
+              </div>
+            </div>
+          </div>
+          
+          <!-- 步骤 3: 执行导入 -->
+          <div class="bg-slate-700/50 rounded-xl p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center text-xs font-medium">3</div>
+              <span class="font-medium">执行导入</span>
+            </div>
+            <div class="ml-9">
+              <button class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs transition flex items-center gap-2">
+                <i class="fa-solid fa-play"></i>开始导入
+              </button>
+            </div>
+          </div>
+          
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="mt-8 flex justify-between">
+          <button onclick="showStep1()" class="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-xl transition flex items-center gap-2">
+            <i class="fa-solid fa-arrow-left"></i>返回
+          </button>
+          <button onclick="showStep2()" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition flex items-center gap-2">
+            下一步<i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ========== 步骤 2: 初始化仓库 ========== -->
+    <div id="step2" class="hidden fade-in">
+      <div class="bg-slate-800/80 backdrop-blur rounded-2xl p-8 border border-slate-700 max-w-xl mx-auto">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-emerald-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <i class="fa-solid fa-database text-emerald-400 text-3xl"></i>
+          </div>
+          <h2 class="text-2xl font-bold mb-2">初始化仓库</h2>
+          <p class="text-slate-400">正在为您创建新的仓库...</p>
+        </div>
+        
+        <!-- 进度条 -->
+        <div class="mb-6">
+          <div class="flex justify-between text-xs text-slate-400 mb-2">
+            <span>创建文件夹</span>
+            <span>50%</span>
+          </div>
+          <div class="w-full bg-slate-700 rounded-full h-2">
+            <div class="bg-emerald-500 h-2 rounded-full transition-all" style="width: 50%"></div>
+          </div>
+        </div>
+        
+        <!-- 步骤列表 -->
+        <div class="space-y-3 text-sm">
+          <div class="flex items-center gap-3 text-emerald-400">
+            <i class="fa-solid fa-check-circle w-4"></i>
+            <span>创建仓库目录</span>
+          </div>
+          <div class="flex items-center gap-3 text-emerald-400">
+            <i class="fa-solid fa-check-circle w-4"></i>
+            <span>初始化数据库</span>
+          </div>
+          <div class="flex items-center gap-3 text-slate-400">
+            <i class="fa-regular fa-circle w-4"></i>
+            <span>设置加密密钥</span>
+          </div>
+          <div class="flex items-center gap-3 text-slate-400">
+            <i class="fa-regular fa-circle w-4"></i>
+            <span>完成初始化</span>
+          </div>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="mt-8 flex justify-center gap-4">
+          <button onclick="showStep1()" class="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-xl transition flex items-center gap-2">
+            <i class="fa-solid fa-arrow-left"></i>上一步
+          </button>
+          <button onclick="showStep3()" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition flex items-center gap-2">
+            下一步<i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ========== 步骤 3: 完成 ========== -->
+    <div id="step3" class="hidden text-center">
+      <div class="w-20 h-20 bg-emerald-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+        <i class="fa-solid fa-check text-emerald-400 text-4xl"></i>
+      </div>
+      <h2 class="text-2xl font-bold mb-2">初始化完成！</h2>
+      <p class="text-slate-400 mb-8">您的仓库已准备就绪</p>
+      <button class="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition flex items-center gap-2 mx-auto">
+        <i class="fa-solid fa-rocket"></i>开始使用 OS-Compass
+      </button>
+    </div>
+    
+    <!-- 底部说明 -->
+    <div class="text-center text-slate-500 text-sm space-y-2 mt-8">
+      <p class="flex items-center justify-center gap-2">
+        <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+        您的数据将安全存储在本地，不会上传至任何服务器
+      </p>
+      <p class="text-xs text-slate-600">
+        仓库是存储您开源项目信息的文件夹，您可以创建多个仓库来分类管理
+      </p>
+    </div>
+    
+  </div>
+  
+  <script>
+    function showStep1() {
+      document.getElementById('step1').classList.remove('hidden');
+      document.getElementById('step1_5').classList.add('hidden');
+      document.getElementById('step2').classList.add('hidden');
+      document.getElementById('step3').classList.add('hidden');
+      updateIndicators(1);
+    }
+    
+    function showImportFlow() {
+      document.getElementById('step1').classList.add('hidden');
+      document.getElementById('step1_5').classList.remove('hidden');
+      document.getElementById('step2').classList.add('hidden');
+      document.getElementById('step3').classList.add('hidden');
+    }
+    
+    function showStep2() {
+      document.getElementById('step1').classList.add('hidden');
+      document.getElementById('step1_5').classList.add('hidden');
+      document.getElementById('step2').classList.remove('hidden');
+      document.getElementById('step3').classList.add('hidden');
+      updateIndicators(2);
+    }
+    
+    function showStep3() {
+      document.getElementById('step1').classList.add('hidden');
+      document.getElementById('step1_5').classList.add('hidden');
+      document.getElementById('step2').classList.add('hidden');
+      document.getElementById('step3').classList.remove('hidden');
+      updateIndicators(3);
+    }
+    
+    function updateIndicators(step) {
+      for (let i = 1; i <= 3; i++) {
+        const indicator = document.getElementById('step' + i + 'Indicator');
+        if (i < step) {
+          indicator.classList.remove('bg-slate-600', 'bg-blue-500');
+          indicator.classList.add('bg-emerald-500');
+          indicator.nextElementSibling.classList.remove('text-slate-500');
+        } else if (i === step) {
+          indicator.classList.remove('bg-slate-600');
+          indicator.classList.add('bg-blue-500');
+          indicator.nextElementSibling.classList.remove('text-slate-500');
+        } else {
+          indicator.classList.remove('bg-blue-500', 'bg-emerald-500');
+          indicator.classList.add('bg-slate-600');
+          indicator.nextElementSibling.classList.add('text-slate-500');
+        }
+      }
+    }
+  </script>
+  
+</body>
+</html>

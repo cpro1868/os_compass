@@ -1,0 +1,47 @@
+[package]
+name = "os-compass"
+version = "0.1.0"
+description = "OS-Compass: 开源项目全生命周期管理与决策系统"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "os_compass_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset", "tray-icon", "image-png"] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+directories = "5"
+rusqlite = { version = "0.32", features = ["bundled", "load_extension"] }
+lazy_static = "1.4"
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "socks", "blocking"], default-features = false }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+aes-gcm = "0.10"
+rand = "0.8"
+base64 = "0.22"
+urlencoding = "2"
+chrono = "0.4"
+async-trait = "0.1"
+sha2 = "0.10"
+hex = "0.4"
+regex = "1"
+zip = "2"
+walkdir = "2"
+once_cell = "1"
+encoding_rs = "0.8"
+banlex = { git = "https://github.com/cognis-digital/banlex" }
+log = "0.4"
+tauri-plugin-log = "2"
+tauri-plugin-notification = "2"
+sqlite-vec = "0.1.9"
+
+[dev-dependencies]
+tempfile = "3"

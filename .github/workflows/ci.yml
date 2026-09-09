@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  frontend:
+    name: Frontend TypeCheck + Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: os-compass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: os-compass/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  rust-check:
+    name: Rust Cargo Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: os-compass/src-tauri
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: os-compass/src-tauri
+      - run: cargo check --lib
+      - run: cargo clippy --lib -- -D warnings
+        continue-on-error: true

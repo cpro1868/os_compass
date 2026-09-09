@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - Obsidian 布局参考</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <aside class="w-16 bg-gray-800 border-r border-gray-700 flex flex-col items-center py-4 space-y-4">
+      <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-compass"></i></div>
+      <div class="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center hover:bg-gray-600 cursor-pointer"><i class="fa-solid fa-layer-group"></i></div>
+      <div class="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center hover:bg-gray-600 cursor-pointer"><i class="fa-solid fa-magnifying-glass"></i></div>
+      <div class="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center hover:bg-gray-600 cursor-pointer"><i class="fa-solid fa-gear"></i></div>
+    </aside>
+    <aside class="w-64 bg-gray-850 border-r border-gray-700 p-4">
+      <h2 class="text-sm font-bold text-gray-400 uppercase mb-3">分类</h2>
+      <ul class="space-y-1 text-sm">
+        <li class="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer text-blue-400">全部项目</li>
+        <li class="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer">前端框架</li>
+        <li class="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer">后端服务</li>
+        <li class="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer">数据库</li>
+      </ul>
+    </aside>
+    <main class="flex-1 p-6 overflow-auto">
+      <h1 class="text-2xl font-bold mb-4">Obsidian 风格布局参考</h1>
+      <p class="text-gray-400">此页面展示深色主题、窄侧边栏、内容聚焦的 Obsidian 风格布局，可作为 OS-Compass 深色模式的参考。</p>
+      <div class="mt-6 grid grid-cols-3 gap-4">
+        <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">项目卡片 A</div>
+        <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">项目卡片 B</div>
+        <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">项目卡片 C</div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

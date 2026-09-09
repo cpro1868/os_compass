@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "sites": [
+    {
+      "name": "wechat",
+      "hosts": ["mp.weixin.qq.com"],
+      "title": ["#activity-name", "h1"],
+      "content": ["#js_content"],
+      "remove": ["script", "style"],
+      "image_attrs": ["data-src", "data-original", "src"],
+      "video_attrs": ["data-src", "src"]
+    },
+    {
+      "name": "example-blog",
+      "hosts": ["example.com", "www.example.com"],
+      "title": ["h1.article-title", "h1"],
+      "content": ["article", ".post-content", "main"],
+      "remove": [".ad", ".related", ".sidebar"],
+      "image_attrs": ["data-original", "data-src", "src"],
+      "video_attrs": ["src"]
+    }
+  ]
+}

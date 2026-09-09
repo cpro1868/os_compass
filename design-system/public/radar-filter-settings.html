@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 情报雷达设置（广告过滤）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .tooltip { visibility: hidden; opacity: 0; transition: all 0.2s; }
+    .tooltip-trigger:hover .tooltip { visibility: visible; opacity: 1; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen overflow-hidden">
+  <div class="flex flex-col h-full">
+
+    <!-- 顶部栏 -->
+    <header class="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-satellite-dish text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-semibold text-lg leading-tight">情报雷达设置</h1>
+          <p class="text-xs text-gray-400">配置雷达采集和过滤规则</p>
+        </div>
+      </div>
+      <button onclick="saveSettings()"
+        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center gap-2 transition">
+        <i class="fa-solid fa-save"></i>
+        保存设置
+      </button>
+    </header>
+
+    <!-- 设置内容区 -->
+    <div class="flex-1 overflow-auto p-6">
+
+      <!-- 广告过滤设置 -->
+      <section class="mb-8">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-blue-400"></i>
+          广告过滤
+        </h2>
+
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+          <!-- 开关 -->
+          <div class="flex items-center justify-between mb-6 pb-6 border-b border-gray-700">
+            <div>
+              <h3 class="font-medium">启用广告过滤</h3>
+              <p class="text-sm text-gray-400 mt-1">自动过滤采集内容中的广告和垃圾信息</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="filterEnabled" checked class="sr-only peer" onchange="toggleFilterSection()">
+              <div class="w-14 h-7 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-7 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          <!-- 过滤强度（开关打开时显示） -->
+          <div id="filterStrengthSection">
+            <div class="mb-4">
+              <h3 class="font-medium mb-2">过滤强度</h3>
+              <p class="text-sm text-gray-400">强度越高，过滤越严格，可能误杀正常内容</p>
+            </div>
+
+            <!-- 强度选项 -->
+            <div class="grid grid-cols-4 gap-3">
+              <!-- 关闭 -->
+              <label class="relative flex flex-col items-center p-4 bg-gray-700/50 rounded-xl border-2 border-gray-600 cursor-pointer hover:border-gray-500 transition group">
+                <input type="radio" name="strength" value="off" class="sr-only" onchange="updateStrengthPreview()">
+                <div class="w-6 h-6 rounded-full border-2 border-gray-500 mb-2 flex items-center justify-center group-hover:border-gray-400">
+                  <div class="w-2 h-2 rounded-full bg-gray-500 hidden"></div>
+                </div>
+                <span class="font-medium text-sm">关闭</span>
+                <span class="text-xs text-gray-500 mt-1">不过滤</span>
+              </label>
+
+              <!-- 低 -->
+              <label class="relative flex flex-col items-center p-4 bg-gray-700/50 rounded-xl border-2 border-green-600 cursor-pointer hover:border-green-500 transition group">
+                <input type="radio" name="strength" value="low" class="sr-only" onchange="updateStrengthPreview()">
+                <div class="w-6 h-6 rounded-full border-2 border-green-600 mb-2 flex items-center justify-center group-hover:border-green-500">
+                  <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                </div>
+                <span class="font-medium text-sm">低</span>
+                <span class="text-xs text-gray-500 mt-1">只过滤明显广告</span>
+              </label>
+
+              <!-- 中 -->
+              <label class="relative flex flex-col items-center p-4 bg-gray-700/50 rounded-xl border-2 border-blue-600 cursor-pointer hover:border-blue-500 transition group">
+                <input type="radio" name="strength" value="medium" checked class="sr-only" onchange="updateStrengthPreview()">
+                <div class="w-6 h-6 rounded-full border-2 border-blue-600 mb-2 flex items-center justify-center group-hover:border-blue-500">
+                  <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                </div>
+                <span class="font-medium text-sm">中</span>
+                <span class="text-xs text-gray-500 mt-1">标准过滤</span>
+              </label>
+
+              <!-- 高 -->
+              <label class="relative flex flex-col items-center p-4 bg-gray-700/50 rounded-xl border-2 border-orange-600 cursor-pointer hover:border-orange-500 transition group">
+                <input type="radio" name="strength" value="high" class="sr-only" onchange="updateStrengthPreview()">
+                <div class="w-6 h-6 rounded-full border-2 border-orange-600 mb-2 flex items-center justify-center group-hover:border-orange-500">
+                  <div class="w-2 h-2 rounded-full bg-orange-500 hidden"></div>
+                </div>
+                <span class="font-medium text-sm">高</span>
+                <span class="text-xs text-gray-500 mt-1">激进过滤</span>
+              </label>
+            </div>
+
+            <!-- 强度说明 -->
+            <div id="strengthPreview" class="mt-4 p-3 bg-blue-900/20 border border-blue-800 rounded-lg">
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-info-circle text-blue-400 mt-0.5"></i>
+                <div class="text-sm">
+                  <p class="text-blue-300">当前：标准过滤（推荐）</p>
+                  <p class="text-gray-400 mt-1">过滤明显广告和部分营销内容，平衡误杀率</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 阈值（高级） -->
+            <details class="mt-4">
+              <summary class="cursor-pointer text-sm text-gray-400 hover:text-gray-300 flex items-center gap-1">
+                <i class="fa-solid fa-chevron-down text-xs transition-transform details[open] .fa-chevron-down"></i>
+                高级设置
+              </summary>
+              <div class="mt-3 p-4 bg-gray-700/30 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                  <label class="text-sm">评分阈值</label>
+                  <span id="thresholdValue" class="text-sm text-blue-400 font-mono">1.0</span>
+                </div>
+                <input type="range" id="thresholdSlider" min="0.5" max="3.0" step="0.1" value="1.0"
+                  class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                  oninput="updateThreshold(this.value)">
+                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>更严格</span>
+                  <span>更宽松</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">
+                  评分超过此阈值的内容将被过滤。banlex 词库内置 spam/scam/harassment 分类，综合评分达到阈值即触发过滤。
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- 过滤词库预览 -->
+      <section class="mb-8">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-book text-purple-400"></i>
+          内置词库
+        </h2>
+
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+          <p class="text-sm text-gray-400 mb-4">
+            系统内置以下分类的检测词库，支持混淆检测（leetspeak、零宽字符等）：
+          </p>
+
+          <div class="grid grid-cols-3 gap-4">
+            <!-- spam -->
+            <div class="bg-gray-700/50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+                <h4 class="font-medium text-sm">垃圾信息 (spam)</h4>
+              </div>
+              <p class="text-xs text-gray-400 mb-2">推广、促销类内容</p>
+              <div class="flex flex-wrap gap-1">
+                <span class="px-2 py-0.5 bg-red-900/40 text-red-300 text-xs rounded">buy now</span>
+                <span class="px-2 py-0.5 bg-red-900/40 text-red-300 text-xs rounded">click here</span>
+                <span class="px-2 py-0.5 bg-red-900/40 text-red-300 text-xs rounded">limited offer</span>
+                <span class="px-2 py-0.5 bg-gray-600 text-xs rounded">+80+</span>
+              </div>
+            </div>
+
+            <!-- scam -->
+            <div class="bg-gray-700/50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="w-3 h-3 bg-orange-500 rounded-full"></span>
+                <h4 class="font-medium text-sm">欺诈信息 (scam)</h4>
+              </div>
+              <p class="text-xs text-gray-400 mb-2">钓鱼、诈骗类内容</p>
+              <div class="flex flex-wrap gap-1">
+                <span class="px-2 py-0.5 bg-orange-900/40 text-orange-300 text-xs rounded">verify account</span>
+                <span class="px-2 py-0.5 bg-orange-900/40 text-orange-300 text-xs rounded">gift card</span>
+                <span class="px-2 py-0.5 bg-orange-900/40 text-orange-300 text-xs rounded">urgent payment</span>
+                <span class="px-2 py-0.5 bg-gray-600 text-xs rounded">+40+</span>
+              </div>
+            </div>
+
+            <!-- harassment -->
+            <div class="bg-gray-700/50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                <h4 class="font-medium text-sm">骚扰信息</h4>
+              </div>
+              <p class="text-xs text-gray-400 mb-2">恶意骚扰类内容</p>
+              <div class="flex flex-wrap gap-1">
+                <span class="px-2 py-0.5 bg-yellow-900/40 text-yellow-300 text-xs rounded">threat</span>
+                <span class="px-2 py-0.5 bg-yellow-900/40 text-yellow-300 text-xs rounded">harassment</span>
+                <span class="px-2 py-0.5 bg-gray-600 text-xs rounded">+20+</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 中文词库 -->
+          <div class="mt-4 p-4 bg-purple-900/20 border border-purple-800 rounded-lg">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="fa-solid fa-language text-purple-400"></i>
+              <h4 class="font-medium text-sm text-purple-300">中文扩展词库</h4>
+              <span class="px-2 py-0.5 bg-purple-600 text-white text-xs rounded">已启用</span>
+            </div>
+            <p class="text-xs text-gray-400 mb-3">针对 Telegram 和国内平台优化的中文广告词库：</p>
+            <div class="flex flex-wrap gap-1">
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">加微信</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">扫码关注</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">二维码</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">广告</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">推广</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">联系我</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">收徒</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">培训</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">课程</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">优惠券</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">立即</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs rounded">点击</span>
+              <span class="px-2 py-0.5 bg-gray-600 text-xs rounded">+50+</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 过滤效果预览 -->
+      <section class="mb-8">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-eye text-green-400"></i>
+          过滤效果预览
+        </h2>
+
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+          <p class="text-sm text-gray-400 mb-4">输入内容测试过滤效果：</p>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-gray-400 mb-2 block">测试内容</label>
+              <textarea id="testInput" rows="4"
+                class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                placeholder="输入一段文字测试过滤效果...">今天发现一个好项目，Python开发的AI工具，GitHub上很火。点击 https://example.com 了解更多，还有免费课程赠送，加微信获取更多福利！</textarea>
+            </div>
+            <div>
+              <label class="text-sm text-gray-400 mb-2 block">检测结果</label>
+              <div id="testResult" class="h-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-sm">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                  <span class="font-medium text-red-400">将被过滤</span>
+                  <span class="text-gray-400">评分: 2.1</span>
+                </div>
+                <div class="space-y-1 text-xs text-gray-400">
+                  <p><span class="text-red-400">[spam]</span> "buy" + "now" → score 0.8</p>
+                  <p><span class="text-red-400">[spam]</span> "free" + "course" → score 0.6</p>
+                  <p><span class="text-purple-400">[zh]</span> "加微信" → score 0.4</p>
+                  <p><span class="text-purple-400">[zh]</span> "课程" → score 0.3</p>
+                </div>
+                <div class="mt-3 pt-3 border-t border-gray-600">
+                  <p class="text-xs text-gray-500">综合评分 2.1 > 阈值 1.0，触发过滤</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="testFilter()" class="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-sm rounded-lg transition">
+            <i class="fa-solid fa-play mr-1"></i>测试过滤
+          </button>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <script>
+    const strengthDescriptions = {
+      off: { name: '关闭过滤', desc: '不过滤任何内容', color: 'gray' },
+      low: { name: '低强度过滤', desc: '只过滤明显广告（如 "buy now click here"）', color: 'green' },
+      medium: { name: '标准过滤（推荐）', desc: '过滤明显广告和部分营销内容，平衡误杀率', color: 'blue' },
+      high: { name: '高强度过滤', desc: '激进过滤，可能误杀部分正常内容', color: 'orange' }
+    };
+
+    function toggleFilterSection() {
+      const enabled = document.getElementById('filterEnabled').checked;
+      const section = document.getElementById('filterStrengthSection');
+      section.style.opacity = enabled ? '1' : '0.5';
+      section.style.pointerEvents = enabled ? 'auto' : 'none';
+    }
+
+    function updateStrengthPreview() {
+      const strength = document.querySelector('input[name="strength"]:checked').value;
+      const desc = strengthDescriptions[strength];
+      const preview = document.getElementById('strengthPreview');
+
+      const colors = {
+        gray: { bg: 'bg-gray-900/20', border: 'border-gray-800', text: 'text-gray-300', icon: 'fa-circle-info' },
+        green: { bg: 'bg-green-900/20', border: 'border-green-800', text: 'text-green-300', icon: 'fa-check-circle' },
+        blue: { bg: 'bg-blue-900/20', border: 'border-blue-800', text: 'text-blue-300', icon: 'fa-info-circle' },
+        orange: { bg: 'bg-orange-900/20', border: 'border-orange-800', text: 'text-orange-300', icon: 'fa-exclamation-circle' }
+      };
+
+      const c = colors[desc.color];
+
+      preview.className = `mt-4 p-3 ${c.bg} border ${c.border} rounded-lg`;
+      preview.innerHTML = `
+        <div class="flex items-start gap-2">
+          <i class="fa-solid ${c.icon} ${c.text} mt-0.5"></i>
+          <div class="text-sm">
+            <p class="${c.text}">当前：${desc.name}</p>
+            <p class="text-gray-400 mt-1">${desc.desc}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateThreshold(value) {
+      document.getElementById('thresholdValue').textContent = value;
+    }
+
+    function testFilter() {
+      const input = document.getElementById('testInput').value;
+      const result = document.getElementById('testResult');
+
+      // 模拟检测结果
+      const hasAd = input.includes('加微信') || input.includes('点击') || input.includes('课程');
+      const score = hasAd ? 2.1 : 0.3;
+      const filtered = score > 1.0;
+
+      if (filtered) {
+        result.innerHTML = `
+          <div class="flex items-center gap-2 mb-2">
+            <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+            <span class="font-medium text-red-400">将被过滤</span>
+            <span class="text-gray-400">评分: ${score}</span>
+          </div>
+          <div class="space-y-1 text-xs text-gray-400">
+            <p><span class="text-purple-400">[zh]</span> "加微信" → score 0.5</p>
+            <p><span class="text-purple-400">[zh]</span> "点击" → score 0.4</p>
+            <p><span class="text-purple-400">[zh]</span> "课程" → score 0.3</p>
+          </div>
+          <div class="mt-3 pt-3 border-t border-gray-600">
+            <p class="text-xs text-gray-500">综合评分 ${score} > 阈值 ${document.getElementById('thresholdSlider').value}，触发过滤</p>
+          </div>
+        `;
+      } else {
+        result.innerHTML = `
+          <div class="flex items-center gap-2 mb-2">
+            <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+            <span class="font-medium text-green-400">通过检测</span>
+            <span class="text-gray-400">评分: ${score}</span>
+          </div>
+          <p class="text-xs text-gray-400 mt-2">未检测到广告或垃圾信息，内容将通过</p>
+        `;
+      }
+    }
+
+    function saveSettings() {
+      const enabled = document.getElementById('filterEnabled').checked;
+      const strength = document.querySelector('input[name="strength"]:checked').value;
+      const threshold = document.getElementById('thresholdSlider').value;
+
+      // 模拟保存
+      console.log({ enabled, strength, threshold });
+
+      alert('设置已保存！\n\n' + JSON.stringify({
+        广告过滤: enabled ? '启用' : '关闭',
+        强度: strength,
+        阈值: threshold
+      }, null, 2));
+    }
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      updateStrengthPreview();
+      toggleFilterSection();
+    });
+  </script>
+</body>
+</html>

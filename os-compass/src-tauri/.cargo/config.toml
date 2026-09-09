@@ -1,0 +1,3 @@
+[target.x86_64-pc-windows-gnu]
+linker = "D:\\Soft\\msys64\\ucrt64\\bin\\gcc.exe"
+ar = "D:\\Soft\\msys64\\ucrt64\\bin\\ar.exe"

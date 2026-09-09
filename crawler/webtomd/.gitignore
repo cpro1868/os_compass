@@ -1,0 +1,14 @@
+.gocache/
+.gomodcache/
+.gopath/
+
+dist/
+test-output/
+tmp-extension-check/
+
+web2md.exe
+assets/
+wechat-real*.md
+wx-*.md
+Prompt.md
+superpowers.md

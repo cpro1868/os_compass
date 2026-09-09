@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 主界面（看板）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <!-- 左侧功能菜单 -->
+    <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+      <!-- Logo -->
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
+        <i class="fa-solid fa-compass text-xl"></i>
+      </div>
+      
+      <!-- 功能按钮 -->
+      <button onclick="location.href='import-form.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition" title="导入项目">
+        <i class="fa-solid fa-plus text-lg mb-1"></i>
+        <span class="text-xs">导入</span>
+      </button>
+      
+      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition opacity-50 cursor-not-allowed" title="意图搜索（二期功能）">
+        <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
+        <span class="text-xs">搜索</span>
+      </button>
+      
+      <!-- 视图切换 -->
+      <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+        <button class="w-12 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white" title="看板视图">
+          <i class="fa-solid fa-table-columns"></i>
+        </button>
+        <button onclick="location.href='list-view.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition" title="列表视图">
+          <i class="fa-solid fa-list"></i>
+        </button>
+      </div>
+      
+      <!-- 分类管理 -->
+      <button onclick="location.href='category-manager.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition mt-auto" title="分类管理">
+        <i class="fa-solid fa-folder-tree text-lg mb-1"></i>
+        <span class="text-xs">分类</span>
+      </button>
+      
+      <!-- 底部 -->
+      <div class="border-t border-gray-700 pt-4 mt-4 w-full flex flex-col items-center gap-3">
+        <button onclick="location.href='settings.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition" title="设置">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+        <button onclick="location.href='plugin-manager.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition" title="插件">
+          <i class="fa-solid fa-plug"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col min-w-0 bg-gray-100">
+      <!-- 顶部栏 -->
+      <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold">全部项目</h1>
+          <p class="text-sm text-gray-500">共 12 个项目</p>
+        </div>
+        <div class="flex gap-2">
+          <button class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50">
+            <i class="fa-solid fa-filter mr-1"></i>筛选
+          </button>
+          <button class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50">
+            <i class="fa-solid fa-sort mr-1"></i>排序
+          </button>
+        </div>
+      </header>
+      
+      <!-- 看板内容 -->
+      <!-- 看板四列对应 lifecycle_status 枚举：TO_EXPLORE / DIVING / IN_USE / ABANDONED -->
+      <!-- 默认只显示 data_status = 'ACTIVE' 的项目 -->
+      <div class="flex-1 overflow-auto p-6">
+        <!-- 拖拽提示 -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 mb-4 flex items-center gap-2 text-sm text-blue-700">
+          <i class="fa-solid fa-hand-pointer"></i>
+          拖拽项目卡片可跨列流转状态
+        </div>
+
+        <div class="grid grid-cols-4 gap-4 h-full min-h-[500px]">
+          <!-- 待探索 - lifecycle_status: TO_EXPLORE -->
+          <div class="bg-gray-50 rounded-xl p-4 flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">💡</span>
+                <h3 class="font-bold">待探索</h3>
+              </div>
+              <span class="text-sm text-gray-500">3</span>
+            </div>
+            <div class="flex-1 space-y-3 overflow-auto">
+              <a href="project-detail.html" class="block bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-grab">
+                <div class="flex items-start gap-3 mb-2">
+                  <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">
+                    <i class="fa-brands fa-python text-sm"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-medium text-sm">django</h4>
+                    <p class="text-xs text-gray-500">PyPI</p>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-600 line-clamp-2">Python Web 框架</p>
+                <div class="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                  <span><i class="fa-solid fa-tag mr-1"></i>后端</span>
+                </div>
+              </a>
+              
+              <a href="project-detail.html" class="block bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-grab">
+                <div class="flex items-start gap-3 mb-2">
+                  <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                    <i class="fa-solid fa-database text-sm"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-medium text-sm">postgresql</h4>
+                    <p class="text-xs text-gray-500">GitHub</p>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-600 line-clamp-2">开源关系型数据库</p>
+                <div class="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                  <span><i class="fa-solid fa-tag mr-1"></i>数据库</span>
+                </div>
+              </a>
+              
+              <a href="project-detail.html" class="block bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-grab">
+                <div class="flex items-start gap-3 mb-2">
+                  <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600">
+                    <i class="fa-solid fa-box text-sm"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-medium text-sm">axios</h4>
+                    <p class="text-xs text-gray-500">NPM</p>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-600 line-clamp-2">Promise HTTP 客户端</p>
+                <div class="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                  <span><i class="fa-solid fa-tag mr-1"></i>前端</span>
+                </div>
+              </a>
+            </div>
+          </div>
+          
+          <!-- 深度研究中 - lifecycle_status: DIVING -->
+          <div class="bg-gray-50 rounded-xl p-4 flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">🔬</span>
+                <h3 class="font-bold">深度研究中</h3>
+              </div>
+              <span class="text-sm text-gray-500">2</span>
+            </div>
+            <div class="flex-1 space-y-3 overflow-auto">
+              <a href="project-detail.html" class="block bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-grab">
+                <div class="flex items-start gap-3 mb-2">
+                  <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                    <i class="fa-brands fa-rust text-sm"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-medium text-sm">tauri</h4>
+                    <p class="text-xs text-gray-500">GitHub</p>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-600 line-clamp-2">使用 Web 前端和 Rust 后端构建桌面应用</p>
+                <div class="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                  <span><i class="fa-solid fa-tag mr-1"></i>桌面</span>
+                </div>
+              </a>
+              
+              <a href="project-detail.html" class="block bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-grab">
+                <div class="flex items-start gap-3 mb-2">
+                  <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
+                    <i class="fa-solid fa-leaf text-sm"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-medium text-sm">nextjs</h4>
+                    <p class="text-xs text-gray-500">GitHub</p>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-600 line-clamp-2">React 服务端渲染框架</p>
+                <div class="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                  <span><i class="fa-solid fa-tag mr-1"></i>前端</span>
+                </div>
+              </a>
+            </div>
+          </div>
+          
+          <!-- 已落地/在用 - lifecycle_status: IN_USE -->
+          <div class="bg-gray-50 rounded-xl p-4 flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">✅</span>
+                <h3 class="font-bold">已落地/在用</h3>
+              </div>
+              <span class="text-sm text-gray-500">5</span>
+            </div>
+            <div class="flex-1 space-y-3 overflow-auto">
+              <a href="project-detail.html" class="block bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-grab">
+                <div class="flex items-start gap-3 mb-2">
+                  <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600">
+                    <i class="fa-brands fa-git-alt text-sm"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-medium text-sm">react</h4>
+                    <p class="text-xs text-gray-500">GitHub</p>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-600 line-clamp-2">用于构建用户界面的 JavaScript 库</p>
+                <div class="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                  <span><i class="fa-solid fa-tag mr-1"></i>前端框架</span>
+                </div>
+              </a>
+              
+              <a href="project-detail.html" class="block bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-grab">
+                <div class="flex items-start gap-3 mb-2">
+                  <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                    <i class="fa-brands fa-vuejs text-sm"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-medium text-sm">vue</h4>
+                    <p class="text-xs text-gray-500">GitHub</p>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-600 line-clamp-2">渐进式 JavaScript 框架</p>
+                <div class="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                  <span><i class="fa-solid fa-tag mr-1"></i>前端框架</span>
+                </div>
+              </a>
+            </div>
+          </div>
+          
+          <!-- 弃用/避坑 - lifecycle_status: ABANDONED -->
+          <div class="bg-gray-50 rounded-xl p-4 flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">🗑️</span>
+                <h3 class="font-bold">弃用/避坑</h3>
+              </div>
+              <span class="text-sm text-gray-500">2</span>
+            </div>
+            <div class="flex-1 space-y-3 overflow-auto">
+              <a href="project-detail.html" class="block bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-grab opacity-60">
+                <div class="flex items-start gap-3 mb-2">
+                  <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center text-red-600">
+                    <i class="fa-brands fa-angular text-sm"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-medium text-sm">angularjs</h4>
+                    <p class="text-xs text-gray-500">GitHub</p>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-600 line-clamp-2">已弃用的 Angular 旧版本</p>
+                <div class="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                  <span><i class="fa-solid fa-tag mr-1"></i>前端框架</span>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
