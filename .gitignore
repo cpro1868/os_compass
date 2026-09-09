@@ -22,6 +22,7 @@ last-vault.txt
 Previous/
 Previous/logs/
 Previous/scripts/
+release/
 
 # === Crawler ===
 crawler/webtomd/.gopath/
@@ -42,9 +43,88 @@ Thumbs.db
 .idea/
 .vscode/*.log
 
-# === Session Temp Files ===
-session-*.md
-
 # === Tauri Build Artifacts ===
 *.msi
 *-setup.exe
+
+# === Agent / Session Internal Records (NEVER PUBLISH) ===
+AGENTS.md
+AGENT.md
+CONTEXT.md
+SESSION-LOG.md
+CURRENT-TASK.md
+session-*.md
+session-*.txt
+checkpoints/
+.claude/
+.opencode/
+*.agent.md
+
+# === Sensitive Documentation (per docs/安全工程方法论.md) ===
+# 内部事件记录（含 SEC-* 安全事件、Bug 复盘等）
+docs/事件记录/
+docs/事件记录/**
+docs/SEC-*.md
+docs/SEC-**
+
+# 内部测试记录（敏感测试细节）
+docs/测试记录/
+docs/测试记录/**
+
+# 涉及项目战略/反思/沟通细节的内部文档
+docs/需求初步沟通记录.md
+docs/环境验证记录.md
+docs/AI重新分析问题修复记录.md
+docs/M15完成质量低下的反思.md
+docs/M15待完善功能清单.md
+docs/P0问题记录_意图搜索off_topic流程不工作.md
+docs/严重问题记录_意图搜索off_topic.md
+docs/异常处理和日志保障方案.md
+docs/开发计划清单.md
+docs/完整工作清单.md
+docs/开发保障机制.md
+docs/审核评估报告.md
+docs/六维度审核评估报告.md
+docs/开发前最终检查清单.md
+docs/发布前测试清单.md
+docs/代理配置架构需求更新.md
+
+# 修复计划与方案草稿（内部技术评审痕迹）
+docs/修复计划_*.md
+docs/修复计划_**
+docs/意图搜索多轮对话理解与智能收敛设计方案_*.md
+docs/情报雷达收藏页取消默认时间筛选方案_*.md
+
+# 持续工作进展与里程碑追踪（内部运营记录）
+docs/工作进展记录.md
+docs/里程碑和开发计划.md
+docs/当前开发计划.md
+docs/开发连续性保障机制.md
+docs/开发前检查清单.md
+
+# 设计文档中的占位草稿与未发布设计（保留公开版说明书，剔除工程内部思考）
+# 注意：以下文件保留并对外发布：
+#   docs/产品需求文档 (PRD).md
+#   docs/概要设计说明书.md
+#   docs/详细设计说明书.md
+#   docs/数据库设计说明书.md
+#   docs/API接口设计说明书.md
+#   docs/技术架构设计说明书.md
+#   docs/安全工程方法论.md           （已脱敏，公开安全规则文档）
+#   docs/插件接入规范.md
+#   docs/扩展插件规范.md
+#   docs/M13-M22实施计划.md
+#   docs/M23安装程序打包与版本发布.md
+#   docs/M22意图搜索历史记录.md
+#   docs/M19-* (公开的需求说明)
+#   docs/原型功能对照表.md
+#   docs/智能意图搜索流程设计.md
+#   docs/分类导入功能设计.md
+#   docs/requirements.md
+#   docs/需求确认文档.md
+#   docs/WBS分解.md
+#   docs/环境配置指南.md
+#   docs/路径管理规范.md
+#   docs/发布检查清单.md
+#   docs/templates/                 （全部文档模板）
+#   docs/assets/                    （原型/UI 图片资源）
