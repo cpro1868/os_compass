@@ -81,6 +81,11 @@ docs/SEC-**
 # 内部测试记录（敏感测试细节）
 docs/测试记录/
 docs/测试记录/**
+docs/测试文档/
+docs/测试文档/**
+docs/用户测试记录.md
+docs/用户测试文档.md
+docs/系统关键错误记录.md
 docs/templates/
 docs/templates/**
 
