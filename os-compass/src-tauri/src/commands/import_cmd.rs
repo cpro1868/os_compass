@@ -480,6 +480,21 @@ async fn run_post_import_tasks(
         }
     }
 
+    // 后台静默为新导入的项目生成向量 (Embedding)，确保新项目即刻可被意图搜索命中
+    if crate::embedding::is_enabled() {
+        emit_progress("embedding", "running", None);
+        match crate::embedding::generate_project_embeddings(project_id).await {
+            Ok(_) => {
+                log::info!("[post_import_tasks] 项目 {} 向量自动生成成功", project_id);
+                emit_progress("embedding", "done", None);
+            }
+            Err(e) => {
+                log::warn!("[post_import_tasks] 项目 {} 向量自动生成失败（不阻断流程）: {}", project_id, e);
+                emit_progress("embedding", "failed", Some(e));
+            }
+        }
+    }
+
     let _ = app.emit("import:task_progress", TaskProgress {
         project_id,
         task_type: "all".to_string(),
