@@ -47,6 +47,17 @@ Thumbs.db
 *.msi
 *-setup.exe
 
+# === Local Test & Debug Scripts (Do not commit) ===
+test_*.rs
+test_*.js
+test_*.ps1
+check_*.ps1
+debug_path/
+crawler/webtomd/AGENTS.md
+crawler/webtomd/docs/superpowers/
+os-compass/src-tauri/test_prompt.rs
+os-compass/src-tauri/examples/
+
 # === Agent / Session Internal Records (NEVER PUBLISH) ===
 AGENTS.md
 AGENT.md
