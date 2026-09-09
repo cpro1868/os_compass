@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 意图搜索</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+    .chat-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .chat-container::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }
+    .typing-indicator span {
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .result-card {
+      animation: slideUp 0.3s ease-out;
+    }
+    .source-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+    }
+  </style>
+</head>
+<body class="text-gray-100 h-screen overflow-hidden">
+
+  <div class="flex h-full">
+    <!-- 主聊天区域 -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+      <!-- 顶部栏 -->
+      <header class="h-14 border-b border-slate-700/50 flex items-center justify-between px-6 bg-slate-900/80 backdrop-blur-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+            <i class="fa-solid fa-compass text-white text-sm"></i>
+          </div>
+          <div>
+            <h1 class="font-semibold text-sm">意图搜索</h1>
+            <p class="text-xs text-slate-500">本地向量 + LLM 联网推荐</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="p-2 hover:bg-slate-700 rounded-lg transition" title="清除对话">
+            <i class="fa-solid fa-trash-can text-slate-400 text-sm"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- 聊天消息区域 -->
+      <div id="chatContainer" class="chat-container flex-1 overflow-auto p-6 space-y-6">
+        <!-- 欢迎消息 -->
+        <div class="flex gap-4 max-w-3xl mx-auto">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center shadow-lg">
+            <i class="fa-solid fa-compass text-white"></i>
+          </div>
+          <div class="flex-1">
+            <div class="bg-slate-800/80 backdrop-blur rounded-2xl rounded-tl-sm p-5 border border-slate-700/50">
+              <p class="text-gray-300 leading-relaxed">
+                您好！我是您的开源项目助手。请描述您的需求，我将通过<strong class="text-blue-400">向量语义匹配</strong>搜索您的本地项目库，并通过<strong class="text-purple-400">LLM 联网搜索</strong>为您推荐相关开源项目。
+              </p>
+            </div>
+            <!-- 快捷提示 -->
+            <div class="mt-4 flex flex-wrap gap-2">
+              <button onclick="sendSuggestion('适合中小团队使用的项目管理工具')" class="px-3 py-1.5 text-xs bg-slate-800/60 hover:bg-slate-700 border border-slate-700 hover:border-blue-500/50 rounded-full transition flex items-center gap-1.5">
+                <i class="fa-solid fa-bolt text-yellow-400"></i>
+                项目管理工具
+              </button>
+              <button onclick="sendSuggestion('React 状态管理库')" class="px-3 py-1.5 text-xs bg-slate-800/60 hover:bg-slate-700 border border-slate-700 hover:border-blue-500/50 rounded-full transition flex items-center gap-1.5">
+                <i class="fa-solid fa-bolt text-yellow-400"></i>
+                React 状态管理
+              </button>
+              <button onclick="sendSuggestion('Python 机器学习入门')" class="px-3 py-1.5 text-xs bg-slate-800/60 hover:bg-slate-700 border border-slate-700 hover:border-blue-500/50 rounded-full transition flex items-center gap-1.5">
+                <i class="fa-solid fa-bolt text-yellow-400"></i>
+                Python 机器学习
+              </button>
+              <button onclick="sendSuggestion('Rust Web 框架')" class="px-3 py-1.5 text-xs bg-slate-800/60 hover:bg-slate-700 border border-slate-700 hover:border-blue-500/50 rounded-full transition flex items-center gap-1.5">
+                <i class="fa-solid fa-bolt text-yellow-400"></i>
+                Rust Web 框架
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 搜索输入框 -->
+      <div class="border-t border-slate-700/50 p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="max-w-3xl mx-auto">
+          <div class="relative bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl shadow-lg focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-900/50 transition">
+            <textarea id="chatInput" rows="1" placeholder="描述您的需求，例如：找一个人工智能相关的、适合中小团队使用的开源项目管理工具..."
+              class="w-full px-4 py-3 pr-14 text-gray-100 rounded-2xl resize-none focus:outline-none placeholder-slate-500 bg-transparent"
+              onkeydown="handleKeyDown(event)"
+              oninput="autoResize(this)"></textarea>
+            <button id="sendBtn" onclick="sendMessage()"
+              class="absolute right-2 bottom-2 w-9 h-9 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-xl flex items-center justify-center transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+              <i class="fa-solid fa-paper-plane text-sm"></i>
+            </button>
+          </div>
+          <div class="flex items-center justify-between mt-2 px-1">
+            <p class="text-xs text-slate-500">
+              <i class="fa-solid fa-wand-magic-sparkles text-blue-400 mr-1"></i>
+              AI 助手基于语义理解搜索
+            </p>
+            <p class="text-xs text-slate-500"><kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-400">Enter</kbd> 发送 · <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-400">Shift+Enter</kbd> 换行</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 右侧边栏 -->
+    <aside class="w-72 bg-slate-900/50 border-l border-slate-700/50 flex flex-col">
+      <!-- 搜索历史 -->
+      <div class="p-4 border-b border-slate-700/50">
+        <h2 class="font-semibold text-sm text-slate-400 flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          搜索历史
+        </h2>
+      </div>
+      <div class="flex-1 overflow-auto p-2">
+        <div class="space-y-1">
+          <button class="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-slate-800/80 text-slate-300 hover:text-white transition flex items-center gap-2">
+            <i class="fa-regular fa-message text-slate-500 text-xs"></i>
+            <span class="truncate">前端状态管理库</span>
+          </button>
+          <button class="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-slate-800/80 text-slate-300 hover:text-white transition flex items-center gap-2">
+            <i class="fa-regular fa-message text-slate-500 text-xs"></i>
+            <span class="truncate">Python Web 框架</span>
+          </button>
+          <button class="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-slate-800/80 text-slate-300 hover:text-white transition flex items-center gap-2">
+            <i class="fa-regular fa-message text-slate-500 text-xs"></i>
+            <span class="truncate">Rust 日志库</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 最近使用 -->
+      <div class="p-4 border-t border-slate-700/50">
+        <h2 class="font-semibold text-sm text-slate-400 flex items-center gap-2 mb-3">
+          <i class="fa-solid fa-history"></i>
+          最近使用
+        </h2>
+        <div class="space-y-2">
+          <div class="bg-slate-800/60 rounded-lg p-2.5 border border-slate-700/50 hover:border-blue-500/50 cursor-pointer transition">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 bg-blue-600/20 rounded-md flex items-center justify-center">
+                <i class="fa-brands fa-vuejs text-blue-400 text-xs"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h4 class="text-xs font-medium truncate">Vue.js</h4>
+                <p class="text-[10px] text-slate-500">深入了解 · 203k ⭐</p>
+              </div>
+            </div>
+          </div>
+          <div class="bg-slate-800/60 rounded-lg p-2.5 border border-slate-700/50 hover:border-blue-500/50 cursor-pointer transition">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 bg-cyan-600/20 rounded-md flex items-center justify-center">
+                <i class="fa-brands fa-react text-cyan-400 text-xs"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h4 class="text-xs font-medium truncate">React</h4>
+                <p class="text-[10px] text-slate-500">使用中 · 219k ⭐</p>
+              </div>
+            </div>
+          </div>
+          <div class="bg-slate-800/60 rounded-lg p-2.5 border border-slate-700/50 hover:border-blue-500/50 cursor-pointer transition">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 bg-orange-600/20 rounded-md flex items-center justify-center">
+                <i class="fa-brands fa-python text-orange-400 text-xs"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h4 class="text-xs font-medium truncate">TensorFlow</h4>
+                <p class="text-[10px] text-slate-500">待探索 · 185k ⭐</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部操作 -->
+      <div class="p-3 border-t border-slate-700/50">
+        <button class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-slate-800/80 text-slate-400 hover:text-white transition flex items-center gap-2">
+          <i class="fa-solid fa-plus"></i>
+          新建搜索
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatContainer = document.getElementById('chatContainer');
+
+    // 自动调整输入框高度
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+      sendBtn.disabled = !el.value.trim();
+    }
+
+    // 处理键盘事件
+    function handleKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (chatInput.value.trim()) {
+          sendMessage();
+        }
+      }
+    }
+
+    // 发送消息
+    function sendMessage() {
+      const message = chatInput.value.trim();
+      if (!message) return;
+
+      // 添加用户消息
+      addMessage('user', message);
+      chatInput.value = '';
+      chatInput.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      // 显示 AI 思考
+      showTypingIndicator();
+
+      // 模拟 AI 回复
+      setTimeout(() => {
+        hideTypingIndicator();
+        const results = getAIResponse(message);
+        addSearchResults(results);
+      }, 2000);
+    }
+
+    // 添加用户消息
+    function addMessage(role, content) {
+      const isUser = role === 'user';
+      const avatar = isUser
+        ? '<div class="w-10 h-10 bg-slate-700 rounded-xl flex-shrink-0 flex items-center justify-center shadow"><i class="fa-solid fa-user text-slate-300"></i></div>'
+        : '<div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center shadow-lg"><i class="fa-solid fa-compass text-white"></i></div>';
+
+      const messageHtml = `
+        <div class="flex gap-4 max-w-3xl mx-auto">
+          ${avatar}
+          <div class="flex-1">
+            <div class="${isUser ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm' : 'bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-2xl rounded-tl-sm'} p-4">
+              <p class="${isUser ? '' : 'text-gray-300 leading-relaxed'}">${content}</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      chatContainer.insertAdjacentHTML('beforeend', messageHtml);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // 添加搜索结果
+    function addSearchResults(results) {
+      const resultHtml = `
+        <div class="flex gap-4 max-w-3xl mx-auto">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center shadow-lg">
+            <i class="fa-solid fa-compass text-white"></i>
+          </div>
+          <div class="flex-1">
+            <div class="bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-2xl rounded-tl-sm p-5">
+              <p class="text-gray-300 leading-relaxed mb-4">${results.summary}</p>
+
+              <!-- 结果统计 -->
+              <div class="flex flex-wrap gap-3 mb-4">
+                <div class="flex items-center gap-1.5 px-2.5 py-1 bg-blue-900/30 border border-blue-700/50 rounded-lg text-xs">
+                  <i class="fa-solid fa-database text-blue-400"></i>
+                  <span class="text-blue-300">本地向量: ${results.localCount}</span>
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 bg-purple-900/30 border border-purple-700/50 rounded-lg text-xs">
+                  <i class="fa-solid fa-globe text-purple-400"></i>
+                  <span class="text-purple-300">LLM 联网: ${results.webCount}</span>
+                </div>
+              </div>
+
+              <!-- 项目卡片 -->
+              <div class="space-y-3">
+                ${results.items.map(item => createProjectCard(item)).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      chatContainer.insertAdjacentHTML('beforeend', resultHtml);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // 生成项目卡片
+    function createProjectCard(item) {
+      const sourceConfig = {
+        local: {
+          label: '本地',
+          bg: 'bg-blue-900/40 border-blue-700/50',
+          text: 'text-blue-400',
+          icon: 'fa-database'
+        },
+        llm: {
+          label: 'LLM 推荐',
+          bg: 'bg-purple-900/40 border-purple-700/50',
+          text: 'text-purple-400',
+          icon: 'fa-wand-magic-sparkles'
+        }
+      };
+      const source = sourceConfig[item.source] || sourceConfig.llm;
+
+      const healthColor = item.health >= 80 ? 'green' : item.health >= 60 ? 'yellow' : 'red';
+      const healthBadge = item.health
+        ? `<span class="flex items-center gap-1 px-2 py-0.5 bg-${healthColor}-900/30 border border-${healthColor}-700/50 rounded text-${healthColor}-400 text-xs">
+            <i class="fa-solid fa-heart text-[10px]"></i>
+            ${item.health}
+           </span>`
+        : '';
+
+      const actionBtn = item.source === 'local'
+        ? `<span class="flex items-center gap-1 px-3 py-1.5 bg-slate-700 text-slate-400 rounded-lg text-xs cursor-default">
+            <i class="fa-solid fa-check"></i> 已入库
+           </span>`
+        : `<button onclick="importProject('${item.name}')" class="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg text-xs hover:from-blue-400 hover:to-indigo-500 transition shadow">
+            <i class="fa-solid fa-download"></i> 导入
+           </button>`;
+
+      return `
+        <div class="result-card bg-slate-900/60 border border-slate-700/50 rounded-xl p-4 hover:border-blue-500/50 hover:shadow-lg transition cursor-pointer">
+          <div class="flex items-start gap-3">
+            <div class="w-11 h-11 bg-slate-800 border border-slate-700 rounded-xl flex items-center justify-center flex-shrink-0">
+              <i class="${item.icon} text-xl" style="color: ${item.iconColor}"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap mb-1">
+                <h4 class="font-semibold text-white">${item.name}</h4>
+                <span class="flex items-center gap-1 px-2 py-0.5 ${source.bg} ${source.text} rounded text-xs source-badge">
+                  <i class="fa-solid ${source.icon} text-[10px]"></i>
+                  ${source.label}
+                </span>
+                ${healthBadge}
+              </div>
+              <p class="text-sm text-slate-400 line-clamp-2">${item.desc}</p>
+              <div class="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                <span class="flex items-center gap-1">
+                  <i class="fa-solid fa-star text-yellow-500"></i>
+                  ${item.stars}
+                </span>
+                <span class="flex items-center gap-1">
+                  <i class="fa-solid fa-code"></i>
+                  ${item.lang}
+                </span>
+              </div>
+            </div>
+            <div class="flex-shrink-0">
+              ${actionBtn}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 显示打字指示器
+    function showTypingIndicator() {
+      const typingHtml = `
+        <div id="typingIndicator" class="flex gap-4 max-w-3xl mx-auto">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center shadow-lg">
+            <i class="fa-solid fa-compass text-white"></i>
+          </div>
+          <div class="flex-1">
+            <div class="bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-2xl rounded-tl-sm p-4">
+              <div class="flex items-center gap-3">
+                <div class="typing-indicator flex gap-1">
+                  <span class="w-2 h-2 bg-blue-400 rounded-full"></span>
+                  <span class="w-2 h-2 bg-blue-400 rounded-full"></span>
+                  <span class="w-2 h-2 bg-blue-400 rounded-full"></span>
+                </div>
+                <span class="text-sm text-slate-400">正在分析语义并搜索...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      chatContainer.insertAdjacentHTML('beforeend', typingHtml);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // 隐藏打字指示器
+    function hideTypingIndicator() {
+      const indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+    }
+
+    // 获取 AI 响应（模拟双轨搜索结果）
+    function getAIResponse(message) {
+      const mockData = {
+        '前端状态管理库': {
+          summary: '根据您的需求，系统通过向量语义匹配在本地项目库中找到 1 个相关项目，并通过 LLM 联网搜索推荐了 3 个热门项目。',
+          localCount: 1,
+          webCount: 3,
+          items: [
+            { name: 'pmndrs/zustand', source: 'local', health: 95, desc: '简洁、直观的状态管理解决方案，Hooks 风格的 API', lang: 'TypeScript', stars: '35k', icon: 'fa-face-smile', iconColor: '#a855f7' },
+            { name: 'reduxjs/redux-toolkit', source: 'llm', health: 92, desc: '官方推荐的 Redux 状态管理工具集，极大简化 Redux 使用', lang: 'TypeScript', stars: '10k', icon: 'fa-layer-group', iconColor: '#f97316' },
+            { name: '@tanstack/query', source: 'llm', health: 94, desc: '强大的异步状态管理与数据获取库，Tk 出品必属精品', lang: 'TypeScript', stars: '42k', icon: 'fa-layer-group', iconColor: '#f97316' },
+            { name: 'pinia/pinia', source: 'llm', health: 96, desc: 'Vue 官方推荐的新一代状态管理，API 设计优雅', lang: 'TypeScript', stars: '12k', icon: 'fa-leaf', iconColor: '#22c55e' },
+          ]
+        },
+        'Python Web 框架': {
+          summary: '根据您的需求，系统通过向量语义匹配在本地项目库中找到 2 个相关项目，并通过 LLM 联网搜索推荐了 2 个热门项目。',
+          localCount: 2,
+          webCount: 2,
+          items: [
+            { name: 'pallets/flask', source: 'local', health: 93, desc: '轻量级 Python Web 框架，灵活可扩展', lang: 'Python', stars: '66k', icon: 'fa-flask', iconColor: '#3b82f6' },
+            { name: 'tiangolo/fastapi', source: 'local', health: 96, desc: '现代、快速的 Web 框架，基于标准类型提示', lang: 'Python', stars: '70k', icon: 'fa-bolt', iconColor: '#f97316' },
+            { name: 'django/django', source: 'llm', health: 94, desc: 'Python 全栈 Web 框架，功能完善', lang: 'Python', stars: '75k', icon: 'fa-crown', iconColor: '#eab308' },
+            { name: 'encode/starlette', source: 'llm', health: 88, desc: '轻量级 ASGI 框架/工具箱，FastAPI 底层', lang: 'Python', stars: '9.5k', icon: 'fa-bolt', iconColor: '#f97316' },
+          ]
+        },
+        'Rust Web 框架': {
+          summary: '根据您的需求，系统通过向量语义匹配在本地项目库中找到 1 个相关项目，并通过 LLM 联网搜索推荐了 3 个热门项目。',
+          localCount: 1,
+          webCount: 3,
+          items: [
+            { name: 'tokio-rs/tracing', source: 'local', health: 94, desc: '应用级分布式追踪与日志框架', lang: 'Rust', stars: '4.8k', icon: 'fa-route', iconColor: '#f97316' },
+            { name: 'actix/actix-web', source: 'llm', health: 91, desc: 'Actor-based 的 Rust 高性能 Web 框架', lang: 'Rust', stars: '22k', icon: 'fa-rocket', iconColor: '#ef4444' },
+            { name: 'axum-framework/axum', source: 'llm', health: 93, desc: 'Tokio 团队出品的 ergonomic Web 框架', lang: 'Rust', stars: '12k', icon: 'fa-bolt', iconColor: '#f97316' },
+            { name: 'poem-web/poem', source: 'llm', health: 89, desc: '优雅的 Rust Web 框架，优秀的类型系统', lang: 'Rust', stars: '4.2k', icon: 'fa-feather', iconColor: '#8b5cf6' },
+          ]
+        },
+        '适合中小团队使用的项目管理工具': {
+          summary: '根据您的需求，系统通过向量语义匹配在本地项目库中找到 0 个相关项目，并通过 LLM 联网搜索推荐了 5 个适合中小团队使用的开源项目管理工具。',
+          localCount: 0,
+          webCount: 5,
+          items: [
+            { name: 'mattermost/server', source: 'llm', health: 92, desc: 'Slack 替代品，自托管团队协作', lang: 'Go', stars: '26k', icon: 'fa-comments', iconColor: '#22c55e' },
+            { name: 'plane/plane', source: 'llm', health: 88, desc: 'Jira 替代品，敏捷项目管理', lang: 'Go', stars: '8.5k', icon: 'fa-plane', iconColor: '#3b82f6' },
+            { name: 'metabase/metabase', source: 'llm', health: 91, desc: '开源 BI 工具，可视化数据分析', lang: 'Clojure', stars: '38k', icon: 'fa-chart-pie', iconColor: '#f97316' },
+            { name: 'calcom/cal.com', source: 'llm', health: 89, desc: '开源日程管理，团队调度工具', lang: 'TypeScript', stars: '25k', icon: 'fa-calendar', iconColor: '#8b5cf6' },
+            { name: 'posthog/posthog', source: 'llm', health: 93, desc: '开源产品分析，自托管 Google Analytics', lang: 'Python', stars: '14k', icon: 'fa-chart-line', iconColor: '#3b82f6' },
+          ]
+        },
+        'React 状态管理库': {
+          summary: '根据您的需求，系统通过向量语义匹配在本地项目库中找到 2 个相关项目，并通过 LLM 联网搜索推荐了 2 个热门项目。',
+          localCount: 2,
+          webCount: 2,
+          items: [
+            { name: 'reduxjs/redux', source: 'local', health: 88, desc: 'React 生态最经典的状态管理库', lang: 'JavaScript', stars: '60k', icon: 'fa-layer-group', iconColor: '#f97316' },
+            { name: 'pmndrs/zustand', source: 'local', health: 95, desc: '轻量级状态管理，简单直观的 API', lang: 'TypeScript', stars: '35k', icon: 'fa-face-smile', iconColor: '#a855f7' },
+            { name: '@tanstack/query', source: 'llm', health: 94, desc: '异步状态管理首选，服务端状态库', lang: 'TypeScript', stars: '42k', icon: 'fa-server', iconColor: '#3b82f6' },
+            { name: 'jotai/jotai', source: 'llm', health: 90, desc: '原子化状态管理，Recoil 精神续作', lang: 'TypeScript', stars: '12k', icon: 'fa-atom', iconColor: '#8b5cf6' },
+          ]
+        },
+        'Python 机器学习入门': {
+          summary: '根据您的需求，系统通过向量语义匹配在本地项目库中找到 0 个相关项目，并通过 LLM 联网搜索推荐了 5 个适合入门的 Python 机器学习项目。',
+          localCount: 0,
+          webCount: 5,
+          items: [
+            { name: 'scikit-learn/scikit-learn', source: 'llm', health: 96, desc: 'Python 机器学习基础库，简单易用', lang: 'Python', stars: '56k', icon: 'fa-brain', iconColor: '#f97316' },
+            { name: 'pytorch/pytorch', source: 'llm', health: 97, desc: '深度学习首选框架，学术界标配', lang: 'Python', stars: '78k', icon: 'fa-fire', iconColor: '#ef4444' },
+            { name: 'tensorflow/tensorflow', source: 'llm', health: 94, desc: 'Google 出品的深度学习框架', lang: 'Python', stars: '180k', icon: 'fa-cubes', iconColor: '#f97316' },
+            { name: 'numpy/numpy', source: 'llm', health: 98, desc: 'Python 科学计算基础库，必学', lang: 'Python', stars: '26k', icon: 'fa-calculator', iconColor: '#3b82f6' },
+            { name: 'pandas-dev/pandas', source: 'llm', health: 95, desc: '数据分析处理库，入门必备', lang: 'Python', stars: '40k', icon: 'fa-table', iconColor: '#22c55e' },
+          ]
+        }
+      };
+
+      if (mockData[message]) {
+        return mockData[message];
+      }
+
+      // 默认回退
+      return {
+        summary: `根据您的需求"${message}"，系统通过向量语义匹配在本地项目库中找到了相关项目，并通过 LLM 联网搜索推荐了热门开源项目。`,
+        localCount: 1,
+        webCount: 4,
+        items: [
+          { name: 'local/sample-project', source: 'local', health: 85, desc: '本地项目库中的示例项目', lang: 'TypeScript', stars: '5k', icon: 'fa-database', iconColor: '#3b82f6' },
+          { name: 'example/project-a', source: 'llm', health: 92, desc: 'LLM 推荐的热门开源项目 A', lang: 'Python', stars: '22k', icon: 'fa-star', iconColor: '#eab308' },
+          { name: 'example/project-b', source: 'llm', health: 88, desc: 'LLM 推荐的热门开源项目 B', lang: 'Rust', stars: '15k', icon: 'fa-star', iconColor: '#eab308' },
+          { name: 'example/project-c', source: 'llm', health: 90, desc: 'LLM 推荐的热门开源项目 C', lang: 'Go', stars: '30k', icon: 'fa-star', iconColor: '#eab308' },
+          { name: 'example/project-d', source: 'llm', health: 86, desc: 'LLM 推荐的热门开源项目 D', lang: 'JavaScript', stars: '18k', icon: 'fa-star', iconColor: '#eab308' },
+        ]
+      };
+    }
+
+    // 发送建议
+    function sendSuggestion(text) {
+      chatInput.value = text;
+      sendBtn.disabled = false;
+      sendMessage();
+    }
+
+    // 导入项目（模拟）
+    function importProject(name) {
+      alert(`正在导入: ${name}`);
+    }
+  </script>
+</body>
+</html>

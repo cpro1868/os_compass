@@ -1,0 +1,610 @@
+use rusqlite::Connection;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use tauri::{AppHandle, Manager};
+use std::sync::Mutex;
+use crate::plugins::radar::init_radar_db;
+use log;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Vault {
+    pub name: String,
+    pub path: String,
+    pub project_count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VaultInfo {
+    pub name: String,
+    pub path: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct VaultValidation {
+    pub valid: bool,
+    pub error: Option<String>,
+    #[serde(rename = "table_count")]
+    pub table_count: Option<i64>,
+    #[serde(rename = "project_count")]
+    pub project_count: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VaultIndex {
+    pub vaults: Vec<VaultInfo>,
+}
+
+impl Default for VaultIndex {
+    fn default() -> Self {
+        Self {
+            vaults: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VaultConfig {
+    pub path: String,
+}
+
+impl Default for VaultConfig {
+    fn default() -> Self {
+        Self {
+            path: String::new(),
+        }
+    }
+}
+
+lazy_static::lazy_static! {
+    pub static ref CURRENT_VAULT_CONFIG: Mutex<Option<VaultConfig>> = Mutex::new(None);
+}
+
+fn get_vault_index_path(app: &AppHandle) -> PathBuf {
+    let data_dir = app.path().app_data_dir().unwrap_or_default();
+    data_dir.join("vault-index.json")
+}
+
+fn get_last_vault_path(app: &AppHandle) -> PathBuf {
+    let data_dir = app.path().app_data_dir().unwrap_or_default();
+    data_dir.join("last-vault.txt")
+}
+
+fn get_vaults_root(app: &AppHandle) -> PathBuf {
+    app.path().app_local_data_dir().unwrap_or_default()
+}
+
+pub fn load_vault_index(app: &AppHandle) -> VaultIndex {
+    let path = get_vault_index_path(app);
+    if path.exists() {
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            if let Ok(index) = serde_json::from_str(&content) {
+                return index;
+            }
+        }
+    }
+    VaultIndex::default()
+}
+
+pub fn save_vault_index(app: &AppHandle, index: &VaultIndex) -> Result<(), String> {
+    let path = get_vault_index_path(app);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let content = serde_json::to_string_pretty(index).map_err(|e| e.to_string())?;
+    std::fs::write(&path, content).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn load_vault_config(vault_path: &str) -> VaultConfig {
+    let config_path = PathBuf::from(vault_path).join("config.json");
+    if config_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(&config_path) {
+            if let Ok(config) = serde_json::from_str(&content) {
+                return config;
+            }
+        }
+    }
+    VaultConfig::default()
+}
+
+pub fn save_vault_config(vault_path: &str, config: &VaultConfig) -> Result<(), String> {
+    let config_path = PathBuf::from(vault_path).join("config.json");
+    let content = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
+    std::fs::write(&config_path, content).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn create_vault(app: AppHandle, name: String, base_path: String) -> Result<Vault, String> {
+    // 记录当前仓库路径，创建完成后切回
+    let current_db_path = {
+        let db_guard = crate::db::DATABASE.lock().unwrap();
+        if let Some(ref _db) = *db_guard {
+            // 获取当前数据库路径（通过 last-vault.txt，系统库）
+            let last_vault = std::fs::read_to_string(
+                app.path().app_data_dir().unwrap_or_default().join("last-vault.txt")
+            ).unwrap_or_default();
+            let last_vault = last_vault.trim().to_string();
+            if !last_vault.is_empty() {
+                Some(std::path::PathBuf::from(last_vault).join("os_compass.db"))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    };
+    let current_crypto_key = {
+        let last_vault = std::fs::read_to_string(
+            app.path().app_data_dir().unwrap_or_default().join("last-vault.txt")
+        ).unwrap_or_default();
+        let last_vault = last_vault.trim().to_string();
+        if !last_vault.is_empty() {
+            let key_path = std::path::PathBuf::from(&last_vault).join(".cryptokey");
+            if key_path.exists() {
+                std::fs::read_to_string(&key_path)
+                    .ok()
+                    .and_then(|c| crate::crypto::key_from_base64(c.trim()).ok())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    };
+
+    // 用户选择的目录就是仓库目录本身，不再在其下创建子目录
+    let vault_dir = if !base_path.trim().is_empty() {
+        PathBuf::from(base_path.trim())
+    } else {
+        // 没有选择目录时，使用默认 vaults 目录 + 仓库名
+        let vaults_root = get_vaults_root(&app);
+        std::fs::create_dir_all(&vaults_root).map_err(|e| e.to_string())?;
+        vaults_root.join(&name)
+    };
+
+    // 检查是否已经是仓库（已有 os_compass.db）
+    let db_path = vault_dir.join("os_compass.db");
+    if db_path.exists() {
+        return Err("该目录已是仓库目录（os_compass.db 已存在），请选择其他目录".to_string());
+    }
+
+    // 目录不存在则创建，已存在则直接使用
+    if !vault_dir.exists() {
+        std::fs::create_dir_all(&vault_dir).map_err(|e| e.to_string())?;
+    }
+    let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+    conn.execute_batch(
+        "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;"
+    ).map_err(|e| e.to_string())?;
+    drop(conn);
+
+    // 为新仓库初始化数据库表结构（切换到新数据库，初始化后再切回）
+    crate::db::switch_database(db_path.clone()).map_err(|e| e.to_string())?;
+
+    // 为新仓库生成独立的加密密钥
+    let key_path = vault_dir.join(".cryptokey");
+    let crypto_key = crate::crypto::generate_key();
+    std::fs::write(&key_path, crate::crypto::key_to_base64(&crypto_key))
+        .map_err(|e| format!("Failed to write crypto key: {}", e))?;
+    log::info!("[vault] Generated new crypto key for new vault: {:?}", vault_dir);
+
+    let config = VaultConfig {
+        path: vault_dir.to_string_lossy().to_string(),
+    };
+    save_vault_config(&vault_dir.to_string_lossy(), &config)?;
+
+    // 初始化雷达数据库（在系统目录）
+    match crate::plugins::radar::init_radar_db() {
+        Ok(_) => log::info!("[create_vault] Radar DB initialized at system dir"),
+        Err(e) => log::error!("[create_vault] Failed to init radar DB: {}", e),
+    }
+
+    let mut index = load_vault_index(&app);
+    index.vaults.push(VaultInfo {
+        name: name.clone(),
+        path: vault_dir.to_string_lossy().to_string(),
+    });
+    save_vault_index(&app, &index)?;
+
+    // 切回原仓库数据库和密钥
+    if let Some(orig_db_path) = current_db_path {
+        if orig_db_path.exists() {
+            crate::db::switch_database(orig_db_path).map_err(|e| e.to_string())?;
+        }
+    }
+    if let Some(orig_key) = current_crypto_key {
+        crate::crypto::init_crypto(orig_key);
+    }
+
+    Ok(Vault {
+        name,
+        path: vault_dir.to_string_lossy().to_string(),
+        project_count: 0,
+    })
+}
+
+pub fn list_vaults(app: AppHandle) -> Result<Vec<Vault>, String> {
+    let index = load_vault_index(&app);
+    let mut vaults = Vec::new();
+
+    for vault_info in &index.vaults {
+        let db_path = PathBuf::from(&vault_info.path).join("os_compass.db");
+        let project_count = if db_path.exists() {
+            if let Ok(conn) = Connection::open(&db_path) {
+                conn.query_row(
+                    "SELECT COUNT(*) FROM projects WHERE data_status = 'ACTIVE'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                ).unwrap_or(0)
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+
+        vaults.push(Vault {
+            name: vault_info.name.clone(),
+            path: vault_info.path.clone(),
+            project_count,
+        });
+    }
+
+    Ok(vaults)
+}
+
+pub fn migrate_to_vault(app: AppHandle, vault_path: String, old_db_path: PathBuf) -> Result<i64, String> {
+    if !old_db_path.exists() {
+        return Ok(0);
+    }
+
+    let vault_dir = PathBuf::from(&vault_path);
+    let new_db_path = vault_dir.join("os_compass.db");
+
+    let old_conn = Connection::open(&old_db_path).map_err(|e| e.to_string())?;
+    let mut new_conn = Connection::open(&new_db_path).map_err(|e| e.to_string())?;
+
+    let tables = ["categories", "tags", "project_tags", "projects", "translations", "project_releases", "project_notes"];
+
+    for table in tables {
+        let count: i64 = old_conn.query_row(
+            &format!("SELECT COUNT(*) FROM {}", table),
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0);
+
+        if count > 0 {
+            let copy_sql = format!("ATTACH DATABASE '{}' AS source; INSERT OR IGNORE INTO {table} SELECT * FROM source.{table}; DETACH DATABASE source;", old_db_path.to_string_lossy());
+            new_conn.execute_batch(&copy_sql).map_err(|e| e.to_string())?;
+        }
+    }
+
+    let project_count: i64 = new_conn.query_row(
+        "SELECT COUNT(*) FROM projects WHERE data_status = 'ACTIVE'",
+        [],
+        |row| row.get(0),
+    ).unwrap_or(0);
+
+    Ok(project_count)
+}
+
+pub fn validate_vault(path: String) -> VaultValidation {
+    let db_path = PathBuf::from(&path).join("os_compass.db");
+    log::debug!("[validate_vault] path={}, db_path={:?}, exists={}", path, db_path, db_path.exists());
+
+    if !db_path.exists() {
+        return VaultValidation {
+            valid: false,
+            error: Some(format!("数据库文件不存在: {:?}", db_path)),
+            table_count: None,
+            project_count: None,
+        };
+    }
+
+    match Connection::open(&db_path) {
+        Ok(conn) => {
+            let table_count: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table'",
+                [],
+                |row| row.get(0),
+            ).unwrap_or(0);
+            log::debug!("[validate_vault] table_count={}", table_count);
+
+            if table_count == 0 {
+                return VaultValidation {
+                    valid: false,
+                    error: Some("数据库无表结构，可能是初始化失败".to_string()),
+                    table_count: Some(0),
+                    project_count: None,
+                };
+            }
+
+            // 检查 projects 表是否存在
+            let has_projects: bool = conn.query_row(
+                "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='projects'",
+                [],
+                |row| row.get(0),
+            ).unwrap_or(false);
+
+            let project_count = if has_projects {
+                conn.query_row(
+                    "SELECT COUNT(*) FROM projects WHERE data_status = 'ACTIVE'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                ).unwrap_or(0)
+            } else {
+                0
+            };
+            log::debug!("[validate_vault] has_projects={}, project_count={}", has_projects, project_count);
+
+            VaultValidation {
+                valid: true,
+                error: None,
+                table_count: Some(table_count),
+                project_count: Some(project_count),
+            }
+        }
+        Err(e) => {
+            log::error!("[validate_vault] Failed to open db: {}", e);
+            VaultValidation {
+                valid: false,
+                error: Some(format!("无法打开数据库: {}", e)),
+                table_count: None,
+                project_count: None,
+            }
+        }
+    }
+}
+
+fn write_log(msg: &str) {
+    use std::io::Write;
+    let log_dir = std::env::var("APPDATA").unwrap_or_default() + "\\com.administrator.os-compass\\logs";
+    std::fs::create_dir_all(&log_dir).ok();
+    let log_file = format!("{}\\vault_debug.log", log_dir);
+    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&log_file) {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default();
+        let secs = now.as_secs();
+        let days = secs / 86400;
+        let secs_in_day = secs % 86400;
+        let hours = secs_in_day / 3600;
+        let secs_in_hour = secs_in_day % 3600;
+        let mins = secs_in_hour / 60;
+        let secs = secs_in_hour % 60;
+        let ts = format!("{}+{:03}T{:02}:{:02}:{:02}", 1970 + days as i64, days, hours, mins, secs);
+        writeln!(file, "[{}] {}", ts, msg).ok();
+    }
+    log::debug!("{}", msg);
+}
+
+pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
+    write_log(&format!("=== open_vault called with path = '{}' ===", path));
+
+    let validation = validate_vault(path.clone());
+    write_log(&format!("[vault] Validation: valid={}, error={:?}", validation.valid, validation.error));
+
+    if !validation.valid {
+        return Err(validation.error.unwrap_or_else(|| "仓库无效".to_string()));
+    }
+
+    let db_path = PathBuf::from(&path).join("os_compass.db");
+    let db_path_str = db_path.to_string_lossy().to_string();
+    write_log(&format!("[vault] Switching database to: {}", db_path_str));
+
+    crate::db::switch_database(db_path).map_err(|e| {
+        write_log(&format!("[vault] switch_database failed: {}", e));
+        e.to_string()
+    })?;
+    write_log("[vault] Database switched successfully");
+
+    let config = VaultConfig {
+        path: path.clone(),
+    };
+    write_log(&format!("[vault] Setting CURRENT_VAULT_CONFIG.path = '{}'", db_path_str));
+    {
+        let mut current_config = CURRENT_VAULT_CONFIG.lock().unwrap();
+        *current_config = Some(config);
+        write_log(&format!("[vault] CURRENT_VAULT_CONFIG set to: path='{}'", db_path_str));
+    }
+
+    let vault_dir = PathBuf::from(&path);
+    write_log(&format!("[vault] vault_dir={:?}", vault_dir));
+    write_log("[vault] Radar DB initialized at system dir");
+
+    // 触发插件仓库切换（调用 on_disable/init/on_enable）
+    if let Err(e) = crate::plugin_manager::PLUGIN_MANAGER.switch_vault(&vault_dir) {
+        log::error!("[open_vault] plugin switch_vault error: {}", e);
+    }
+
+    let last_vault_path = get_last_vault_path(&app);
+    if let Some(parent) = last_vault_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(&last_vault_path, &path).map_err(|e| e.to_string())?;
+
+    let vault_name = std::path::Path::new(&path)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "未知".to_string());
+
+    let project_count = validation.project_count.unwrap_or(0);
+
+    Ok(Vault {
+        name: vault_name,
+        path,
+        project_count,
+    })
+}
+
+pub fn delete_vault(app: AppHandle, path: String, permanent: bool) -> Result<(), String> {
+    let mut index = load_vault_index(&app);
+    index.vaults.retain(|v| v.path != path);
+    save_vault_index(&app, &index)?;
+
+    if permanent {
+        let vault_dir = PathBuf::from(&path);
+        if vault_dir.exists() {
+            std::fs::remove_dir_all(&vault_dir).map_err(|e| e.to_string())?;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn get_current_vault(app: AppHandle) -> Result<Option<Vault>, String> {
+    let last_vault_path = get_last_vault_path(&app);
+    if !last_vault_path.exists() {
+        return Ok(None);
+    }
+
+    let path = std::fs::read_to_string(&last_vault_path).map_err(|e| e.to_string())?;
+    let path = path.trim().to_string();
+
+    let index = load_vault_index(&app);
+    if let Some(vault_info) = index.vaults.iter().find(|v| v.path == path) {
+        let validation = validate_vault(path.clone());
+        Ok(Some(Vault {
+            name: vault_info.name.clone(),
+            path: vault_info.path.clone(),
+            project_count: validation.project_count.unwrap_or(0),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+pub fn get_current_config() -> Option<VaultConfig> {
+    let config = CURRENT_VAULT_CONFIG.lock().unwrap();
+    config.clone()
+}
+
+pub fn save_current_config(config: VaultConfig) -> Result<(), String> {
+    let last_vault_path = std::env::var("CURRENT_VAULT_PATH")
+        .unwrap_or_default();
+    if last_vault_path.is_empty() {
+        return Err("当前没有打开的仓库".to_string());
+    }
+    save_vault_config(&last_vault_path, &config)?;
+    let mut current = CURRENT_VAULT_CONFIG.lock().unwrap();
+    *current = Some(config);
+    Ok(())
+}
+
+#[derive(Debug)]
+pub struct VaultIntegrityInfo {
+    pub project_count: i64,
+}
+
+fn check_vault_integrity(path: &str) -> Result<VaultIntegrityInfo, String> {
+    use std::collections::HashSet;
+
+    let vault_dir = PathBuf::from(path);
+
+    if !vault_dir.exists() {
+        return Err("目录不存在".to_string());
+    }
+
+    let db_path = vault_dir.join("os_compass.db");
+    if !db_path.exists() {
+        return Err("未找到 os_compass.db，不是有效的仓库目录".to_string());
+    }
+
+    let key_path = vault_dir.join(".cryptokey");
+    if !key_path.exists() {
+        return Err("未找到 .cryptokey 加密密钥文件，无法解密敏感数据".to_string());
+    }
+
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("数据库文件损坏：{}", e))?;
+
+    let required_tables: Vec<&str> = vec![
+        "categories", "tags", "projects", "project_tags", "project_notes",
+        "readme_variants", "translations", "project_clone", "project_releases",
+    ];
+
+    let mut stmt = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+        .map_err(|e| e.to_string())?;
+    let existing_tables: HashSet<String> = stmt
+        .query_map([], |row| row.get(0))
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    let missing: Vec<&str> = required_tables
+        .iter()
+        .filter(|t| !existing_tables.contains(&t.to_string()))
+        .map(|t| *t)
+        .collect();
+    if !missing.is_empty() {
+        return Err(format!(
+            "数据库结构不完整，缺少表：{}。可能不是 OS-Compass 仓库或为旧版本",
+            missing.join(", ")
+        ));
+    }
+
+    let key_cols = [
+        ("tags", vec!["source"]),
+        ("projects", vec!["data_status", "lifecycle_status"]),
+    ];
+    for (table, cols) in &key_cols {
+        let pragma_sql = format!("PRAGMA table_info({})", table);
+        let mut p = conn.prepare(&pragma_sql).map_err(|e| e.to_string())?;
+        let existing_cols: HashSet<String> = p
+            .query_map([], |row| row.get::<_, String>(1))
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
+        for col in cols.clone() {
+            if !existing_cols.contains(&col.to_string()) {
+                return Err("数据库版本过旧，不支持导入".to_string());
+            }
+        }
+    }
+
+    let key_content = std::fs::read_to_string(&key_path)
+        .map_err(|e| format!("读取 .cryptokey 失败：{}", e))?;
+    let crypto_key = crate::crypto::key_from_base64(key_content.trim())
+        .map_err(|_| ".cryptokey 文件格式无效，无法解密敏感数据".to_string())?;
+
+    // V2.0: system_variables 已移到系统库，仓库库不再存储敏感数据
+
+    let project_count = conn
+        .query_row(
+            "SELECT COUNT(*) FROM projects WHERE data_status = 'ACTIVE'",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+        .unwrap_or(0);
+
+    Ok(VaultIntegrityInfo { project_count })
+}
+
+pub fn import_vault(app: AppHandle, name: String, path: String) -> Result<Vault, String> {
+    let integrity = check_vault_integrity(&path)?;
+
+    let mut index = load_vault_index(&app);
+
+    if index.vaults.iter().any(|v| v.path == path) {
+        return Err("该仓库已在清单中，无需重复导入".to_string());
+    }
+
+    if index.vaults.iter().any(|v| v.name == name) {
+        return Err(format!("仓库名 '{}' 已存在，请修改名称", name));
+    }
+
+    index.vaults.push(VaultInfo {
+        name: name.clone(),
+        path: path.clone(),
+    });
+    save_vault_index(&app, &index)?;
+
+    Ok(Vault {
+        name,
+        path,
+        project_count: integrity.project_count,
+    })
+}
+
+

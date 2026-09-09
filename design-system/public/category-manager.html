@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 分类管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <!-- 左侧功能菜单 -->
+    <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
+        <i class="fa-solid fa-compass text-xl"></i>
+      </div>
+      
+      <button onclick="location.href='main-interface.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-plus text-lg mb-1"></i>
+        <span class="text-xs">导入</span>
+      </button>
+      
+      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
+        <span class="text-xs">搜索</span>
+      </button>
+      
+      <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+        <button onclick="location.href='main-interface.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-table-columns"></i>
+        </button>
+        <button onclick="location.href='list-view.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-list"></i>
+        </button>
+      </div>
+      
+      <!-- 当前页面高亮 -->
+      <button class="w-12 h-12 rounded-xl bg-gray-800 flex flex-col items-center justify-center text-white mt-auto">
+        <i class="fa-solid fa-folder-tree text-lg mb-1"></i>
+        <span class="text-xs">分类</span>
+      </button>
+      
+      <div class="border-t border-gray-700 pt-4 mt-4 w-full flex flex-col items-center gap-3">
+        <button onclick="location.href='settings.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+        <button onclick="location.href='plugin-manager.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-plug"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col min-w-0">
+      <!-- 顶部栏 -->
+      <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button onclick="location.href='main-interface.html'" class="text-gray-500 hover:text-gray-700">
+            <i class="fa-solid fa-arrow-left mr-2"></i>返回
+          </button>
+          <h1 class="text-xl font-bold">分类管理</h1>
+        </div>
+        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <i class="fa-solid fa-plus mr-2"></i>新建分类
+        </button>
+      </header>
+      
+      <!-- 分类树内容 -->
+      <div class="flex-1 overflow-auto p-6">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 max-w-4xl">
+          <!-- 系统分类：未分类（不可删除） -->
+          <div class="border-b border-gray-100 pb-4 mb-4">
+            <div class="flex items-center justify-between p-3 bg-gray-100 rounded-lg border border-gray-200">
+              <div class="flex items-center gap-3">
+                <i class="fa-solid fa-inbox text-gray-400"></i>
+                <div>
+                  <span class="font-bold text-gray-600">未分类</span>
+                  <span class="text-gray-400 mx-2">/</span>
+                  <span class="text-sm text-gray-400">uncategorized</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded">3 个项目</span>
+                <span class="text-xs text-gray-400 italic">系统分类，不可删除</span>
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2 ml-2">当 AI 无法判断项目所属分类时，将自动归入此类</p>
+          </div>
+          
+          <!-- 一级分类：前端框架 -->
+          <div class="border-b border-gray-100 pb-4 mb-4">
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-3">
+                <button onclick="toggleChildren(this)" class="text-gray-400 hover:text-gray-600">
+                  <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <i class="fa-solid fa-folder text-yellow-500"></i>
+                <div>
+                  <span class="font-bold">前端框架</span>
+                  <span class="text-gray-400 mx-2">/</span>
+                  <span class="text-sm text-gray-500">frontend-framework</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">5 个项目</span>
+                <button onclick="editCategory('frontend-framework')" class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="编辑">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+                <button onclick="deleteCategory('frontend-framework', 5)" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="删除">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+            <div class="ml-8 mt-2 space-y-2">
+              <!-- 二级分类：React 生态 -->
+              <div class="border-b border-gray-100 pb-2">
+                <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50">
+                  <div class="flex items-center gap-3">
+                    <button class="text-gray-400 hover:text-gray-600">
+                      <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <i class="fa-solid fa-folder text-yellow-400"></i>
+                    <div>
+                      <span>React 生态</span>
+                      <span class="text-gray-400 mx-2">/</span>
+                      <span class="text-sm text-gray-500">react-ecosystem</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">2 个项目</span>
+                    <button class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><i class="fa-solid fa-pen"></i></button>
+                    <button class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><i class="fa-solid fa-trash"></i></button>
+                  </div>
+                </div>
+                <!-- 三级分类 -->
+                <div class="ml-8 space-y-2">
+                  <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50">
+                    <div class="flex items-center gap-3">
+                      <i class="fa-solid fa-folder-open text-yellow-300"></i>
+                      <span class="text-sm">React 核心库</span>
+                      <span class="text-gray-400 mx-2">/</span>
+                      <span class="text-xs text-gray-500">react-core</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">1 个项目</span>
+                      <button class="p-1.5 text-gray-400 hover:text-blue-600 rounded"><i class="fa-solid fa-pen text-xs"></i></button>
+                      <button class="p-1.5 text-gray-400 hover:text-red-600 rounded"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- 二级分类：Vue 生态 -->
+              <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50">
+                <div class="flex items-center gap-3">
+                  <button class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-chevron-right"></i>
+                  </button>
+                  <i class="fa-solid fa-folder text-yellow-400"></i>
+                  <div>
+                    <span>Vue 生态</span>
+                    <span class="text-gray-400 mx-2">/</span>
+                    <span class="text-sm text-gray-500">vue-ecosystem</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">1 个项目</span>
+                  <button class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><i class="fa-solid fa-pen"></i></button>
+                  <button class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 一级分类：后端服务 -->
+          <div class="border-b border-gray-100 pb-4 mb-4">
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-3">
+                <button class="text-gray-400 hover:text-gray-600">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+                <i class="fa-solid fa-folder text-yellow-500"></i>
+                <div>
+                  <span class="font-bold">后端服务</span>
+                  <span class="text-gray-400 mx-2">/</span>
+                  <span class="text-sm text-gray-500">backend-service</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">3 个项目</span>
+                <button class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><i class="fa-solid fa-pen"></i></button>
+                <button class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 一级分类：数据库 -->
+          <div class="border-b border-gray-100 pb-4 mb-4">
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-3">
+                <button class="text-gray-400 hover:text-gray-600">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+                <i class="fa-solid fa-folder text-yellow-500"></i>
+                <div>
+                  <span class="font-bold">数据库</span>
+                  <span class="text-gray-400 mx-2">/</span>
+                  <span class="text-sm text-gray-500">database</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">2 个项目</span>
+                <button class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><i class="fa-solid fa-pen"></i></button>
+                <button class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 一级分类：AI / ML -->
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center gap-3">
+              <button class="text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+              <i class="fa-solid fa-folder text-yellow-500"></i>
+              <div>
+                <span class="font-bold">AI / ML</span>
+                <span class="text-gray-400 mx-2">/</span>
+                <span class="text-sm text-gray-500">ai-ml</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">0 个项目</span>
+              <button class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><i class="fa-solid fa-pen"></i></button>
+              <button class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 分类详情编辑区（点击编辑按钮显示） -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 mt-6 max-w-4xl">
+          <h3 class="font-bold mb-4">编辑分类：React 生态</h3>
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">分类名称</label>
+                <input type="text" value="React 生态" class="w-full px-3 py-2 border rounded-lg">
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">路径标识</label>
+                <input type="text" value="react-ecosystem" class="w-full px-3 py-2 border rounded-lg bg-gray-50">
+                <p class="text-xs text-gray-500 mt-1">用于 URL 和系统标识，建议使用英文</p>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">上级分类</label>
+              <select class="w-full px-3 py-2 border rounded-lg">
+                <option value="">无（顶级分类）</option>
+                <option value="1" selected>前端框架</option>
+                <option value="2">后端服务</option>
+                <option value="3">数据库</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">
+                分类说明 <span class="text-gray-400 font-normal">（用于 AI 精准归类）</span>
+              </label>
+              <textarea rows="3" class="w-full px-3 py-2 border rounded-lg" placeholder="描述这个分类的边界和用途，帮助 AI 理解哪些项目应该归入此类...">React 生态是指与 React 核心库相关的项目，包括：
+- React 官方库及周边（React Router, Redux, MobX 等）
+- React 应用框架（Next.js, Remix, Gatsby 等）
+- React UI 组件库（Material-UI, Ant Design, Chakra UI 等）
+- React 工具链（Create React App, Vite 等）</textarea>
+              <p class="text-xs text-gray-500 mt-1">详细的说明有助于 AI 更准确地将新项目归类到此分类</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">排序权重</label>
+              <input type="number" value="1" class="w-full px-3 py-2 border rounded-lg">
+              <p class="text-xs text-gray-500 mt-1">数字越小排序越靠前</p>
+            </div>
+            <div class="flex justify-end gap-3 pt-4">
+              <button class="px-4 py-2 border rounded-lg hover:bg-gray-50">取消</button>
+              <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // 删除分类校验
+      function deleteCategory(path, projectCount) {
+        if (projectCount > 0) {
+          alert(`无法删除分类"${path}"：该分类下有 ${projectCount} 个项目，请先移动或删除这些项目`);
+          return;
+        }
+        if (confirm(`确定要删除分类"${path}"吗？`)) {
+          alert('分类已删除');
+        }
+      }
+
+      // 编辑分类
+      function editCategory(path) {
+        alert('打开分类编辑面板：' + path);
+      }
+
+      // 折叠/展开子分类
+      function toggleChildren(btn) {
+        const icon = btn.querySelector('i');
+        const children = btn.closest('.border-b').querySelector('.space-y-2, .ml-8');
+        if (children) {
+          children.classList.toggle('hidden');
+          icon.classList.toggle('fa-chevron-down');
+          icon.classList.toggle('fa-chevron-right');
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: '发布版本标签 (如 v0.1.1)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build & Release Windows App
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: os-compass
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: os-compass/pnpm-lock.yaml
+
+      - name: Security Static Scan (docs/安全工程方法论.md)
+        shell: pwsh
+        run: |
+          Write-Host "Checking for leaked secrets or hardcoded endpoints..."
+          $violations = @()
+          $files = Get-ChildItem -Path @("src", "src-tauri/src") -Recurse -File -Include *.ts, *.tsx, *.rs
+          foreach ($f in $files) {
+            $content = Get-Content $f.FullName -Raw
+            if ($content -match 'sk-[a-zA-Z0-9]{24,}') {
+              $violations += "Suspected API Key in $($f.FullName)"
+            }
+            if ($content -match '127\.0\.0\.1:8964') {
+              $violations += "Hardcoded proxy in $($f.FullName)"
+            }
+          }
+          if ($violations.Count -gt 0) {
+            $violations | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+          Write-Host "Security audit passed!"
+
+      - name: Install Frontend Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Typecheck & Tests
+        run: |
+          pnpm typecheck
+          pnpm test
+
+      - name: Build Tauri Bundles
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.event.inputs.tag_name || github.ref_name }}
+          releaseName: "OS-Compass ${{ github.event.inputs.tag_name || github.ref_name }}"
+          releaseBody: "详细更新内容请参见 [CHANGELOG.md](CHANGELOG.md)。"
+          releaseDraft: false
+          prerelease: false
+          args: --target x86_64-pc-windows-msvc
+
+      - name: Upload Windows Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-compass-windows-installer
+          path: |
+            os-compass/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+            os-compass/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          if-no-files-found: warn

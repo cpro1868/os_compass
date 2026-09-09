@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>首页 - OS-Compass</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+    .typing-indicator span {
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+    .result-card {
+      animation: slideUp 0.3s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="text-gray-100 min-h-screen flex">
+
+  <!-- 顶部导航 -->
+  <header class="fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-6 border-b border-slate-700/50 backdrop-blur-sm z-50 bg-slate-900/90">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+        <i class="fa-solid fa-compass text-xl"></i>
+      </div>
+      <span class="font-bold text-xl tracking-tight">OS-Compass</span>
+    </div>
+    
+    <div class="flex items-center gap-4">
+      <button class="px-4 py-2 text-slate-400 hover:text-white transition flex items-center gap-2">
+        <i class="fa-solid fa-satellite-dish"></i>
+        <span class="hidden sm:inline">情报雷达</span>
+      </button>
+      <button class="px-4 py-2 text-blue-400 hover:text-white transition flex items-center gap-2">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span class="hidden sm:inline">意图搜索</span>
+      </button>
+      <button class="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition">
+        <i class="fa-solid fa-gear text-slate-400"></i>
+      </button>
+    </div>
+  </header>
+  
+  <!-- 主内容区 -->
+  <main class="flex flex-1 pt-16">
+    
+    <!-- 左侧：搜索结果区域 -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <div class="flex-1 overflow-y-auto px-6 py-6">
+        <div class="max-w-3xl mx-auto space-y-6">
+          
+          <!-- 欢迎语（无结果时显示） -->
+          <div class="text-center py-12">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mb-4 shadow-lg">
+              <i class="fa-solid fa-compass text-3xl text-white"></i>
+            </div>
+            <h1 class="text-2xl font-bold mb-2">开源罗盘</h1>
+            <p class="text-slate-400">AI 开源资产智能管家 - 告诉我你想找什么开源项目</p>
+          </div>
+          
+          <!-- 搜索结果卡片（示例） -->
+          <div class="result-card">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-6 h-6 bg-green-600/20 rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-check text-green-400 text-xs"></i>
+              </div>
+              <span class="text-sm text-slate-400">找到 3 个符合条件的高质量开源项目</span>
+            </div>
+            
+            <div class="space-y-3">
+              <!-- 项目 1 -->
+              <div class="bg-slate-800/60 backdrop-blur rounded-xl border border-slate-700 p-4 hover:border-blue-500/50 cursor-pointer transition">
+                <div class="flex items-start gap-4">
+                  <div class="w-12 h-12 bg-purple-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i class="fa-brands fa-python text-purple-400 text-xl"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <h3 class="font-semibold text-white">PaddlePaddle</h3>
+                      <span class="px-2 py-0.5 bg-blue-600/30 text-blue-300 text-xs rounded">百度开源</span>
+                    </div>
+                    <p class="text-sm text-slate-400 line-clamp-2">功能丰富，支持多平台的深度学习框架，提供从训练到部署的全流程能力</p>
+                    <div class="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                      <span><i class="fa-solid fa-star text-yellow-500 mr-1"></i>21.3k</span>
+                      <span><i class="fa-solid fa-code mr-1"></i>Python/C++</span>
+                      <span><i class="fa-solid fa-chart-line mr-1"></i>活跃度高</span>
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-sm transition flex-shrink-0">
+                    查看详情 →
+                  </button>
+                </div>
+              </div>
+              
+              <!-- 项目 2 -->
+              <div class="bg-slate-800/60 backdrop-blur rounded-xl border border-slate-700 p-4 hover:border-blue-500/50 cursor-pointer transition">
+                <div class="flex items-start gap-4">
+                  <div class="w-12 h-12 bg-orange-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i class="fa-brands fa-node-js text-orange-400 text-xl"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <h3 class="font-semibold text-white">LangChain</h3>
+                      <span class="px-2 py-0.5 bg-green-600/30 text-green-300 text-xs rounded">热门项目</span>
+                    </div>
+                    <p class="text-sm text-slate-400 line-clamp-2">用于构建 LLM 应用的框架，支持多种 LLM 提供商和工具集成</p>
+                    <div class="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                      <span><i class="fa-solid fa-star text-yellow-500 mr-1"></i>68.2k</span>
+                      <span><i class="fa-solid fa-code mr-1"></i>Python/JS</span>
+                      <span><i class="fa-solid fa-chart-line mr-1"></i>活跃度极高</span>
+                    </div>
+                  </div>
+                  <button class="px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-sm transition flex-shrink-0">
+                    查看详情 →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      
+      <!-- 搜索输入框（固定底部） -->
+      <div class="border-t border-slate-800 px-6 py-4 bg-slate-900/80 backdrop-blur-sm flex-shrink-0">
+        <div class="max-w-3xl mx-auto">
+          <!-- 快捷提示 -->
+          <div class="flex flex-wrap gap-2 mb-3">
+            <span class="text-xs text-slate-500">快捷：</span>
+            <button class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 transition">Vue.js 相关项目</button>
+            <button class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 transition">Python 机器学习</button>
+            <button class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-full text-xs text-slate-400 transition">Rust CLI 工具</button>
+          </div>
+          
+          <!-- 搜索输入框 -->
+          <div class="bg-slate-800/80 backdrop-blur rounded-2xl border border-slate-700 p-3">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-blue-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-robot text-blue-400 text-sm"></i>
+              </div>
+              <input 
+                type="text" 
+                placeholder="例如：找一个人工智能相关的、适合中小团队使用的开源项目管理工具..."
+                class="flex-1 bg-transparent text-sm py-2 focus:outline-none placeholder-slate-500"
+              >
+              <button class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition flex items-center gap-2 text-sm">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>搜索</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 右侧：最近使用 -->
+    <div class="w-72 border-l border-slate-800 p-4 overflow-y-auto bg-slate-900/50">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-medium text-slate-400">最近使用</h3>
+        <button class="text-xs text-blue-400 hover:text-blue-300 transition">查看全部 →</button>
+      </div>
+      
+      <div class="space-y-3">
+        <!-- 项目 1 -->
+        <div class="bg-slate-800/60 backdrop-blur rounded-xl p-3 border border-slate-700 hover:border-blue-500/50 cursor-pointer transition">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-8 h-8 bg-blue-600/20 rounded-lg flex items-center justify-center">
+              <i class="fa-brands fa-vuejs text-blue-400 text-sm"></i>
+            </div>
+            <span class="text-xs px-2 py-0.5 bg-slate-700 rounded text-slate-400">深入了解</span>
+          </div>
+          <h4 class="font-medium text-sm truncate">Vue.js</h4>
+          <p class="text-xs text-slate-500 mt-0.5">203k ⭐</p>
+        </div>
+        
+        <!-- 项目 2 -->
+        <div class="bg-slate-800/60 backdrop-blur rounded-xl p-3 border border-slate-700 hover:border-blue-500/50 cursor-pointer transition">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-8 h-8 bg-cyan-600/20 rounded-lg flex items-center justify-center">
+              <i class="fa-brands fa-react text-cyan-400 text-sm"></i>
+            </div>
+            <span class="text-xs px-2 py-0.5 bg-slate-700 rounded text-slate-400">使用中</span>
+          </div>
+          <h4 class="font-medium text-sm truncate">React</h4>
+          <p class="text-xs text-slate-500 mt-0.5">219k ⭐</p>
+        </div>
+        
+        <!-- 项目 3 -->
+        <div class="bg-slate-800/60 backdrop-blur rounded-xl p-3 border border-slate-700 hover:border-blue-500/50 cursor-pointer transition">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-8 h-8 bg-orange-600/20 rounded-lg flex items-center justify-center">
+              <i class="fa-brands fa-python text-orange-400 text-sm"></i>
+            </div>
+            <span class="text-xs px-2 py-0.5 bg-slate-700 rounded text-slate-400">待探索</span>
+          </div>
+          <h4 class="font-medium text-sm truncate">TensorFlow</h4>
+          <p class="text-xs text-slate-500 mt-0.5">185k ⭐</p>
+        </div>
+        
+        <!-- 项目 4 -->
+        <div class="bg-slate-800/60 backdrop-blur rounded-xl p-3 border border-slate-700 hover:border-blue-500/50 cursor-pointer transition">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-8 h-8 bg-green-600/20 rounded-lg flex items-center justify-center">
+              <i class="fa-solid fa-layer-group text-green-400 text-sm"></i>
+            </div>
+            <span class="text-xs px-2 py-0.5 bg-slate-700 rounded text-slate-400">深入了解</span>
+          </div>
+          <h4 class="font-medium text-sm truncate">Next.js</h4>
+          <p class="text-xs text-slate-500 mt-0.5">125k ⭐</p>
+        </div>
+        
+        <!-- 项目 5 -->
+        <div class="bg-slate-800/60 backdrop-blur rounded-xl p-3 border border-slate-700 hover:border-blue-500/50 cursor-pointer transition">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-8 h-8 bg-purple-600/20 rounded-lg flex items-center justify-center">
+              <i class="fa-solid fa-terminal text-purple-400 text-sm"></i>
+            </div>
+            <span class="text-xs px-2 py-0.5 bg-slate-700 rounded text-slate-400">待探索</span>
+          </div>
+          <h4 class="font-medium text-sm truncate">Go 标准库</h4>
+          <p class="text-xs text-slate-500 mt-0.5">官方文档</p>
+        </div>
+      </div>
+    </div>
+    
+  </main>
+
+</body>
+</html>

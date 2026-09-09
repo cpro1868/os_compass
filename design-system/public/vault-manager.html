@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 仓库管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.2s ease-out; }
+    .vault-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px -5px rgba(0,0,0,0.1); }
+    .vault-card { transition: all 0.2s ease; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <!-- 左侧功能菜单 -->
+    <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
+        <i class="fa-solid fa-compass text-xl"></i>
+      </div>
+      
+      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-plus text-lg mb-1"></i>
+        <span class="text-xs">导入</span>
+      </button>
+      
+      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
+        <span class="text-xs">搜索</span>
+      </button>
+      
+      <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+        <button class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-table-columns"></i>
+        </button>
+        <button class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-list"></i>
+        </button>
+      </div>
+      
+      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition mt-auto">
+        <i class="fa-solid fa-folder-tree text-lg mb-1"></i>
+        <span class="text-xs">分类</span>
+      </button>
+      
+      <div class="border-t border-gray-700 pt-4 mt-4 w-full flex flex-col items-center gap-3">
+        <button class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+        <button class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-plug"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+      <!-- 顶部栏 -->
+      <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button class="text-gray-500 hover:text-gray-700">
+            <i class="fa-solid fa-arrow-left mr-2"></i>返回
+          </button>
+          <i class="fa-solid fa-folder-open text-amber-600 text-xl"></i>
+          <h1 class="text-2xl font-bold">仓库管理</h1>
+        </div>
+        <button onclick="openCreateModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+          <i class="fa-solid fa-plus"></i>新建仓库
+        </button>
+      </header>
+
+      <!-- 内容区 -->
+      <div class="flex-1 overflow-auto p-8">
+        <!-- 当前仓库信息 -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-6 mb-8 text-white">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <i class="fa-solid fa-database text-2xl"></i>
+                <span class="text-lg font-medium">当前仓库</span>
+              </div>
+              <h2 class="text-2xl font-bold mb-1" id="current-vault-name">工作项目库</h2>
+              <p class="text-blue-100 text-sm" id="current-vault-path">D:\Projects\os-compass-data\vaults\work</p>
+            </div>
+            <div class="text-right">
+              <div class="text-4xl font-bold mb-1">42</div>
+              <div class="text-blue-100 text-sm">个项目</div>
+            </div>
+          </div>
+          <div class="mt-4 flex gap-3">
+            <button onclick="openSwitchModal()" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm flex items-center gap-2">
+              <i class="fa-solid fa-right-left"></i>切换仓库
+            </button>
+            <button class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm flex items-center gap-2">
+              <i class="fa-solid fa-folder"></i>打开所在文件夹
+            </button>
+          </div>
+        </div>
+
+        <!-- 仓库列表 -->
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-lg font-semibold">所有仓库</h2>
+          <button class="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
+            <i class="fa-solid fa-arrows-rotate"></i>刷新
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- 仓库卡片 1 - 当前仓库 -->
+          <div class="vault-card bg-white rounded-xl border-2 border-blue-500 p-5 cursor-pointer">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-database text-blue-600 text-xl"></i>
+              </div>
+              <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">当前</span>
+            </div>
+            <h3 class="font-semibold text-lg mb-1">工作项目库</h3>
+            <p class="text-gray-500 text-sm mb-3 truncate">D:\Projects\os-compass-data\vaults\work</p>
+            <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
+              <span><i class="fa-solid fa-layer-group mr-1"></i>42 个项目</span>
+              <span><i class="fa-solid fa-clock mr-1"></i>今天</span>
+            </div>
+            <div class="flex gap-2">
+              <button class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm">设置</button>
+              <button class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm">删除</button>
+            </div>
+          </div>
+
+          <!-- 仓库卡片 2 -->
+          <div class="vault-card bg-white rounded-xl border border-gray-200 p-5 cursor-pointer">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-database text-purple-600 text-xl"></i>
+              </div>
+              <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded">备用</span>
+            </div>
+            <h3 class="font-semibold text-lg mb-1">个人项目库</h3>
+            <p class="text-gray-500 text-sm mb-3 truncate">D:\Projects\os-compass-data\vaults\personal</p>
+            <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
+              <span><i class="fa-solid fa-layer-group mr-1"></i>18 个项目</span>
+              <span><i class="fa-solid fa-clock mr-1"></i>3 天前</span>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="switchVault('personal')" class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">切换</button>
+              <button class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm">删除</button>
+            </div>
+          </div>
+
+          <!-- 仓库卡片 3 -->
+          <div class="vault-card bg-white rounded-xl border border-gray-200 p-5 cursor-pointer">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-database text-green-600 text-xl"></i>
+              </div>
+              <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded">归档</span>
+            </div>
+            <h3 class="font-semibold text-lg mb-1">2024 归档库</h3>
+            <p class="text-gray-500 text-sm mb-3 truncate">D:\Projects\os-compass-data\vaults\archive-2024</p>
+            <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
+              <span><i class="fa-solid fa-layer-group mr-1"></i>127 个项目</span>
+              <span><i class="fa-solid fa-clock mr-1"></i>1 周前</span>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="switchVault('archive-2024')" class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">切换</button>
+              <button class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm">删除</button>
+            </div>
+          </div>
+
+          <!-- 导入已有仓库卡片 -->
+          <div class="vault-card bg-white rounded-xl border-2 border-dashed border-emerald-300 p-5 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30" onclick="openImportModal()">
+            <div class="flex flex-col items-center justify-center h-full py-8">
+              <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4">
+                <i class="fa-solid fa-file-import text-emerald-500 text-xl"></i>
+              </div>
+              <p class="text-emerald-600 text-sm font-medium">导入已有仓库</p>
+              <p class="text-gray-400 text-xs mt-1">选择含仓库文件的目录</p>
+            </div>
+          </div>
+
+          <!-- 空状态卡片 -->
+          <div class="vault-card bg-white rounded-xl border-2 border-dashed border-gray-300 p-5 cursor-pointer hover:border-blue-400 hover:bg-blue-50/30" onclick="openCreateModal()">
+            <div class="flex flex-col items-center justify-center h-full py-8">
+              <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
+                <i class="fa-solid fa-plus text-gray-400 text-xl"></i>
+              </div>
+              <p class="text-gray-500 text-sm">点击创建新仓库</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 提示信息 -->
+        <div class="mt-8 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <i class="fa-solid fa-lightbulb text-amber-500 mt-0.5"></i>
+          <div>
+            <h4 class="font-medium text-amber-800 mb-1">使用提示</h4>
+            <ul class="text-sm text-amber-700 space-y-1">
+              <li>每个仓库是独立的数据存储空间，可用于分类管理不同场景的项目</li>
+              <li>仓库数据以 SQLite 数据库文件形式存储，便于备份和迁移</li>
+              <li>删除仓库不会影响其他仓库的数据</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 创建仓库弹窗 -->
+  <div id="create-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+      <div class="p-6 border-b border-gray-200 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-semibold">创建新仓库</h2>
+          <button onclick="closeCreateModal()" class="text-gray-500 hover:text-gray-700">
+            <i class="fa-solid fa-xmark text-xl"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-6 space-y-5 flex-1 overflow-y-auto">
+        <div>
+          <label class="block text-sm font-medium mb-2">仓库名称 <span class="text-red-500">*</span></label>
+          <input type="text" id="vault-name" placeholder="例如：工作项目库" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium mb-2">存放位置 <span class="text-red-500">*</span></label>
+          <div class="flex gap-2">
+            <input type="text" id="vault-path" placeholder="选择存放目录" class="flex-1 px-4 py-2 border rounded-lg bg-gray-50" value="D:\Projects\os-compass-data\vaults">
+            <button class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+              <i class="fa-solid fa-folder-open"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 警告提示 -->
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div class="flex items-start gap-3">
+            <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+            <div>
+              <h4 class="font-medium text-amber-800 mb-1">重要说明</h4>
+              <ul class="text-sm text-amber-700 space-y-1">
+                <li>将创建新的 SQLite 数据库文件</li>
+                <li>执行数据库初始化脚本（创建表结构、索引等）</li>
+                <li>此过程可能需要几秒钟，请勿关闭应用</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 进度显示区（创建时显示） -->
+        <div id="create-progress" class="hidden">
+          <div class="border-t border-gray-200 pt-5">
+            <h4 class="font-medium mb-3">正在创建仓库...</h4>
+            
+            <!-- 步骤列表 -->
+            <div class="space-y-3">
+              <div id="step-1" class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-1 text-gray-500"></i>
+                </div>
+                <span class="text-sm text-gray-500">验证目录有效性</span>
+              </div>
+              
+              <div id="step-2" class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-2 text-gray-500"></i>
+                </div>
+                <span class="text-sm text-gray-500">创建数据库文件</span>
+              </div>
+              
+              <div id="step-3" class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-3 text-gray-500"></i>
+                </div>
+                <span class="text-sm text-gray-500">执行初始化脚本</span>
+              </div>
+              
+              <div id="step-4" class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-4 text-gray-500"></i>
+                </div>
+                <span class="text-sm text-gray-500">验证数据库结构</span>
+              </div>
+            </div>
+
+            <!-- 总体进度条 -->
+            <div class="mt-4">
+              <div class="flex justify-between text-sm mb-1">
+                <span id="progress-text" class="text-gray-500">准备中...</span>
+                <span id="progress-percent" class="text-blue-600 font-medium">0%</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- 错误信息区 -->
+            <div id="create-error" class="hidden mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-circle-xmark text-red-500 mt-0.5"></i>
+                <div>
+                  <p class="text-sm text-red-700 font-medium">创建失败</p>
+                  <p id="error-message" class="text-sm text-red-600 mt-1">未知错误</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="button-area" class="p-6 border-t border-gray-200 flex gap-3 flex-shrink-0">
+        <button id="btn-cancel" class="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">
+          取消
+        </button>
+        <button id="btn-create" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          创建仓库
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 切换仓库弹窗 -->
+  <div id="switch-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+      <div class="p-6 border-b border-gray-200 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-semibold">切换仓库</h2>
+          <button onclick="closeSwitchModal()" class="text-gray-500 hover:text-gray-700">
+            <i class="fa-solid fa-xmark text-xl"></i>
+          </button>
+        </div>
+        <p class="text-sm text-gray-500 mt-1">选择要打开的仓库</p>
+      </div>
+
+      <div class="p-4 flex-1 overflow-y-auto">
+        <div class="space-y-2">
+          <!-- 选项 1 -->
+          <button onclick="confirmSwitch()" class="w-full p-4 rounded-lg border-2 border-blue-500 bg-blue-50 text-left flex items-center gap-4">
+            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <i class="fa-solid fa-database text-blue-600"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-medium">工作项目库</div>
+              <div class="text-sm text-gray-500">D:\Projects\os-compass-data\vaults\work</div>
+            </div>
+            <i class="fa-solid fa-check text-blue-600"></i>
+          </button>
+          
+          <!-- 选项 2 -->
+          <button class="w-full p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-left flex items-center gap-4">
+            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <i class="fa-solid fa-database text-purple-600"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-medium">个人项目库</div>
+              <div class="text-sm text-gray-500">D:\Projects\os-compass-data\vaults\personal</div>
+            </div>
+          </button>
+          
+          <!-- 选项 3 -->
+          <button class="w-full p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-left flex items-center gap-4">
+            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <i class="fa-solid fa-database text-green-600"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-medium">2024 归档库</div>
+              <div class="text-sm text-gray-500">D:\Projects\os-compass-data\vaults\archive-2024</div>
+            </div>
+          </button>
+          
+          <!-- 导入已有仓库 -->
+          <button onclick="closeSwitchModal(); openImportModal();" class="w-full p-4 rounded-lg border-2 border-dashed border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50/30 text-left flex items-center gap-4">
+            <div class="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
+              <i class="fa-solid fa-file-import text-emerald-500"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-emerald-600">导入已有仓库</div>
+              <div class="text-sm text-gray-400">选择含仓库文件的目录登记回清单</div>
+            </div>
+          </button>
+
+          <!-- 创建新仓库 -->
+          <button onclick="closeSwitchModal(); openCreateModal();" class="w-full p-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30 text-left flex items-center gap-4">
+            <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              <i class="fa-solid fa-folder-plus text-gray-400"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-gray-600">创建新仓库</div>
+              <div class="text-sm text-gray-400">设置新的数据存储空间</div>
+            </div>
+          </button>
+        </div>
+      </div>
+      
+      <div class="p-6 border-t border-gray-200 flex-shrink-0">
+        <button onclick="closeSwitchModal()" class="w-full px-4 py-2 border rounded-lg hover:bg-gray-50">
+          取消
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 删除确认弹窗 -->
+  <div id="delete-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+      <div class="p-6 border-b border-gray-200 flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+            <i class="fa-solid fa-triangle-exclamation text-red-600 text-xl"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-semibold">删除仓库</h2>
+            <p class="text-sm text-gray-500">此操作不可恢复</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6 flex-1 overflow-y-auto">
+        <p class="text-gray-600 mb-4">确定要删除仓库 <strong>"个人项目库"</strong> 吗？</p>
+
+        <div class="mb-4">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500">
+            <span class="text-sm text-gray-600">同时删除数据库文件（彻底销毁数据）</span>
+          </label>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+          <i class="fa-solid fa-exclamation-circle mr-1"></i>
+          如果不勾选，将只从索引中移除，数据库文件保留在原位置
+        </div>
+      </div>
+
+      <div class="p-6 border-t border-gray-200 flex gap-3 flex-shrink-0">
+        <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">
+          取消
+        </button>
+        <button class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+          确认删除
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导入已有仓库弹窗 -->
+  <div id="import-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+      <div class="p-6 border-b border-gray-200 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-semibold">导入已有仓库</h2>
+          <button onclick="closeImportModal()" class="text-gray-500 hover:text-gray-700">
+            <i class="fa-solid fa-xmark text-xl"></i>
+          </button>
+        </div>
+        <p class="text-sm text-gray-500 mt-1">选择已有仓库文件目录，校验齐全、有效后登记回仓库清单</p>
+      </div>
+
+      <div class="p-6 space-y-4 flex-1 overflow-y-auto">
+        <div>
+          <label class="block text-sm font-medium mb-2">仓库存放位置 <span class="text-red-500">*</span></label>
+          <div class="flex gap-2">
+            <input type="text" id="import-vault-path" placeholder="选择含 os_compass.db 和 .cryptokey 的目录" class="flex-1 px-4 py-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+            <button onclick="simulateSelectImportPath()" class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+              <i class="fa-solid fa-folder-open"></i>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">仓库名称 <span class="text-red-500">*</span></label>
+          <input type="text" id="import-vault-name" placeholder="默认取目录名，可修改" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+        </div>
+
+        <!-- 说明 -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+          <i class="fa-solid fa-circle-info text-blue-500 mt-0.5"></i>
+          <div class="text-sm text-blue-700">
+            <p>将校验目录下的 <code class="bg-blue-100 px-1 rounded">os_compass.db</code> 和 <code class="bg-blue-100 px-1 rounded">.cryptokey</code> 文件齐全、有效后登记到仓库清单。</p>
+            <p class="mt-1 text-blue-500">导入后不会立即切换，可在清单中手动点"切换"。</p>
+          </div>
+        </div>
+
+        <!-- 校验步骤展示（校验时显示） -->
+        <div id="import-progress" class="hidden">
+          <div class="border-t border-gray-200 pt-5">
+            <h4 class="font-medium mb-3">正在校验仓库...</h4>
+            <div class="space-y-2">
+              <div id="import-step-1" class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-circle text-gray-400 text-[8px]"></i>
+                </div>
+                <span class="text-sm text-gray-500">目录存在</span>
+              </div>
+              <div id="import-step-2" class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-circle text-gray-400 text-[8px]"></i>
+                </div>
+                <span class="text-sm text-gray-500">os_compass.db 存在</span>
+              </div>
+              <div id="import-step-3" class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-circle text-gray-400 text-[8px]"></i>
+                </div>
+                <span class="text-sm text-gray-500">.cryptokey 存在</span>
+              </div>
+              <div id="import-step-4" class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-circle text-gray-400 text-[8px]"></i>
+                </div>
+                <span class="text-sm text-gray-500">数据库可打开</span>
+              </div>
+              <div id="import-step-5" class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-circle text-gray-400 text-[8px]"></i>
+                </div>
+                <span class="text-sm text-gray-500">表结构完整（12 张表）</span>
+              </div>
+              <div id="import-step-6" class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-circle text-gray-400 text-[8px]"></i>
+                </div>
+                <span class="text-sm text-gray-500">关键列存在（版本检查）</span>
+              </div>
+              <div id="import-step-7" class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-circle text-gray-400 text-[8px]"></i>
+                </div>
+                <span class="text-sm text-gray-500">密钥匹配验证</span>
+              </div>
+              <div id="import-step-8" class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-circle text-gray-400 text-[8px]"></i>
+                </div>
+                <span class="text-sm text-gray-500">路径不重复</span>
+              </div>
+              <div id="import-step-9" class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-circle text-gray-400 text-[8px]"></i>
+                </div>
+                <span class="text-sm text-gray-500">名称不重复</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 错误信息区 -->
+        <div id="import-error" class="hidden bg-red-50 border border-red-200 rounded-lg p-3">
+          <div class="flex items-start gap-2">
+            <i class="fa-solid fa-circle-xmark text-red-500 mt-0.5"></i>
+            <div>
+              <p class="text-sm text-red-700 font-medium">导入失败</p>
+              <p id="import-error-message" class="text-sm text-red-600 mt-1">未知错误</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="import-button-area" class="p-6 border-t border-gray-200 flex gap-3 flex-shrink-0">
+        <button onclick="closeImportModal()" class="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">
+          取消
+        </button>
+        <button id="btn-import" onclick="importVault()" class="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+          <i class="fa-solid fa-file-import mr-1"></i>验证并导入
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 步骤状态样式
+    const STEP_STATES = {
+      pending: { bg: 'bg-gray-200', icon: 'fa-circle', color: 'text-gray-500' },
+      running: { bg: 'bg-blue-500 animate-pulse', icon: 'fa-spinner fa-spin', color: 'text-white' },
+      success: { bg: 'bg-green-500', icon: 'fa-check', color: 'text-white' },
+      error: { bg: 'bg-red-500', icon: 'fa-xmark', color: 'text-white' }
+    };
+
+    function setStepState(stepId, state, label) {
+      const stepEl = document.getElementById(stepId);
+      const iconEl = stepEl.querySelector('i');
+      const textEl = stepEl.querySelector('span');
+      const config = STEP_STATES[state];
+      
+      iconEl.className = `fa-solid ${config.icon} ${config.color}`;
+      stepEl.querySelector('div').className = `w-6 h-6 rounded-full ${config.bg} flex items-center justify-center text-xs`;
+      if (label) textEl.textContent = label;
+      if (state === 'success') textEl.className = 'text-sm text-green-600 font-medium';
+      if (state === 'error') textEl.className = 'text-sm text-red-600 font-medium';
+    }
+
+    function resetSteps() {
+      for (let i = 1; i <= 4; i++) {
+        setStepState(`step-${i}`, 'pending');
+      }
+    }
+
+    function updateProgress(percent, text) {
+      document.getElementById('progress-bar').style.width = `${percent}%`;
+      document.getElementById('progress-percent').textContent = `${percent}%`;
+      document.getElementById('progress-text').textContent = text;
+    }
+
+    function showError(message) {
+      const errorEl = document.getElementById('create-error');
+      document.getElementById('error-message').textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+
+    function hideError() {
+      document.getElementById('create-error').classList.add('hidden');
+    }
+
+    function setButtonState(state) {
+      const btnCreate = document.getElementById('btn-create');
+      const btnCancel = document.getElementById('btn-cancel');
+      const buttonArea = document.getElementById('button-area');
+      
+      if (state === 'creating') {
+        btnCreate.disabled = true;
+        btnCreate.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>创建中...';
+        btnCancel.disabled = true;
+      } else if (state === 'error') {
+        btnCreate.disabled = false;
+        btnCreate.innerHTML = '重新创建';
+        btnCreate.className = 'flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700';
+        btnCancel.disabled = false;
+      }
+    }
+
+    async function createVault() {
+      const name = document.getElementById('vault-name').value.trim();
+      const path = document.getElementById('vault-path').value.trim();
+      
+      if (!name) {
+        alert('请输入仓库名称');
+        return;
+      }
+      if (!path) {
+        alert('请选择存放位置');
+        return;
+      }
+
+      // 显示进度区
+      document.getElementById('create-progress').classList.remove('hidden');
+      hideError();
+      resetSteps();
+      updateProgress(0, '准备中...');
+      setButtonState('creating');
+
+      // 模拟创建流程
+      try {
+        // 步骤1：验证目录
+        setStepState('step-1', 'running');
+        updateProgress(10, '验证目录有效性...');
+        await sleep(600);
+        
+        const dirValid = await simulateCheck('目录不存在，需要创建');
+        if (dirValid.error) {
+          throw new Error(dirValid.message);
+        }
+        setStepState('step-1', 'success', '目录有效性验证通过');
+        updateProgress(25, '目录有效');
+
+        // 步骤2：创建数据库文件
+        setStepState('step-2', 'running');
+        updateProgress(35, '正在创建数据库文件...');
+        await sleep(800);
+        
+        const dbCreated = await simulateCheck(`数据库文件: ${path}\\${name}\\os_compass.db`);
+        if (dbCreated.error) {
+          throw new Error(dbCreated.message);
+        }
+        setStepState('step-2', 'success', `数据库文件创建成功 (${path}\\${name}\\os_compass.db)`);
+        updateProgress(50, '数据库文件已创建');
+
+        // 步骤3：执行初始化脚本
+        setStepState('step-3', 'running');
+        updateProgress(60, '执行初始化脚本（创建表结构、索引...）');
+        await sleep(1200);
+        
+        const tables = ['projects', 'categories', 'tags', 'project_tags', 'translations', 'settings', 'system_variables', 'source_plugins', 'project_releases'];
+        for (let i = 0; i < tables.length; i++) {
+          updateProgress(60 + Math.floor((i / tables.length) * 15), `创建表: ${tables[i]}`);
+          await sleep(200);
+        }
+        
+        setStepState('step-3', 'success', '初始化脚本执行完成 (9 个表)');
+        updateProgress(75, '表结构创建完成');
+
+        // 步骤4：验证数据库结构
+        setStepState('step-4', 'running');
+        updateProgress(80, '验证数据库结构...');
+        await sleep(500);
+        
+        const tablesCheck = await simulateCheck('所有表结构验证通过');
+        if (tablesCheck.error) {
+          throw new Error(tablesCheck.message);
+        }
+        
+        await sleep(300);
+        setStepState('step-4', 'success', '数据库结构验证通过');
+        updateProgress(100, '仓库创建完成！');
+
+        document.getElementById('button-area').innerHTML = `
+          <button onclick="closeCreateModal(); location.reload();" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+            <i class="fa-solid fa-check mr-2"></i>完成
+          </button>
+        `;
+        
+      } catch (err) {
+        showError(err.message);
+        setStepState('step-1', 'error');
+        setButtonState('error');
+        document.getElementById('btn-create').onclick = () => {
+          document.getElementById('create-progress').classList.add('hidden');
+          hideError();
+          resetSteps();
+          updateProgress(0, '');
+          createVault();
+        };
+        document.getElementById('btn-cancel').onclick = closeCreateModal;
+      }
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function simulateCheck(successMsg) {
+      // 模拟95%成功率
+      if (Math.random() > 0.95) {
+        return { error: true, message: '数据库文件写入失败：磁盘空间不足' };
+      }
+      return { error: false, message: successMsg };
+    }
+
+    function openCreateModal() {
+      document.getElementById('create-modal').classList.remove('hidden');
+      document.getElementById('create-progress').classList.add('hidden');
+      hideError();
+      resetSteps();
+      updateProgress(0, '');
+      
+      // 重置按钮
+      document.getElementById('button-area').innerHTML = `
+        <button id="btn-cancel" class="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">取消</button>
+        <button id="btn-create" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">创建仓库</button>
+      `;
+      initButtonEvents();
+    }
+    
+    function closeCreateModal() {
+      document.getElementById('create-modal').classList.add('hidden');
+      // 延迟重置，等待动画完成
+      setTimeout(() => {
+        document.getElementById('button-area').innerHTML = `
+          <button id="btn-cancel" class="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">取消</button>
+          <button id="btn-create" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">创建仓库</button>
+        `;
+        initButtonEvents();
+      }, 300);
+    }
+    
+    function initButtonEvents() {
+      document.getElementById('btn-cancel').onclick = closeCreateModal;
+      document.getElementById('btn-create').onclick = createVault;
+    }
+    
+    function openSwitchModal() {
+      document.getElementById('switch-modal').classList.remove('hidden');
+    }
+    
+    function closeSwitchModal() {
+      document.getElementById('switch-modal').classList.add('hidden');
+    }
+    
+    function openDeleteModal() {
+      document.getElementById('delete-modal').classList.remove('hidden');
+    }
+    
+    function closeDeleteModal() {
+      document.getElementById('delete-modal').classList.add('hidden');
+    }
+
+    // ===== 导入已有仓库 =====
+    function openImportModal() {
+      const modal = document.getElementById('import-modal');
+      modal.classList.remove('hidden');
+      // 重置表单
+      document.getElementById('import-vault-path').value = '';
+      document.getElementById('import-vault-name').value = '';
+      document.getElementById('import-progress').classList.add('hidden');
+      document.getElementById('import-error').classList.add('hidden');
+      resetImportSteps();
+      // 重置按钮
+      const btn = document.getElementById('btn-import');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-file-import mr-1"></i>验证并导入';
+      btn.onclick = importVault;
+    }
+
+    function closeImportModal() {
+      document.getElementById('import-modal').classList.add('hidden');
+    }
+
+    // 模拟"浏览"选目录：原型里随机演示一个合法或非法路径
+    const SAMPLE_PATHS = [
+      { path: 'D:\\Backup\\work-vault', name: 'work-vault', valid: true },
+      { path: 'D:\\Backup\\old-archive', name: 'old-archive', valid: true },
+      { path: 'E:\\EmptyDir', name: 'EmptyDir', valid: false, reason: 'missing_db' },
+      { path: 'E:\\PartialVault', name: 'PartialVault', valid: false, reason: 'missing_key' },
+      { path: 'D:\\Projects\\os-compass-data\\vaults\\personal', name: 'personal', valid: false, reason: 'path_duplicate' },
+      { path: 'D:\\Data\\work', name: '工作项目库', valid: false, reason: 'name_duplicate' },
+      { path: 'D:\\Old\\legacy-db', name: 'legacy-db', valid: false, reason: 'schema_outdated' },
+      { path: 'D:\\Wrong\\mismatched', name: 'mismatched', valid: false, reason: 'key_mismatch' },
+    ];
+    let sampleIndex = 0;
+
+    function simulateSelectImportPath() {
+      const sample = SAMPLE_PATHS[sampleIndex % SAMPLE_PATHS.length];
+      sampleIndex++;
+      document.getElementById('import-vault-path').value = sample.path;
+      // 仅在名称输入框为空时自动填入目录名
+      const nameInput = document.getElementById('import-vault-name');
+      if (!nameInput.value.trim()) {
+        nameInput.value = sample.name;
+      }
+      // 隐藏之前的错误/进度
+      document.getElementById('import-progress').classList.add('hidden');
+      document.getElementById('import-error').classList.add('hidden');
+      resetImportSteps();
+    }
+
+    function resetImportSteps() {
+      for (let i = 1; i <= 9; i++) {
+        const el = document.getElementById(`import-step-${i}`);
+        if (!el) continue;
+        const dot = el.querySelector('div');
+        const ic = el.querySelector('i');
+        const txt = el.querySelector('span');
+        dot.className = 'w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs';
+        ic.className = 'fa-solid fa-circle text-gray-400 text-[8px]';
+        txt.className = 'text-sm text-gray-500';
+      }
+    }
+
+    function setImportStepState(stepId, state, label) {
+      const el = document.getElementById(stepId);
+      const dot = el.querySelector('div');
+      const ic = el.querySelector('i');
+      const txt = el.querySelector('span');
+      if (state === 'running') {
+        dot.className = 'w-5 h-5 rounded-full bg-blue-500 animate-pulse flex items-center justify-center text-xs';
+        ic.className = 'fa-solid fa-spinner fa-spin text-white text-[8px]';
+        txt.className = 'text-sm text-gray-700';
+      } else if (state === 'success') {
+        dot.className = 'w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-xs';
+        ic.className = 'fa-solid fa-check text-white text-[8px]';
+        txt.className = 'text-sm text-green-600 font-medium';
+      } else if (state === 'error') {
+        dot.className = 'w-5 h-5 rounded-full bg-red-500 flex items-center justify-center text-xs';
+        ic.className = 'fa-solid fa-xmark text-white text-[8px]';
+        txt.className = 'text-sm text-red-600 font-medium';
+      }
+      if (label) txt.textContent = label;
+    }
+
+    function showImportError(message) {
+      document.getElementById('import-error-message').textContent = message;
+      document.getElementById('import-error').classList.remove('hidden');
+    }
+
+    // 根据当前选择的路径查找对应的样本（用于模拟校验结果）
+    function findSampleByPath(path) {
+      return SAMPLE_PATHS.find(s => s.path === path);
+    }
+
+    async function importVault() {
+      const name = document.getElementById('import-vault-name').value.trim();
+      const path = document.getElementById('import-vault-path').value.trim();
+
+      if (!path) { alert('请选择仓库目录'); return; }
+      if (!name) { alert('请输入仓库名称'); return; }
+
+      // 重置 UI
+      document.getElementById('import-progress').classList.remove('hidden');
+      document.getElementById('import-error').classList.add('hidden');
+      resetImportSteps();
+      const btn = document.getElementById('btn-import');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>校验中...';
+
+      const sample = findSampleByPath(path);
+      const failReason = sample && !sample.valid ? sample.reason : null;
+
+      try {
+        // 步骤 1: 目录存在
+        setImportStepState('import-step-1', 'running');
+        await sleep(300);
+        setImportStepState('import-step-1', 'success');
+
+        // 步骤 2: os_compass.db 存在
+        setImportStepState('import-step-2', 'running');
+        await sleep(300);
+        if (failReason === 'missing_db') {
+          setImportStepState('import-step-2', 'error', '未找到 os_compass.db');
+          throw new Error('未找到 os_compass.db，不是有效的仓库目录');
+        }
+        setImportStepState('import-step-2', 'success');
+
+        // 步骤 3: .cryptokey 存在
+        setImportStepState('import-step-3', 'running');
+        await sleep(300);
+        if (failReason === 'missing_key') {
+          setImportStepState('import-step-3', 'error', '未找到 .cryptokey');
+          throw new Error('未找到 .cryptokey 加密密钥文件，无法解密敏感数据');
+        }
+        setImportStepState('import-step-3', 'success');
+
+        // 步骤 4: db 能打开
+        setImportStepState('import-step-4', 'running');
+        await sleep(400);
+        setImportStepState('import-step-4', 'success');
+
+        // 步骤 5: 12 张表全在
+        setImportStepState('import-step-5', 'running');
+        await sleep(500);
+        setImportStepState('import-step-5', 'success', '表结构完整（12 张表）');
+
+        // 步骤 6: 关键列存在
+        setImportStepState('import-step-6', 'running');
+        await sleep(400);
+        if (failReason === 'schema_outdated') {
+          setImportStepState('import-step-6', 'error', '关键列缺失');
+          throw new Error('数据库版本过旧，不支持导入');
+        }
+        setImportStepState('import-step-6', 'success');
+
+        // 步骤 7: 密钥匹配验证
+        setImportStepState('import-step-7', 'running');
+        await sleep(500);
+        if (failReason === 'key_mismatch') {
+          setImportStepState('import-step-7', 'error', '密钥不匹配');
+          throw new Error('.cryptokey 与数据库加密数据不匹配，请确认密钥文件来自同一仓库');
+        }
+        setImportStepState('import-step-7', 'success', '密钥匹配（或无加密数据，已跳过）');
+
+        // 步骤 8: 路径不重复
+        setImportStepState('import-step-8', 'running');
+        await sleep(300);
+        if (failReason === 'path_duplicate') {
+          setImportStepState('import-step-8', 'error', '路径已在清单中');
+          throw new Error('该仓库已在清单中，无需重复导入');
+        }
+        setImportStepState('import-step-8', 'success');
+
+        // 步骤 9: 名称不重复
+        setImportStepState('import-step-9', 'running');
+        await sleep(300);
+        if (failReason === 'name_duplicate') {
+          setImportStepState('import-step-9', 'error', '名称已存在');
+          throw new Error(`仓库名 '${name}' 已存在，请修改名称`);
+        }
+        setImportStepState('import-step-9', 'success');
+
+        // 全部通过
+        btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i>导入成功';
+        btn.className = 'flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700';
+        await sleep(600);
+        closeImportModal();
+        // 原型演示：刷新页面模拟列表更新
+        // location.reload();
+
+      } catch (err) {
+        showImportError(err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-file-import mr-1"></i>重新验证';
+        btn.onclick = importVault;
+      }
+    }
+    
+    function switchVault(vaultId) {
+      console.log('Switch to vault:', vaultId);
+    }
+    
+    function confirmSwitch() {
+      alert('仓库切换功能开发中...');
+      closeSwitchModal();
+    }
+
+    // 点击遮罩关闭
+    ['create-modal', 'switch-modal', 'delete-modal', 'import-modal'].forEach(id => {
+      document.getElementById(id).addEventListener('click', function(e) {
+        if (e.target === this) {
+          this.classList.add('hidden');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

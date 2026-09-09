@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 设置中心</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <!-- 左侧功能菜单 -->
+    <aside class="w-16 bg-gray-900 flex flex-col items-center py-4 gap-4">
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4">
+        <i class="fa-solid fa-compass text-xl"></i>
+      </div>
+      
+      <button onclick="location.href='main-interface.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-plus text-lg mb-1"></i>
+        <span class="text-xs">导入</span>
+      </button>
+      
+      <button class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-magnifying-glass text-lg mb-1"></i>
+        <span class="text-xs">搜索</span>
+      </button>
+      
+      <div class="flex flex-col gap-1 mt-4 border-t border-gray-700 pt-4">
+        <button onclick="location.href='main-interface.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-table-columns"></i>
+        </button>
+        <button onclick="location.href='list-view.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-list"></i>
+        </button>
+      </div>
+      
+      <button onclick="location.href='category-manager.html'" class="w-12 h-12 rounded-xl hover:bg-gray-800 flex flex-col items-center justify-center text-gray-400 hover:text-white transition mt-auto">
+        <i class="fa-solid fa-folder-tree text-lg mb-1"></i>
+        <span class="text-xs">分类</span>
+      </button>
+      
+      <div class="border-t border-gray-700 pt-4 mt-4 w-full flex flex-col items-center gap-3">
+        <!-- 当前页面高亮 -->
+        <button class="w-12 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-white">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+        <button onclick="location.href='plugin-manager.html'" class="w-12 h-10 rounded-lg hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <i class="fa-solid fa-plug"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 p-8 overflow-auto">
+      <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-4 mb-6">
+          <button onclick="location.href='main-interface.html'" class="text-gray-500 hover:text-gray-700">
+            <i class="fa-solid fa-arrow-left mr-2"></i>返回
+          </button>
+          <h1 class="text-2xl font-bold">设置中心</h1>
+        </div>
+        
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <!-- 标签页导航 -->
+          <div class="border-b border-gray-200 flex">
+            <button id="tab-general" class="px-6 py-3 border-b-2 border-blue-600 text-blue-600 font-medium">通用</button>
+            <button id="tab-download" class="px-6 py-3 border-b-2 border-transparent hover:text-blue-600">下载</button>
+            <button id="tab-llm" class="px-6 py-3 border-b-2 border-transparent hover:text-blue-600">大模型 (LLM)</button>
+            <button id="tab-variables" class="px-6 py-3 border-b-2 border-transparent hover:text-blue-600">变量管理</button>
+            <button id="tab-extensions" class="px-6 py-3 border-b-2 border-transparent hover:text-blue-600">扩展配置</button>
+          </div>
+          
+          <!-- 通用设置 -->
+          <div id="panel-general" class="p-6 space-y-6">
+            <div>
+              <h3 class="font-medium mb-4">存储设置</h3>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">数据目录</label>
+                  <div class="flex gap-2">
+                    <input type="text" value="C:\Users\Admin\.os-compass" class="flex-1 px-3 py-2 border rounded-lg bg-gray-50">
+                    <button class="px-4 py-2 border rounded-lg hover:bg-gray-50">浏览</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="border-t border-gray-100 pt-6">
+              <h3 class="font-medium mb-4">外观</h3>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">主题</label>
+                  <select class="w-full px-3 py-2 border rounded-lg">
+                    <option>深色（默认）</option>
+                    <option>浅色</option>
+                    <option>跟随系统</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">界面语言</label>
+                  <select class="w-full px-3 py-2 border rounded-lg">
+                    <option>简体中文</option>
+                    <option>English</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 下载设置 -->
+          <div id="panel-download" class="p-6 space-y-6 hidden">
+            <div>
+              <h3 class="font-medium mb-4">下载设置</h3>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">默认源码存放目录</label>
+                  <div class="flex gap-2">
+                    <input type="text" value="D:\OpenSource_Workspace" class="flex-1 px-3 py-2 border rounded-lg bg-gray-50">
+                    <button class="px-4 py-2 border rounded-lg hover:bg-gray-50">浏览</button>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">默认代码编辑器</label>
+                  <select class="w-full px-3 py-2 border rounded-lg">
+                    <option>VS Code</option>
+                    <option>Cursor</option>
+                    <option>WebStorm</option>
+                    <option>Sublime Text</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="border-t border-gray-100 pt-6">
+              <h3 class="font-medium mb-4">网络与代理</h3>
+              <div class="space-y-4">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="proxy-enable" class="rounded">
+                  <label for="proxy-enable" class="text-sm">启用代理</label>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium mb-1">代理协议</label>
+                    <select class="w-full px-3 py-2 border rounded-lg">
+                      <option>HTTP</option>
+                      <option>HTTPS</option>
+                      <option>SOCKS5</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-1">地址</label>
+                    <input type="text" placeholder="127.0.0.1:7890" class="w-full px-3 py-2 border rounded-lg">
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium mb-1">用户名（可选）</label>
+                    <input type="text" placeholder="用户名" class="w-full px-3 py-2 border rounded-lg">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-1">密码（可选）</label>
+                    <input type="password" placeholder="密码" class="w-full px-3 py-2 border rounded-lg">
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="proxy-git" class="rounded">
+                  <label for="proxy-git" class="text-sm">仅 Git Clone 使用代理（不影响其他功能）</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- LLM 设置 -->
+          <div id="panel-llm" class="p-6 space-y-6 hidden">
+            <div>
+              <h3 class="font-medium mb-4">大模型配置</h3>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">LLM 供应商</label>
+                  <select class="w-full px-3 py-2 border rounded-lg">
+                    <option>OpenAI</option>
+                    <option>DeepSeek</option>
+                    <option>Anthropic</option>
+                    <option>Ollama（本地）</option>
+                    <option>自定义</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">API Base URL</label>
+                  <input type="text" placeholder="https://api.openai.com/v1" class="w-full px-3 py-2 border rounded-lg">
+                  <p class="text-xs text-gray-500 mt-1">支持第三方反代地址</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">API Key</label>
+                  <div class="relative">
+                    <input type="password" placeholder="sk-..." class="w-full px-3 py-2 border rounded-lg pr-20">
+                    <button class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-blue-600 hover:underline">显示</button>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">密钥将加密存储在系统密钥库</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">模型名称</label>
+                  <input type="text" placeholder="gpt-4o" class="w-full px-3 py-2 border rounded-lg">
+                  <p class="text-xs text-gray-500 mt-1">如：gpt-4o、deepseek-chat、claude-3-sonnet</p>
+                </div>
+                <div class="flex items-center gap-3 pt-2">
+                  <button onclick="testLLMConnection()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i class="fa-solid fa-plug mr-2"></i>测试连接
+                  </button>
+                  <span class="text-sm text-green-600 hidden" id="test-success">
+                    <i class="fa-solid fa-check-circle mr-1"></i>连接成功
+                  </span>
+                  <span class="text-sm text-red-600 hidden" id="test-failed">
+                    <i class="fa-solid fa-times-circle mr-1"></i>连接失败
+                  </span>
+                </div>
+                <!-- 错误详情提示 -->
+                <div id="llm-error-detail" class="hidden mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm">
+                  <p class="text-red-700 font-medium mb-2"><i class="fa-solid fa-circle-exclamation mr-1"></i>连接失败，请检查以下配置：</p>
+                  <ul class="text-red-600 list-disc list-inside space-y-1">
+                    <li>API Base URL 是否正确</li>
+                    <li>API Key 是否有效</li>
+                    <li>网络连接是否正常</li>
+                    <li>代理设置是否正确（如启用代理）</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div class="border-t border-gray-100 pt-6">
+              <h3 class="font-medium mb-4">翻译偏好</h3>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">默认阅读语言</label>
+                  <select class="w-full px-3 py-2 border rounded-lg">
+                    <option>简体中文</option>
+                    <option>English</option>
+                    <option>日本語</option>
+                  </select>
+                  <p class="text-xs text-gray-500 mt-1">非目标语言的 README 和 AI 报告将自动翻译</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="auto-translate-readme" class="rounded" checked>
+                  <label for="auto-translate-readme" class="text-sm">导入时自动翻译 README</label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="auto-translate-report" class="rounded" checked>
+                  <label for="auto-translate-report" class="text-sm">AI 报告使用阅读语言生成</label>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">README 更新频率</label>
+                  <select class="w-full px-3 py-2 border rounded-lg">
+                    <option>手动</option>
+                    <option selected>智能检测（推荐）</option>
+                    <option>每天</option>
+                    <option>每周</option>
+                  </select>
+                  <p class="text-xs text-gray-500 mt-1">检测到 README 变化时提示用户</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="border-t border-gray-100 pt-6">
+              <h3 class="font-medium mb-4">爬虫设置</h3>
+              <div class="space-y-4">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="crawler-enable" class="rounded">
+                  <label for="crawler-enable" class="text-sm">启用爬虫服务（用于未知平台导入）</label>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">爬虫 API 地址</label>
+                  <input type="text" placeholder="http://localhost:8080/crawl" class="w-full px-3 py-2 border rounded-lg">
+                  <p class="text-xs text-gray-500 mt-1">外部爬虫服务地址，将网页转换为 Markdown</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 变量管理 -->
+          <div id="panel-variables" class="p-6 space-y-6 hidden">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-medium mb-1">系统变量</h3>
+                <p class="text-sm text-gray-500">扩展配置所需的变量。敏感变量会加密存储。</p>
+              </div>
+              <button onclick="openVarModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <i class="fa-solid fa-plus mr-2"></i>新增变量
+              </button>
+            </div>
+            
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+              <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th class="text-left px-4 py-3 text-sm font-medium text-gray-600">键名</th>
+                    <th class="text-left px-4 py-3 text-sm font-medium text-gray-600">变量值</th>
+                    <th class="text-center px-4 py-3 text-sm font-medium text-gray-600">类型</th>
+                    <th class="text-center px-4 py-3 text-sm font-medium text-gray-600">操作</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm">github_token</td>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-500">●●●●●●●●●●●●●●●●</td>
+                    <td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded">敏感</span></td>
+                    <td class="px-4 py-3 text-center"><button class="text-blue-600 hover:underline mr-2">编辑</button><button class="text-red-600 hover:underline">删除</button></td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm">gitee_token</td>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-500">●●●●●●●●●●●●●●●●</td>
+                    <td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded">敏感</span></td>
+                    <td class="px-4 py-3 text-center"><button class="text-blue-600 hover:underline mr-2">编辑</button><button class="text-red-600 hover:underline">删除</button></td>
+                  </tr>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 font-mono text-sm">github_proxy</td>
+                    <td class="px-4 py-3 font-mono text-sm">http://127.0.0.1:7890</td>
+                    <td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">普通</span></td>
+                    <td class="px-4 py-3 text-center"><button class="text-blue-600 hover:underline mr-2">编辑</button><button class="text-red-600 hover:underline">删除</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- 扩展配置 -->
+          <div id="panel-extensions" class="p-6 space-y-6 hidden">
+            <h3 class="font-medium mb-1">已安装的扩展</h3>
+            
+            <div class="space-y-4">
+              <!-- GitHub 扩展 -->
+              <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center text-white"><i class="fa-brands fa-github text-xl"></i></div>
+                    <div>
+                      <div class="flex items-center gap-2"><span class="font-medium">GitHub</span><span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v1.0.0</span></div>
+                      <p class="text-sm text-gray-500 font-mono">plugins.GitHubPlugin</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" class="sr-only peer" checked>
+                      <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                    <button onclick="openExtConfig('github')" class="px-3 py-1.5 text-sm border rounded-lg hover:bg-white"><i class="fa-solid fa-gear mr-1"></i>配置</button>
+                  </div>
+                </div>
+                <div class="mt-3 pt-3 border-t text-sm text-gray-500"><span class="text-orange-500">*</span> 需要变量：github_token、github_proxy</div>
+              </div>
+              
+              <!-- Gitee 扩展 -->
+              <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center text-white"><i class="fa-solid fa-code text-xl"></i></div>
+                    <div>
+                      <div class="flex items-center gap-2"><span class="font-medium">Gitee</span><span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">v1.0.0</span></div>
+                      <p class="text-sm text-gray-500 font-mono">plugins.GiteePlugin</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" class="sr-only peer" checked>
+                      <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                    <button onclick="openExtConfig('gitee')" class="px-3 py-1.5 text-sm border rounded-lg hover:bg-white"><i class="fa-solid fa-gear mr-1"></i>配置</button>
+                  </div>
+                </div>
+                <div class="mt-3 pt-3 border-t text-sm text-gray-500"><span class="text-orange-500">*</span> 需要变量：gitee_token</div>
+              </div>
+              
+              <!-- 通用爬虫（内置） -->
+              <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center text-white"><i class="fa-solid fa-spider text-xl"></i></div>
+                    <div>
+                      <div class="flex items-center gap-2"><span class="font-medium">通用爬虫</span><span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">内置</span></div>
+                      <p class="text-sm text-gray-500 font-mono">plugins.CrawlerPlugin</p>
+                    </div>
+                  </div>
+                  <span class="text-sm text-green-600"><i class="fa-solid fa-check-circle mr-1"></i>无需配置</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 底部按钮 -->
+          <div class="border-t border-gray-200 p-6 flex justify-end gap-3 bg-gray-50">
+            <button class="px-4 py-2 border rounded-lg hover:bg-white">重置</button>
+            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <script>
+    // 标签页切换
+    const tabs = [
+      { btn: 'tab-general', panel: 'panel-general' },
+      { btn: 'tab-download', panel: 'panel-download' },
+      { btn: 'tab-llm', panel: 'panel-llm' },
+      { btn: 'tab-variables', panel: 'panel-variables' },
+      { btn: 'tab-extensions', panel: 'panel-extensions' }
+    ];
+
+    tabs.forEach(({ btn, panel }) => {
+      document.getElementById(btn).addEventListener('click', () => {
+        tabs.forEach(t => {
+          document.getElementById(t.btn).classList.remove('border-blue-600', 'text-blue-600');
+          document.getElementById(t.btn).classList.add('border-transparent');
+          document.getElementById(t.panel).classList.add('hidden');
+        });
+        document.getElementById(btn).classList.add('border-blue-600', 'text-blue-600');
+        document.getElementById(btn).classList.remove('border-transparent');
+        document.getElementById(panel).classList.remove('hidden');
+      });
+    });
+
+    // LLM 连接测试函数
+    function testLLMConnection() {
+      const successEl = document.getElementById('test-success');
+      const failedEl = document.getElementById('test-failed');
+      const errorDetail = document.getElementById('llm-error-detail');
+
+      successEl.classList.add('hidden');
+      failedEl.classList.add('hidden');
+      errorDetail.classList.add('hidden');
+
+      const apiKey = document.querySelector('#panel-llm input[placeholder*="sk-"]')?.value || '';
+      const testPassed = apiKey && apiKey.startsWith('sk-');
+
+      if (testPassed) {
+        successEl.classList.remove('hidden');
+      } else {
+        failedEl.classList.remove('hidden');
+        errorDetail.classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>
