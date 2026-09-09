@@ -10,6 +10,7 @@
     "tauri": "tauri",
     "release:sync-version": "powershell -ExecutionPolicy Bypass -File ../scripts/sync-version.ps1",
     "release:build": "powershell -ExecutionPolicy Bypass -File ../scripts/build-release.ps1",
+    "release:publish": "powershell -ExecutionPolicy Bypass -File ../scripts/release.ps1",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
