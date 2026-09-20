@@ -12,6 +12,7 @@ import { ClonePanel } from "./ClonePanel";
 import { ReleasesPanel } from "./ReleasesPanel";
 import { ArticleGenerationPanel } from "./ArticleGenerationPanel";
 import { useTranslation } from "react-i18next";
+import { exportRunbookAsMarkdown } from "../utils/runbookExport";
 
 interface ProjectDetailDialogProps {
   project: Project;
@@ -1249,16 +1250,38 @@ const handleAnalyze = useCallback(async () => {
                       ) : (
                         <>
                           {runbookContent && (
-                            <button
-                              onClick={() => {
-                                setEditedRunbook(runbookContent || "");
-                                setIsEditingRunbook(true);
-                              }}
-                              className="px-3 py-1.5 text-sm border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                            >
-                              <i className="fa-solid fa-pen mr-1"></i>
-                              {t("detail.editRunbook")}
-                            </button>
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditedRunbook(runbookContent || "");
+                                  setIsEditingRunbook(true);
+                                }}
+                                className="px-3 py-1.5 text-sm border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                              >
+                                <i className="fa-solid fa-pen mr-1"></i>
+                                {t("detail.editRunbook")}
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const path = await exportRunbookAsMarkdown({
+                                      invoke,
+                                      projectName: project.name,
+                                      content: runbookContent,
+                                    });
+                                    if (path) {
+                                      showToast(t("detail.exportRunbookDone", { path }), "success");
+                                    }
+                                  } catch (e) {
+                                    showToast(`${t("detail.exportRunbookFailed")}: ${String(e)}`, "error");
+                                  }
+                                }}
+                                className="px-3 py-1.5 text-sm border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                              >
+                                <i className="fa-solid fa-file-export mr-1"></i>
+                                {t("detail.exportRunbook")}
+                              </button>
+                            </>
                           )}
                           <button
                             onClick={async () => {
