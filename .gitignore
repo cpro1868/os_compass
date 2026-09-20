@@ -58,6 +58,9 @@ crawler/webtomd/docs/superpowers/
 os-compass/src-tauri/test_prompt.rs
 os-compass/src-tauri/examples/
 
+# === Internal Reusable Code Templates (Do not commit) ===
+code-templates/
+
 # === Agent / Session Internal Records (NEVER PUBLISH) ===
 AGENTS.md
 AGENT.md
