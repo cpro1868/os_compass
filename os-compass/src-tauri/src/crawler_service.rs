@@ -95,12 +95,16 @@ impl CrawlerService {
         let mut all_args = args;
         all_args.extend(proxy_args);
         
-        match Command::new(&web2md_path)
-            .args(&all_args)
+        let mut cmd = Command::new(&web2md_path);
+        cmd.args(&all_args)
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
+            .stderr(Stdio::null());
+        #[cfg(windows)]
         {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+        match cmd.spawn() {
             Ok(child) => {
                 self.process = Some(child);
                 std::thread::sleep(Duration::from_millis(500));

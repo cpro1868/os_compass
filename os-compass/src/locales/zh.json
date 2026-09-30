@@ -403,7 +403,10 @@
     "duplicate": "项目已存在：{{name}}",
     "importFailedShort": "入库失败",
     "importingName": "导入 {{name}}...",
-    "importingProgress": "导入中... ({{current}}/{{total}})"
+    "importingProgress": "导入中... ({{current}}/{{total}})",
+    "tokenExpiredTitle": "GitHub Token 已失效",
+    "tokenExpiredDesc": "请前往设置 → 系统变量，重新配置 github_token 后重试。",
+    "goToSettings": "前往设置"
   },
   "markdownEditor": {
     "placeholder": "输入 Markdown 内容...",

@@ -779,7 +779,10 @@
     "duplicate": "Project already exists: {{name}}",
     "importFailedShort": "Import failed",
     "importingName": "Importing {{name}}...",
-    "importingProgress": "Importing... ({{current}}/{{total}})"
+    "importingProgress": "Importing... ({{current}}/{{total}})",
+    "tokenExpiredTitle": "GitHub Token expired",
+    "tokenExpiredDesc": "Please go to Settings → System Variables and re-configure github_token, then try again.",
+    "goToSettings": "Go to Settings"
   },
   "common": {
     "loading": "Loading...",

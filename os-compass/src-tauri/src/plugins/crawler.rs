@@ -50,7 +50,19 @@ pub async fn fetch_with_crawler(url: &str) -> ImportResult {
                         };
                     }
                     
-                    let name = data.title.clone().unwrap_or_else(|| "Unknown".to_string());
+                    let name = data.title.clone()
+                        .filter(|t| !t.trim().is_empty() && !t.starts_with("http"))
+                        .unwrap_or_else(|| {
+                            // 兜底：从 URL 提取 owner/repo 作为名称
+                            url.trim_end_matches('/')
+                                .rsplit('/')
+                                .take(2)
+                                .collect::<Vec<_>>()
+                                .into_iter()
+                                .rev()
+                                .collect::<Vec<_>>()
+                                .join("/")
+                        });
                     let markdown = data.markdown.clone().unwrap_or_default();
                     
                     return ImportResult {

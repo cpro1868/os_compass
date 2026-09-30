@@ -19,6 +19,13 @@ interface ImportResult {
   duplicate?: { projectId: number; projectName: string };
 }
 
+/** 判断错误是否为 GitHub Token 失效（401/Unauthorized/Bad credentials） */
+export function isTokenExpiredError(err?: string): boolean {
+  if (!err) return false;
+  const s = err.toLowerCase();
+  return s.includes("401") || s.includes("unauthorized") || s.includes("bad credentials");
+}
+
 export function ImportModal({ onClose, onSuccess, initialUrl }: ImportModalProps) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<"single" | "batch">("single");
@@ -34,6 +41,7 @@ export function ImportModal({ onClose, onSuccess, initialUrl }: ImportModalProps
   const [error, setError] = useState<string | null>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [currentStep, setCurrentStep] = useState("");
+  const [tokenExpired, setTokenExpired] = useState(false);
 
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {});
@@ -49,6 +57,7 @@ export function ImportModal({ onClose, onSuccess, initialUrl }: ImportModalProps
     setResults([]);
     setCurrentIndex(0);
     setError(null);
+    setTokenExpired(false);
 
     const importResults: ImportResult[] = [];
     const successProjectIds: number[] = [];
@@ -99,18 +108,26 @@ export function ImportModal({ onClose, onSuccess, initialUrl }: ImportModalProps
             defaultLanguage: settingsLang,
           }).catch((e) => console.error("后台任务失败:", e));
         } else {
+          const errMsg = result.error || t("import.importFailedShort");
+          if (isTokenExpiredError(errMsg)) {
+            setTokenExpired(true);
+          }
           importResults.push({
             url,
             success: false,
-            error: result.error || t("import.importFailedShort"),
+            error: errMsg,
           });
           setResults([...importResults]);
         }
       } catch (e) {
+        const errMsg = String(e);
+        if (isTokenExpiredError(errMsg)) {
+          setTokenExpired(true);
+        }
         importResults.push({
           url,
           success: false,
-          error: String(e),
+          error: errMsg,
         });
         setResults([...importResults]);
       }
@@ -280,6 +297,27 @@ export function ImportModal({ onClose, onSuccess, initialUrl }: ImportModalProps
                   />
                   <span className="text-sm">{t("import.autoTranslateReadmeShort")}</span>
                 </label>
+              </div>
+            </div>
+          )}
+
+          {tokenExpired && (
+            <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                <i className="fa-solid fa-triangle-exclamation text-amber-500 dark:text-amber-400 mt-0.5"></i>
+                <div className="flex-1">
+                  <p className="font-medium text-amber-700 dark:text-amber-300">{t("import.tokenExpiredTitle")}</p>
+                  <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">{t("import.tokenExpiredDesc")}</p>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      window.dispatchEvent(new CustomEvent("navigate", { detail: { openSettings: true } }));
+                    }}
+                    className="mt-2 px-3 py-1.5 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                  >
+                    {t("import.goToSettings")}
+                  </button>
+                </div>
               </div>
             </div>
           )}
