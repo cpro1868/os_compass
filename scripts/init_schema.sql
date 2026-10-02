@@ -207,3 +207,32 @@ CREATE TABLE IF NOT EXISTS radar_notifications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_radar_notifications_read ON radar_notifications(read);
+-- 项目探索表组（M24）
+CREATE TABLE IF NOT EXISTS explore_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    title TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS explore_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL REFERENCES explore_sessions(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK(role IN ('user','assistant')),
+    content TEXT NOT NULL,
+    sources TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_explore_messages_session ON explore_messages(session_id);
+
+CREATE TABLE IF NOT EXISTS project_readme_chunks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    chunk_index INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    embedding TEXT,
+    readme_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_readme_chunks_project ON project_readme_chunks(project_id);
