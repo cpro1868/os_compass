@@ -6,6 +6,7 @@ pub mod crawler_service;
 pub mod db;
 pub mod embedding;
 pub mod error;
+pub mod explore;
 pub mod feature_plugin;
 pub mod health;
 pub mod llm;
