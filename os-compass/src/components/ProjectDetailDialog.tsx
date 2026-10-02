@@ -197,6 +197,12 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
   }, [open, project.id]);
 
   useEffect(() => {
+    if (open && tab === "notes" && project.id) {
+      noteApi.getByProject(project.id).then(setProjectNotes).catch(() => {});
+    }
+  }, [open, tab, project.id]);
+
+  useEffect(() => {
     if (!open || !project.id) return;
     let unlisten: UnlistenFn | null = null;
     listen<{ project_id: number; task_type: string; status: string; error: string | null }>("import:task_progress", (event) => {
@@ -1488,7 +1494,7 @@ const handleAnalyze = useCallback(async () => {
                           </button>
                         </div>
                       </div>
-                      <p className="text-sm text-blue-900 dark:text-blue-200 whitespace-pre-wrap">{note.content}</p>
+                      <MarkdownRenderer content={note.content} className="prose dark:prose-invert prose-sm max-w-none text-sm text-blue-900 dark:text-blue-200" />
                     </div>
                   ))
                 ) : (
