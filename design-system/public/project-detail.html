@@ -119,6 +119,9 @@
            <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="article">
              <i class="fa-solid fa-file-alt mr-1"></i>文章生成
            </button>
+           <button class="tab-btn px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm" data-tab="explore">
+             <i class="fa-solid fa-comments mr-1"></i>项目探索
+           </button>
         </nav>
       </div>
 
@@ -884,6 +887,136 @@
                   <span>文章基于项目 README、AI 分析结果和适用场景生成，支持 Markdown 格式导出</span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- 项目探索 -->
+          <div id="content-explore" class="tab-content hidden">
+            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden flex h-[600px]">
+
+              <!-- 会话列表侧栏 -->
+              <aside class="w-52 bg-gray-50 border-r border-gray-200 flex flex-col flex-shrink-0">
+                <div class="p-3 border-b border-gray-200">
+                  <h2 class="font-semibold text-xs text-gray-500 flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left"></i>探索会话
+                  </h2>
+                </div>
+                <div class="flex-1 overflow-auto p-2 space-y-1">
+                  <button class="w-full text-left px-3 py-2.5 text-sm rounded-lg bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-2">
+                    <i class="fa-regular fa-message text-blue-400 text-xs"></i>
+                    <span class="truncate flex-1">如何本地部署和运行？</span>
+                  </button>
+                  <button class="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-gray-100 text-gray-600 flex items-center gap-2">
+                    <i class="fa-regular fa-message text-gray-400 text-xs"></i>
+                    <span class="truncate flex-1">Fiber 架构的设计动机</span>
+                  </button>
+                  <button class="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-gray-100 text-gray-600 flex items-center gap-2">
+                    <i class="fa-regular fa-message text-gray-400 text-xs"></i>
+                    <span class="truncate flex-1">和 Vue 相比该怎么选？</span>
+                  </button>
+                </div>
+                <div class="p-3 border-t border-gray-200">
+                  <button class="w-full px-3 py-2 text-sm rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-blue-400 hover:text-blue-600 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-plus"></i>新建会话
+                  </button>
+                </div>
+              </aside>
+
+              <!-- 聊天主区域 -->
+              <div class="flex-1 flex flex-col min-w-0">
+                <!-- 知识库状态条 -->
+                <div class="px-4 py-2 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2 text-xs text-emerald-700 flex-shrink-0">
+                  <i class="fa-solid fa-circle-check"></i>
+                  <span>知识库就绪：README ×21 块 · AI 报告 · Runbook · 笔记 ×3</span>
+                  <span class="text-emerald-500 ml-auto">向量检索已启用</span>
+                </div>
+
+                <!-- 消息流 -->
+                <div class="flex-1 overflow-auto p-4 space-y-4">
+                  <!-- 欢迎消息 -->
+                  <div class="flex gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex-shrink-0 flex items-center justify-center">
+                      <i class="fa-solid fa-compass text-white text-xs"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="bg-gray-50 border border-gray-200 rounded-xl rounded-tl-sm p-3">
+                        <p class="text-gray-700 leading-relaxed text-sm">你好！我已读完 <strong class="text-blue-600">facebook/react</strong> 的全部资料（README、AI 报告、Runbook 和你的笔记）。关于这个项目，有任何想深入了解的地方都可以问我。</p>
+                      </div>
+                      <div class="mt-2 flex flex-wrap gap-2">
+                        <button class="px-3 py-1.5 text-xs bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-700 rounded-full transition flex items-center gap-1.5">
+                          <i class="fa-solid fa-bolt text-yellow-500"></i>这个项目是做什么的？
+                        </button>
+                        <button class="px-3 py-1.5 text-xs bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-700 rounded-full transition flex items-center gap-1.5">
+                          <i class="fa-solid fa-bolt text-yellow-500"></i>如何本地部署和运行？
+                        </button>
+                        <button class="px-3 py-1.5 text-xs bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-700 rounded-full transition flex items-center gap-1.5">
+                          <i class="fa-solid fa-bolt text-yellow-500"></i>架构上有什么设计亮点？
+                        </button>
+                        <button class="px-3 py-1.5 text-xs bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-700 rounded-full transition flex items-center gap-1.5">
+                          <i class="fa-solid fa-bolt text-yellow-500"></i>二次开发应该从哪里入手？
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 用户消息 -->
+                  <div class="flex gap-3">
+                    <div class="w-8 h-8 bg-gray-200 rounded-lg flex-shrink-0 flex items-center justify-center">
+                      <i class="fa-solid fa-user text-gray-500 text-xs"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="bg-blue-600 text-white rounded-xl rounded-tl-sm p-3 text-sm">如何本地部署和运行？</div>
+                    </div>
+                  </div>
+
+                  <!-- AI 回答（带来源标注） -->
+                  <div class="flex gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex-shrink-0 flex items-center justify-center">
+                      <i class="fa-solid fa-compass text-white text-xs"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="bg-white border border-gray-200 rounded-xl rounded-tl-sm p-3 shadow-sm">
+                        <div class="text-sm text-gray-700 leading-relaxed space-y-2">
+                          <p>根据 README 和 Runbook，React 本身是一个<strong>库</strong>而非完整应用，本地运行通常是运行它的示例或基于它创建项目：</p>
+                          <p><strong>1. 创建一个新项目（推荐方式）</strong></p>
+                          <div class="bg-gray-900 text-gray-100 rounded-lg p-3 text-xs font-mono">npx create-react-app my-app<br>cd my-app<br>npm start</div>
+                          <p><strong>2. 运行 React 源码仓库</strong>（适用于贡献代码）：克隆后执行 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-pink-600">yarn install</code>，再运行 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-pink-600">yarn build</code>。</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 mt-3 pt-2 border-t border-gray-100">
+                          <span class="text-[10px] text-gray-400 mr-1">参考来源：</span>
+                          <span class="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] border border-blue-100"><i class="fa-solid fa-book-open mr-1"></i>README 片段 ×2</span>
+                          <span class="px-2 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] border border-purple-100"><i class="fa-solid fa-list-check mr-1"></i>Runbook</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2 mt-1.5 px-1">
+                        <button class="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition">
+                          <i class="fa-solid fa-note-sticky"></i>存入笔记
+                        </button>
+                        <button class="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition">
+                          <i class="fa-regular fa-copy"></i>复制
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 输入框 -->
+                <div class="border-t border-gray-200 p-3 flex-shrink-0">
+                  <div class="relative bg-gray-50 border border-gray-200 rounded-xl focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition">
+                    <textarea rows="1" placeholder="继续追问，例如：它的 Fiber 架构解决了什么问题？"
+                      class="w-full px-4 py-2.5 pr-12 text-sm text-gray-900 rounded-xl resize-none focus:outline-none placeholder-gray-400 bg-transparent"></textarea>
+                    <button class="absolute right-2 bottom-2 w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg flex items-center justify-center shadow">
+                      <i class="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1.5 px-1"><kbd class="px-1 py-0.5 bg-gray-100 border border-gray-200 rounded">Enter</kbd> 发送 · <kbd class="px-1 py-0.5 bg-gray-100 border border-gray-200 rounded">Shift+Enter</kbd> 换行</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3 text-xs text-gray-500 flex items-start gap-2">
+              <i class="fa-solid fa-info-circle mt-0.5"></i>
+              <span>探索对话基于本项目的 README、AI 报告、Runbook 和本地笔记回答；用户信息（数据保险箱）内容不会发送给大模型。详细交互见独立原型 project-explore.html</span>
             </div>
           </div>
         </div>

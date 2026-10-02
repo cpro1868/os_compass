@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 项目探索</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .chat-scroll::-webkit-scrollbar { width: 6px; }
+    .chat-scroll::-webkit-scrollbar-track { background: transparent; }
+    .chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .typing-indicator span { animation: bounce 1.4s infinite ease-in-out both; }
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .msg-enter { animation: slideUp 0.3s ease-out; }
+    .ai-msg .msg-actions { opacity: 0; transition: opacity 0.15s; }
+    .ai-msg:hover .msg-actions { opacity: 1; }
+  </style>
+</head>
+<body class="bg-gray-200 text-gray-900 h-screen overflow-hidden flex items-center justify-center p-6">
+
+  <!-- 模拟项目详情弹窗 -->
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-full flex flex-col overflow-hidden">
+
+    <!-- 弹窗头部 -->
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center gap-4 flex-shrink-0">
+      <div class="w-12 h-12 bg-cyan-100 rounded-xl flex items-center justify-center">
+        <i class="fa-brands fa-react text-cyan-500 text-2xl"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-xl font-bold">facebook / react</h1>
+        <p class="text-sm text-gray-500 truncate">用于构建用户界面的 JavaScript 库</p>
+      </div>
+      <div class="flex items-center gap-3 text-sm text-gray-500">
+        <span><i class="fa-solid fa-star text-yellow-500"></i> 219k</span>
+        <span><i class="fa-solid fa-code-branch"></i> 45.7k</span>
+      </div>
+      <button class="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <!-- 标签页导航 -->
+    <div class="bg-white border-b border-gray-200 px-6 flex-shrink-0">
+      <nav class="flex gap-1">
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm">概览</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm">AI 报告</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm">Runbook</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm">README</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm"><i class="fa-solid fa-code-branch mr-1"></i>克隆</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm"><i class="fa-solid fa-tag mr-1"></i>Releases</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm">本地笔记</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm"><i class="fa-solid fa-lock mr-1"></i>用户信息</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm"><i class="fa-solid fa-file-alt mr-1"></i>文章生成</button>
+        <button class="px-4 py-3 border-b-2 border-blue-600 text-blue-600 font-medium text-sm"><i class="fa-solid fa-comments mr-1"></i>项目探索</button>
+      </nav>
+    </div>
+
+    <!-- 项目探索内容区 -->
+    <div class="flex-1 flex min-h-0">
+
+      <!-- 会话列表侧栏 -->
+      <aside class="w-60 bg-gray-50 border-r border-gray-200 flex flex-col flex-shrink-0">
+        <div class="p-3 border-b border-gray-200">
+          <h2 class="font-semibold text-xs text-gray-500 flex items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            探索会话
+          </h2>
+        </div>
+        <div class="flex-1 overflow-auto p-2 chat-scroll">
+          <div class="space-y-1" id="sessionList">
+            <div class="session-item group relative">
+              <button class="w-full text-left px-3 py-2.5 text-sm rounded-lg bg-blue-50 text-blue-700 border border-blue-200 transition flex items-center gap-2">
+                <i class="fa-regular fa-message text-blue-400 text-xs"></i>
+                <span class="truncate flex-1">如何本地部署和运行？</span>
+              </button>
+              <button onclick="deleteSession(this)" title="删除会话"
+                class="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 hidden group-hover:flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50">
+                <i class="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+            <div class="session-item group relative">
+              <button onclick="switchSession(this)" class="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-gray-100 text-gray-600 transition flex items-center gap-2">
+                <i class="fa-regular fa-message text-gray-400 text-xs"></i>
+                <span class="truncate flex-1">Fiber 架构的设计动机</span>
+              </button>
+              <button onclick="deleteSession(this)" title="删除会话"
+                class="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 hidden group-hover:flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50">
+                <i class="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+            <div class="session-item group relative">
+              <button onclick="switchSession(this)" class="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-gray-100 text-gray-600 transition flex items-center gap-2">
+                <i class="fa-regular fa-message text-gray-400 text-xs"></i>
+                <span class="truncate flex-1">和 Vue 相比该怎么选？</span>
+              </button>
+              <button onclick="deleteSession(this)" title="删除会话"
+                class="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 hidden group-hover:flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50">
+                <i class="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="p-3 border-t border-gray-200">
+          <button onclick="newSession()" class="w-full px-3 py-2 text-sm rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-blue-400 hover:text-blue-600 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-plus"></i>
+            新建会话
+          </button>
+        </div>
+      </aside>
+
+      <!-- 聊天主区域 -->
+      <main class="flex-1 flex flex-col min-w-0">
+
+        <!-- 知识库状态条 -->
+        <div class="px-5 py-2 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2 text-xs text-emerald-700 flex-shrink-0">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>知识库就绪：README ×21 块 · AI 报告 · Runbook · 笔记 ×3</span>
+          <span class="text-emerald-500 ml-auto">向量检索已启用</span>
+        </div>
+        <!-- 降级状态示例（默认隐藏）：
+        <div class="px-5 py-2 bg-amber-50 border-b border-amber-100 flex items-center gap-2 text-xs text-amber-700 flex-shrink-0">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>向量检索未启用，README 按截断注入，回答可能不完整</span>
+          <a href="#" class="underline ml-auto">前往设置</a>
+        </div>
+        -->
+
+        <!-- 聊天消息流 -->
+        <div id="chatContainer" class="chat-scroll flex-1 overflow-auto p-5 space-y-5">
+
+          <!-- 欢迎消息 -->
+          <div class="flex gap-3 msg-enter" id="welcomeMsg">
+            <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center shadow">
+              <i class="fa-solid fa-compass text-white text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="bg-gray-50 border border-gray-200 rounded-2xl rounded-tl-sm p-4">
+                <p class="text-gray-700 leading-relaxed text-sm">
+                  你好！我已读完 <strong class="text-blue-600">facebook/react</strong> 的全部资料（README、AI 报告、Runbook 和你的笔记）。关于这个项目，有任何想深入了解的地方都可以问我。
+                </p>
+              </div>
+              <!-- 建议问题 -->
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button onclick="sendSuggestion('这个项目是做什么的？')" class="px-3 py-1.5 text-xs bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-700 rounded-full transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-bolt text-yellow-500"></i>这个项目是做什么的？
+                </button>
+                <button onclick="sendSuggestion('如何本地部署和运行？')" class="px-3 py-1.5 text-xs bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-700 rounded-full transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-bolt text-yellow-500"></i>如何本地部署和运行？
+                </button>
+                <button onclick="sendSuggestion('架构上有什么设计亮点？')" class="px-3 py-1.5 text-xs bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-700 rounded-full transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-bolt text-yellow-500"></i>架构上有什么设计亮点？
+                </button>
+                <button onclick="sendSuggestion('二次开发应该从哪里入手？')" class="px-3 py-1.5 text-xs bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-700 rounded-full transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-bolt text-yellow-500"></i>二次开发应该从哪里入手？
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 用户消息示例 -->
+          <div class="flex gap-3 msg-enter">
+            <div class="w-9 h-9 bg-gray-200 rounded-xl flex-shrink-0 flex items-center justify-center">
+              <i class="fa-solid fa-user text-gray-500 text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="bg-blue-600 text-white rounded-2xl rounded-tl-sm p-4 text-sm">
+                如何本地部署和运行？
+              </div>
+            </div>
+          </div>
+
+          <!-- AI 回答示例（带来源标注 + 操作行） -->
+          <div class="flex gap-3 msg-enter ai-msg">
+            <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center shadow">
+              <i class="fa-solid fa-compass text-white text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="bg-white border border-gray-200 rounded-2xl rounded-tl-sm p-4 shadow-sm">
+                <div class="text-sm text-gray-700 leading-relaxed space-y-2">
+                  <p>根据 README 和 Runbook，React 本身是一个<strong>库</strong>而非完整应用，本地运行通常是运行它的示例或基于它创建项目：</p>
+                  <p><strong>1. 创建一个新项目（推荐方式）</strong></p>
+                  <div class="bg-gray-900 text-gray-100 rounded-lg p-3 text-xs font-mono">npx create-react-app my-app<br>cd my-app<br>npm start</div>
+                  <p><strong>2. 运行 React 源码仓库</strong>（适用于贡献代码）：克隆仓库后执行 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-pink-600">yarn install</code> 安装依赖，再运行 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-pink-600">yarn build</code> 构建。</p>
+                  <p>详细的环境要求（Node 版本等）在你的 Runbook 中已有记录，可以直接照做。</p>
+                </div>
+                <!-- 来源标注 -->
+                <div class="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                  <span class="text-[10px] text-gray-400 mr-1">参考来源：</span>
+                  <span class="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] border border-blue-100"><i class="fa-solid fa-book-open mr-1"></i>README 片段 ×2</span>
+                  <span class="px-2 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] border border-purple-100"><i class="fa-solid fa-list-check mr-1"></i>Runbook</span>
+                </div>
+              </div>
+              <!-- 操作行（hover 显示） -->
+              <div class="msg-actions flex items-center gap-2 mt-1.5 px-1">
+                <button onclick="saveToNote(this)" class="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition">
+                  <i class="fa-solid fa-note-sticky"></i>存入笔记
+                </button>
+                <button onclick="copyAnswer(this)" class="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition">
+                  <i class="fa-regular fa-copy"></i>复制
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 输入框 -->
+        <div class="border-t border-gray-200 p-4 bg-white flex-shrink-0">
+          <div class="relative bg-gray-50 border border-gray-200 rounded-2xl focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition">
+            <textarea id="chatInput" rows="1" placeholder="继续追问，例如：它的 Fiber 架构解决了什么问题？"
+              class="w-full px-4 py-3 pr-14 text-sm text-gray-900 rounded-2xl resize-none focus:outline-none placeholder-gray-400 bg-transparent"
+              onkeydown="handleKeyDown(event)"
+              oninput="autoResize(this)"></textarea>
+            <button id="sendBtn" onclick="sendMessage()"
+              class="absolute right-2 bottom-2 w-9 h-9 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-xl flex items-center justify-center transition shadow disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+              <i class="fa-solid fa-paper-plane text-sm"></i>
+            </button>
+          </div>
+          <div class="flex items-center justify-between mt-2 px-1">
+            <p class="text-xs text-gray-400">
+              <i class="fa-solid fa-book-open text-blue-500 mr-1"></i>
+              回答基于本项目资料生成
+            </p>
+            <p class="text-xs text-gray-400"><kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-gray-500">Enter</kbd> 发送 · <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-gray-500">Shift+Enter</kbd> 换行</p>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed top-6 right-6 z-50 items-center gap-2 px-4 py-3 bg-gray-900 text-white text-sm rounded-xl shadow-lg">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toastText">已存入本地笔记</span>
+  </div>
+
+  <script>
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatContainer = document.getElementById('chatContainer');
+
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+      sendBtn.disabled = !el.value.trim();
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (chatInput.value.trim()) sendMessage();
+      }
+    }
+
+    function sendMessage() {
+      const message = chatInput.value.trim();
+      if (!message) return;
+      addUserMessage(message);
+      chatInput.value = '';
+      chatInput.style.height = 'auto';
+      sendBtn.disabled = true;
+      showTyping();
+      setTimeout(() => {
+        hideTyping();
+        addAiMessage(message);
+      }, 1600);
+    }
+
+    function sendSuggestion(text) {
+      chatInput.value = text;
+      sendBtn.disabled = false;
+      sendMessage();
+    }
+
+    function addUserMessage(content) {
+      const html = `
+        <div class="flex gap-3 msg-enter">
+          <div class="w-9 h-9 bg-gray-200 rounded-xl flex-shrink-0 flex items-center justify-center">
+            <i class="fa-solid fa-user text-gray-500 text-sm"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="bg-blue-600 text-white rounded-2xl rounded-tl-sm p-4 text-sm">${escapeHtml(content)}</div>
+          </div>
+        </div>`;
+      chatContainer.insertAdjacentHTML('beforeend', html);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function addAiMessage(question) {
+      const answer = getMockAnswer(question);
+      const html = `
+        <div class="flex gap-3 msg-enter ai-msg">
+          <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center shadow">
+            <i class="fa-solid fa-compass text-white text-sm"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="bg-white border border-gray-200 rounded-2xl rounded-tl-sm p-4 shadow-sm">
+              <div class="text-sm text-gray-700 leading-relaxed space-y-2">${answer.body}</div>
+              <div class="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                <span class="text-[10px] text-gray-400 mr-1">参考来源：</span>
+                ${answer.sources}
+              </div>
+            </div>
+            <div class="msg-actions flex items-center gap-2 mt-1.5 px-1">
+              <button onclick="saveToNote(this)" class="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition">
+                <i class="fa-solid fa-note-sticky"></i>存入笔记
+              </button>
+              <button onclick="copyAnswer(this)" class="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition">
+                <i class="fa-regular fa-copy"></i>复制
+              </button>
+            </div>
+          </div>
+        </div>`;
+      chatContainer.insertAdjacentHTML('beforeend', html);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function getMockAnswer(question) {
+      const src = {
+        readme: '<span class="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] border border-blue-100"><i class="fa-solid fa-book-open mr-1"></i>README 片段 ×2</span>',
+        ai: '<span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] border border-indigo-100"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI 报告</span>',
+        runbook: '<span class="px-2 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] border border-purple-100"><i class="fa-solid fa-list-check mr-1"></i>Runbook</span>',
+        notes: '<span class="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] border border-amber-100"><i class="fa-solid fa-note-sticky mr-1"></i>本地笔记</span>',
+      };
+      const data = {
+        '这个项目是做什么的？': {
+          body: `<p>React 是一个用于<strong>构建用户界面</strong>的 JavaScript 库，由 Meta（Facebook）开源维护。核心特点：</p>
+                 <p>• <strong>组件化</strong>：UI 拆分为独立可复用的组件<br>• <strong>声明式</strong>：描述"界面应该是什么样"，由 React 负责高效更新 DOM<br>• <strong>虚拟 DOM</strong>：通过 Diff 算法最小化真实 DOM 操作</p>
+                 <p>它只负责视图层，路由、数据请求等需搭配生态库（如 React Router、React Query）使用。</p>`,
+          sources: src.readme + src.ai
+        },
+        '架构上有什么设计亮点？': {
+          body: `<p>从项目资料来看，React 架构上最值得关注的是三点：</p>
+                 <p><strong>1. Fiber 架构</strong>：将渲染工作拆分为可中断的小单元，支持优先级调度，解决了旧版同步递归渲染阻塞主线程的问题。</p>
+                 <p><strong>2. Hooks 模型</strong>：用函数组合替代类组件生命周期，逻辑复用不再依赖 HOC/Render Props 嵌套。</p>
+                 <p><strong>3. 并发渲染（Concurrent）</strong>：useTransition 等 API 让非紧急更新让位于用户交互。</p>
+                 <p>你的笔记里也标记了 Fiber 相关段落，可以对照源码 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-pink-600">packages/react-reconciler</code> 目录深入。</p>`,
+          sources: src.readme + src.ai + src.notes
+        },
+        '二次开发应该从哪里入手？': {
+          body: `<p>建议按这个顺序入手：</p>
+                 <p><strong>1.</strong> 先读 README 的 "Contributing" 章节，了解行为准则与 PR 流程<br>
+                 <strong>2.</strong> 按 Runbook 搭建本地构建环境（Node 版本要求已记录在案）<br>
+                 <strong>3.</strong> 从 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-pink-600">good first issue</code> 标签的任务开始，优先看 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-pink-600">packages/react</code> 这种入口包而非 reconciler 核心</p>
+                 <p>需要我帮你整理一份具体的上手任务清单吗？</p>`,
+          sources: src.readme + src.runbook
+        }
+      };
+      if (data[question]) return data[question];
+      return {
+        body: `<p>基于本项目的 README、AI 报告和 Runbook，关于「${escapeHtml(question)}」：（原型演示）这里是模拟回答，实际实现时将注入检索到的相关资料片段，由大模型生成针对性回答。</p>`,
+        sources: src.readme + src.ai
+      };
+    }
+
+    function showTyping() {
+      const html = `
+        <div id="typingIndicator" class="flex gap-3">
+          <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center shadow">
+            <i class="fa-solid fa-compass text-white text-sm"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl rounded-tl-sm p-4">
+              <div class="flex items-center gap-3">
+                <div class="typing-indicator flex gap-1">
+                  <span class="w-2 h-2 bg-blue-400 rounded-full"></span>
+                  <span class="w-2 h-2 bg-blue-400 rounded-full"></span>
+                  <span class="w-2 h-2 bg-blue-400 rounded-full"></span>
+                </div>
+                <span class="text-sm text-gray-400">正在检索项目资料并思考...</span>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      chatContainer.insertAdjacentHTML('beforeend', html);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function hideTyping() {
+      const el = document.getElementById('typingIndicator');
+      if (el) el.remove();
+    }
+
+    function showToast(text) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastText').textContent = text;
+      toast.classList.remove('hidden');
+      toast.classList.add('flex');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+        toast.classList.remove('flex');
+      }, 2200);
+    }
+
+    function saveToNote(btn) {
+      btn.innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i><span class="text-emerald-600">已存入</span>';
+      showToast('已追加到本地笔记（本地笔记选项卡可见）');
+    }
+
+    function copyAnswer() {
+      showToast('回答已复制到剪贴板');
+    }
+
+    function switchSession(btn) {
+      document.querySelectorAll('#sessionList .session-item > button').forEach(b => {
+        b.className = 'w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-gray-100 text-gray-600 transition flex items-center gap-2';
+      });
+      btn.className = 'w-full text-left px-3 py-2.5 text-sm rounded-lg bg-blue-50 text-blue-700 border border-blue-200 transition flex items-center gap-2';
+      showToast('已切换到历史会话（原型演示）');
+    }
+
+    function newSession() {
+      const list = document.getElementById('sessionList');
+      const item = document.createElement('div');
+      item.className = 'session-item group relative';
+      item.innerHTML = `
+        <button onclick="switchSession(this)" class="w-full text-left px-3 py-2.5 text-sm rounded-lg bg-blue-50 text-blue-700 border border-blue-200 transition flex items-center gap-2">
+          <i class="fa-regular fa-message text-blue-400 text-xs"></i>
+          <span class="truncate flex-1">新会话</span>
+        </button>
+        <button onclick="deleteSession(this)" title="删除会话"
+          class="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 hidden group-hover:flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>`;
+      document.querySelectorAll('#sessionList .session-item > button').forEach(b => {
+        b.className = 'w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-gray-100 text-gray-600 transition flex items-center gap-2';
+      });
+      list.prepend(item);
+      showToast('已创建新会话');
+    }
+
+    function deleteSession(btn) {
+      btn.closest('.session-item').remove();
+      showToast('会话已删除');
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+  </script>
+</body>
+</html>
