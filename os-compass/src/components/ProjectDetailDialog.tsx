@@ -11,6 +11,7 @@ import { noteApi } from "../api/note";
 import { ClonePanel } from "./ClonePanel";
 import { ReleasesPanel } from "./ReleasesPanel";
 import { ArticleGenerationPanel } from "./ArticleGenerationPanel";
+import { ExplorePanel } from "./ExplorePanel";
 import { useTranslation } from "react-i18next";
 import { exportRunbookAsMarkdown } from "../utils/runbookExport";
 
@@ -43,7 +44,7 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
   const { t } = useTranslation();
   const [project, setProject] = useState<Project>(initialProject);
   useEffect(() => { setProject(initialProject); }, [initialProject]);
-  const [tab, setTab] = useState<"overview" | "ai" | "runbook" | "readme" | "clone" | "releases" | "notes" | "user" | "article">("overview");
+  const [tab, setTab] = useState<"overview" | "ai" | "runbook" | "readme" | "clone" | "releases" | "notes" | "user" | "article" | "explore">("overview");
   const [analyzing, setAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const [runbookContent, setRunbookContent] = useState<string | null>(null);
@@ -687,6 +688,7 @@ const handleAnalyze = useCallback(async () => {
     { id: "notes" as const, label: t("detail.notes") },
     { id: "user" as const, label: t("detail.user"), icon: "lock" },
     { id: "article" as const, label: t("detail.article"), icon: "newspaper" },
+    { id: "explore" as const, label: t("detail.explore"), icon: "comments" },
   ];
 
   return (
@@ -1721,6 +1723,8 @@ const handleAnalyze = useCallback(async () => {
           {tab === "article" && (
             <ArticleGenerationPanel projectId={project.id} projectName={project.name} />
           )}
+
+          {tab === "explore" && <ExplorePanel projectId={project.id} projectName={project.name} />}
         </div>
       </div>
 
