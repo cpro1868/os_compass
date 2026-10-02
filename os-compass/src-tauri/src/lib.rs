@@ -674,6 +674,13 @@ pub fn run() {
             import_preset_categories,
             parse_categories_file,
             import_categories_from_file,
+            commands::explore_cmd::ask_explore,
+            commands::explore_cmd::list_explore_sessions,
+            commands::explore_cmd::get_explore_messages,
+            commands::explore_cmd::delete_explore_session,
+            commands::explore_cmd::get_latest_explore_session,
+            commands::explore_cmd::get_explore_kb_status,
+            commands::explore_cmd::rebuild_explore_index,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
