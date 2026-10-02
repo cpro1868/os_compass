@@ -32,6 +32,7 @@ design-system/
     ├── category-manager.html  # 分类管理
     ├── import-form.html  # 项目导入
     ├── search-view.html  # 搜索视图
+    ├── project-explore.html  # 项目探索（对话式项目深挖，M24）
     ├── settings.html   # 设置中心
     ├── plugin-manager.html  # 插件管理
     └── obsidian-layout.html  # Obsidian 风格参考

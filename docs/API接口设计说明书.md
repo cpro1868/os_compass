@@ -2183,4 +2183,97 @@ interface ScoreDimension {
 
 ---
 
+## 3.20 项目探索接口（M24）
+
+> 需求：`docs/M24项目探索功能需求.md`；详细设计：`docs/详细设计说明书.md` §4.9。
+> 所有命令操作**仓库库**，数据随仓库切换隔离。上下文组装在 Rust 侧完成（后端组装式），前端不拼装 Prompt。
+
+### 3.20.1 ask_explore（核心问答）
+
+| 项 | 内容 |
+|----|------|
+| 参数 | `{ projectId: number, sessionId?: number, question: string }` |
+| 返回 | `ExploreAnswer` |
+| 说明 | sessionId 省略时自动新建会话；内部完成索引检查、上下文组装、LLM 调用、消息落库 |
+
+```typescript
+interface ExploreAnswer {
+  sessionId: number;        // 会话 ID（新建时返回新 ID）
+  answer: string;           // AI 回答（Markdown 原文）
+  sources: ExploreSource[]; // 本轮参考来源
+  degraded: boolean;        // true = 向量未启用，README 按截断注入
+}
+
+type ExploreSource =
+  | { type: 'readme_chunk'; chunkIndex: number }
+  | { type: 'ai_report' }
+  | { type: 'runbook' }
+  | { type: 'notes' };
+```
+
+**错误**：LLM 未配置 / 超时（180s）/ 401/429/500，沿用 llm.rs 错误分类文案。
+
+### 3.20.2 会话管理
+
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `list_explore_sessions` | `{ projectId }` | `ExploreSession[]` | 按 updated_at 倒序 |
+| `get_explore_messages` | `{ sessionId }` | `ExploreMessage[]` | 按 created_at 升序 |
+| `delete_explore_session` | `{ sessionId }` | `void` | 级联删除消息 |
+| `get_latest_explore_session` | `{ projectId }` | `ExploreSession \| null` | 重开详情时恢复最近会话 |
+
+```typescript
+interface ExploreSession {
+  id: number;
+  projectId: number;
+  title: string | null;     // 首条问题前 30 字符
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ExploreMessage {
+  id: number;
+  sessionId: number;
+  role: 'user' | 'assistant';
+  content: string;
+  sources: ExploreSource[] | null;
+  createdAt: string;
+}
+```
+
+### 3.20.3 知识索引
+
+| 命令 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `get_explore_kb_status` | `{ projectId }` | `ExploreKbStatus` | 打开面板时查询状态条 |
+| `rebuild_explore_index` | `{ projectId }` | `{ chunks: number }` | 手动重建 README 分块索引 |
+
+```typescript
+interface ExploreKbStatus {
+  ready: boolean;          // 索引可用
+  building: boolean;       // 正在构建
+  degraded: boolean;       // 降级模式（向量未启用）
+  readmeChunks: number;    // README 分块数
+  hasAiReport: boolean;
+  hasRunbook: boolean;
+  notesCount: number;
+}
+```
+
+### 3.20.4 调用示例
+
+```typescript
+// 发送问题（自动沿用/新建会话）
+const ans = await invoke<ExploreAnswer>('ask_explore', {
+  projectId: 1,
+  sessionId: currentSessionId ?? undefined,
+  question: '这个项目是做什么的？'
+});
+
+// 存入笔记：复用既有笔记更新命令，前端拼接追加内容
+// ## 探索问答：{问题前 30 字}\n\n{ans.answer}
+```
+
+---
+
 **文档结束**
