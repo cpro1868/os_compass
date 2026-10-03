@@ -782,38 +782,37 @@ const handleAnalyze = useCallback(async () => {
           </div>
         </header>
 
-        {/* Category Bar */}
-        <div className="px-6 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 text-sm">
-          <span className="text-gray-500 dark:text-gray-400">{t("detail.category")}：</span>
-          {editing ? (
-            <select
-              value={editCategoryId ?? ""}
-              onChange={(e) => setEditCategoryId(e.target.value ? Number(e.target.value) : null)}
-              className="px-3 py-1 border dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 rounded text-xs"
+        {/* Category & Status Bar */}
+        <div className="px-6 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 dark:text-gray-400">{t("detail.category")}：</span>
+            {editing ? (
+              <select
+                value={editCategoryId ?? ""}
+                onChange={(e) => setEditCategoryId(e.target.value ? Number(e.target.value) : null)}
+                className="px-3 py-1 border dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 rounded text-xs"
+              >
+                <option value="">{t("detail.uncategorized")}</option>
+                {categoryOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="px-3 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">
+                <i className="fa-solid fa-folder mr-1"></i>{categoryPath}
+              </span>
+            )}
+            <button
+              onClick={handleAIClassify}
+              disabled={isClassifying}
+              className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center gap-1 disabled:opacity-75"
             >
-              <option value="">{t("detail.uncategorized")}</option>
-              {categoryOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>{opt.label}</option>
-              ))}
-            </select>
-          ) : (
-            <span className="px-3 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">
-              <i className="fa-solid fa-folder mr-1"></i>{categoryPath}
-            </span>
-          )}
-          <button
-            onClick={handleAIClassify}
-            disabled={isClassifying}
-            className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center gap-1 disabled:opacity-75"
-          >
-            <i className={`fa-solid fa-wand-magic-sparkles ${isClassifying ? "animate-spin" : ""}`}></i>
-            {t("detail.aiClassify")}
-          </button>
-        </div>
-
-        {/* Status Bar */}
-        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm">
+              <i className={`fa-solid fa-wand-magic-sparkles ${isClassifying ? "animate-spin" : ""}`}></i>
+              {t("detail.aiClassify")}
+            </button>
+          </div>
+          <span className="hidden sm:block h-4 w-px bg-gray-300 dark:bg-gray-600"></span>
+          <div className="flex items-center gap-2">
             <span className="text-gray-500 dark:text-gray-400">{t("list.status")}：</span>
             {Object.entries(STATUS_CONFIG).map(([key, config]) => (
               <button
