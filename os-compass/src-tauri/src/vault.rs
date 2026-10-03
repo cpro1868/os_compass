@@ -398,6 +398,9 @@ pub fn open_vault(app: AppHandle, path: String) -> Result<Vault, String> {
     })?;
     write_log("[vault] Database switched successfully");
 
+    // 系统变量已迁移至系统库（V2.0）：将旧仓库库中的遗留变量惰性合并到系统库
+    crate::commands::variables::merge_legacy_vault_variables();
+
     let config = VaultConfig {
         path: path.clone(),
     };
