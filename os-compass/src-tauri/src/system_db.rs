@@ -67,6 +67,12 @@ impl SystemDb {
             [],
         );
 
+        // 已有库迁移：GitLab 插件补充 required_variables（INSERT OR IGNORE 不会更新已存在行）
+        conn.execute(
+            "UPDATE source_plugins SET required_variables = '[{\"key\": \"gitlab_token\", \"name\": \"GitLab Token\", \"description\": \"GitLab Personal Access Token，用于提高限额并访问私有项目\",\"secret\": true}]' WHERE id = 'gitlab' AND (required_variables IS NULL OR required_variables = '[]')",
+            [],
+        )?;
+
         conn.execute(
             r#"
             INSERT OR IGNORE INTO source_plugins (id, name, plugin_class, description, enabled, version, required_variables, url_patterns) VALUES
@@ -76,7 +82,9 @@ impl SystemDb {
             ('gitee', 'Gitee', 'plugins::GiteePlugin', '获取 Gitee 项目信息、健康度评分', 1, '1.0.0',
              '[{"key": "gitee_token", "name": "Gitee 私有令牌", "description": "Gitee 私有令牌，用于访问 Gitee API","secret": true}]',
              '["gitee.com", "www.gitee.com"]'),
-            ('gitlab', 'GitLab', 'plugins::GitLabPlugin', '获取 GitLab 项目信息', 1, '1.0.0', '[]', '["gitlab.com", "www.gitlab.com"]'),
+            ('gitlab', 'GitLab', 'plugins::GitLabPlugin', '获取 GitLab 项目信息', 1, '1.0.0',
+             '[{"key": "gitlab_token", "name": "GitLab Token", "description": "GitLab Personal Access Token，用于提高限额并访问私有项目","secret": true}]',
+             '["gitlab.com", "www.gitlab.com"]'),
             ('npm', 'NPM', 'plugins::NpmPlugin', '获取 NPM 包信息', 1, '1.0.0', '[]', '["npmjs.com", "www.npmjs.com", "registry.npmjs.org"]'),
             ('pypi', 'PyPI', 'plugins::PyPiPlugin', '获取 PyPI 包信息', 1, '1.0.0', '[]', '["pypi.org", "www.pypi.org"]'),
             ('crates', 'Crates.io', 'plugins::CratesPlugin', '获取 crates.io 包信息', 1, '1.0.0', '[]', '["crates.io", "www.crates.io", "crates.rust-lang.org"]'),
@@ -90,7 +98,8 @@ impl SystemDb {
             INSERT OR IGNORE INTO system_variables (key, encrypted_value, is_secret) VALUES
             ('github_token', '', 1),
             ('github_proxy', '', 0),
-            ('gitee_token', '', 1)
+            ('gitee_token', '', 1),
+            ('gitlab_token', '', 1)
             "#,
             [],
         )?;
@@ -356,15 +365,23 @@ pub fn get_system_variable(key: &str) -> Option<String> {
 
     let conn = db.get_connection();
 
-    let result: String = conn
+    let (value, is_secret): (String, i32) = conn
         .query_row(
-            "SELECT encrypted_value FROM system_variables WHERE key = ?",
+            "SELECT encrypted_value, is_secret FROM system_variables WHERE key = ?",
             [key],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .ok()?;
 
-    match crate::crypto::decrypt_string(&result) {
+    // 非密变量明文存储，直接返回；密文变量为空串时不必解密
+    if is_secret == 0 {
+        return Some(value);
+    }
+    if value.is_empty() {
+        return Some(String::new());
+    }
+
+    match crate::crypto::decrypt_string(&value) {
         Ok(plaintext) => Some(plaintext),
         Err(e) => {
             log::warn!("[system_db] WARNING: Cannot decrypt variable key='{}': {}.", key, e);
