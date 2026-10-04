@@ -162,13 +162,43 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
             }
         }
         Platform::NPM => {
-            npm::fetch_npm_project(url, None).await
+            let api_result = npm::fetch_npm_project(url, None).await;
+            if !api_result.success {
+                let fallback_result = start_crawler_and_fetch(url).await;
+                if fallback_result.success {
+                    fallback_result
+                } else {
+                    api_result
+                }
+            } else {
+                api_result
+            }
         }
         Platform::PyPI => {
-            pypi::fetch_pypi_project(url, None).await
+            let api_result = pypi::fetch_pypi_project(url, None).await;
+            if !api_result.success {
+                let fallback_result = start_crawler_and_fetch(url).await;
+                if fallback_result.success {
+                    fallback_result
+                } else {
+                    api_result
+                }
+            } else {
+                api_result
+            }
         }
         Platform::Crates => {
-            crates::fetch_crates_project(url, None).await
+            let api_result = crates::fetch_crates_project(url, None).await;
+            if !api_result.success {
+                let fallback_result = start_crawler_and_fetch(url).await;
+                if fallback_result.success {
+                    fallback_result
+                } else {
+                    api_result
+                }
+            } else {
+                api_result
+            }
         }
         Platform::Unknown => {
             start_crawler_and_fetch(url).await
@@ -326,13 +356,43 @@ pub async fn preview_import(url: String) -> ImportResult {
             }
         }
         Platform::NPM => {
-            npm::fetch_npm_project(url, None).await
+            let api_result = npm::fetch_npm_project(url, None).await;
+            if !api_result.success {
+                let fallback_result = start_crawler_and_fetch(url).await;
+                if fallback_result.success {
+                    fallback_result
+                } else {
+                    api_result
+                }
+            } else {
+                api_result
+            }
         }
         Platform::PyPI => {
-            pypi::fetch_pypi_project(url, None).await
+            let api_result = pypi::fetch_pypi_project(url, None).await;
+            if !api_result.success {
+                let fallback_result = start_crawler_and_fetch(url).await;
+                if fallback_result.success {
+                    fallback_result
+                } else {
+                    api_result
+                }
+            } else {
+                api_result
+            }
         }
         Platform::Crates => {
-            crates::fetch_crates_project(url, None).await
+            let api_result = crates::fetch_crates_project(url, None).await;
+            if !api_result.success {
+                let fallback_result = start_crawler_and_fetch(url).await;
+                if fallback_result.success {
+                    fallback_result
+                } else {
+                    api_result
+                }
+            } else {
+                api_result
+            }
         }
         Platform::Unknown => {
             start_crawler_and_fetch(url).await
