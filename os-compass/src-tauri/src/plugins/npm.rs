@@ -7,6 +7,7 @@ struct NpmPackage {
     description: Option<String>,
     homepage: Option<String>,
     license: Option<String>,
+    readme: Option<String>,
     versions: serde_json::Value,
     #[serde(rename = "dist-tags")]
     dist_tags: Option<NpmDistTags>,
@@ -145,7 +146,7 @@ pub async fn fetch_npm_project(url: &str, proxy: Option<&str>) -> ImportResult {
         homepage,
         latest_commit: None,
         latest_release: Some(latest_version),
-        readme_content: None,
+        readme_content: package.readme,
     };
 
     ImportResult {

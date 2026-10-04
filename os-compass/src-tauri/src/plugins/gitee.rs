@@ -1,4 +1,5 @@
 use crate::plugins::{extract_source_id, ImportResult, Platform, ProjectData};
+use base64::Engine;
 
 pub async fn fetch_gitee_project(url: &str, token: Option<&str>) -> ImportResult {
     let platform = Platform::Gitee;
@@ -87,6 +88,8 @@ pub async fn fetch_gitee_project(url: &str, token: Option<&str>) -> ImportResult
         },
     };
 
+    let readme_content = fetch_gitee_readme(owner, repo_name, token, &client).await;
+
     let project_data = ProjectData {
         name: repo.name,
         url: repo.html_url,
@@ -101,7 +104,7 @@ pub async fn fetch_gitee_project(url: &str, token: Option<&str>) -> ImportResult
         homepage: repo.homepage,
         latest_commit: repo.pushed_at,
         latest_release: None,
-        readme_content: None,
+        readme_content,
     };
 
     ImportResult {
@@ -111,4 +114,27 @@ pub async fn fetch_gitee_project(url: &str, token: Option<&str>) -> ImportResult
         project_data: Some(project_data),
         readme_variants: None,
     }
+}
+#[derive(serde::Deserialize)]
+struct GiteeReadme {
+    content: String,
+}
+
+async fn fetch_gitee_readme(owner: &str, repo: &str, token: Option<&str>, client: &reqwest::Client) -> Option<String> {
+    let api_url = format!("https://gitee.com/api/v5/repos/{}/{}/readme", owner, repo);
+
+    let mut request = client.get(&api_url);
+    if let Some(t) = token {
+        request = request.query(&[("access_token", t)]);
+    }
+
+    let resp = request.send().await.ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+
+    let readme: GiteeReadme = resp.json().await.ok()?;
+    let cleaned: String = readme.content.chars().filter(|c| !c.is_whitespace()).collect();
+    let bytes = base64::engine::general_purpose::STANDARD.decode(&cleaned).ok()?;
+    String::from_utf8(bytes).ok()
 }
