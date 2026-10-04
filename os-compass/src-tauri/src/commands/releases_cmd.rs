@@ -205,6 +205,58 @@ fn fetch_gitee_releases(url: &str, token: Option<&str>) -> Result<Vec<Release>, 
     result
 }
 
+#[derive(Debug, Deserialize)]
+struct GitLabRelease {
+    tag_name: String,
+    released_at: Option<String>,
+    description: Option<String>,
+}
+
+fn fetch_gitlab_releases(url: &str, token: Option<&str>) -> Result<Vec<Release>, String> {
+    let source_id = crate::plugins::extract_source_id(url, crate::plugins::Platform::GitLab)
+        .ok_or("Invalid GitLab URL")?;
+    let encoded = urlencoding::encode(&source_id);
+    let api_url = format!("https://gitlab.com/api/v4/projects/{}/releases", encoded);
+
+    let runtime = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
+    let result = runtime.block_on(async {
+        let mut req = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .user_agent(concat!("os-compass/", env!("CARGO_PKG_VERSION")))
+            .build()
+            .map_err(|e| e.to_string())?
+            .get(&api_url);
+
+        if let Some(t) = token {
+            req = req.header("PRIVATE-TOKEN", t);
+        }
+
+        let resp = req.send().await.map_err(|e| e.to_string())?;
+
+        if !resp.status().is_success() {
+            return Err(format!("GitLab API error: {}", resp.status()));
+        }
+
+        let gl_releases: Vec<GitLabRelease> = resp.json().await.map_err(|e| e.to_string())?;
+
+        Ok(gl_releases.into_iter().map(|r| {
+            Release {
+                id: r.tag_name.clone(),
+                project_id: 0,
+                tag_name: r.tag_name,
+                published_at: r.released_at,
+                body: r.description,
+                body_zh: None,
+                download_urls: Vec::new(),
+                source: "gitlab".to_string(),
+                fetched_at: Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+            }
+        }).collect::<Vec<_>>())
+    });
+
+    result
+}
+
 #[tauri::command]
 pub fn fetch_releases(project_id: i64) -> Result<Vec<Release>, String> {
     let db_guard = DATABASE.try_lock().map_err(|e| e.to_string())?;
@@ -238,6 +290,10 @@ pub fn fetch_releases(project_id: i64) -> Result<Vec<Release>, String> {
         "gitee" => {
             let token = crate::commands::variables::get_variable_value_internal("gitee_token");
             fetch_gitee_releases(&url, token.as_deref())?
+        },
+        "gitlab" => {
+            let token = crate::commands::variables::get_variable_value_internal("gitlab_token");
+            fetch_gitlab_releases(&url, token.as_deref())?
         },
         _ => return Err("PLATFORM_NOT_SUPPORTED".to_string()),
     };

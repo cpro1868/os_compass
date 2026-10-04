@@ -1,5 +1,6 @@
 pub mod github;
 pub mod gitee;
+pub mod gitlab;
 pub mod npm;
 pub mod pypi;
 pub mod crates;
@@ -74,6 +75,7 @@ impl Default for ImportResult {
 pub enum Platform {
     GitHub,
     Gitee,
+    GitLab,
     NPM,
     PyPI,
     Crates,
@@ -90,6 +92,8 @@ pub fn identify_platform(url: &str) -> Platform {
                         return Platform::GitHub;
                     } else if domain.contains("gitee") {
                         return Platform::Gitee;
+                    } else if domain.contains("gitlab") {
+                        return Platform::GitLab;
                     } else if domain.contains("npm") {
                         return Platform::NPM;
                     } else if domain.contains("pypi") {
@@ -107,6 +111,8 @@ pub fn identify_platform(url: &str) -> Platform {
                 Platform::GitHub
             } else if url_lower.contains("gitee.com") {
                 Platform::Gitee
+            } else if url_lower.contains("gitlab.com") {
+                Platform::GitLab
             } else if url_lower.contains("npmjs.com") || url_lower.contains("registry.npmjs") {
                 Platform::NPM
             } else if url_lower.contains("pypi.org") {
@@ -169,6 +175,19 @@ pub fn extract_source_id(url: &str, platform: Platform) -> Option<String> {
             } else {
                 None
             }
+        }
+        Platform::GitLab => {
+            // 支持多级 group：gitlab.com/group/sub/repo，截掉 /-/ 之后的路径段
+            let path_part = url.split(['?', '#']).next().unwrap_or("").trim_end_matches('/');
+            let parts: Vec<&str> = path_part.split('/').collect();
+            if parts.len() >= 5 && parts[2].contains("gitlab") {
+                let joined = parts[3..].join("/");
+                let cut = joined.split("/-/").next().unwrap_or("").trim_end_matches('/');
+                if !cut.is_empty() {
+                    return Some(cut.to_string());
+                }
+            }
+            None
         }
         Platform::NPM => {
             let url_lower = url.to_lowercase();
