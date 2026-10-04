@@ -86,6 +86,7 @@ pub async fn fetch_gitlab_project(url: &str, token: Option<&str>) -> ImportResul
         latest_commit: project.last_activity_at,
         latest_release: None,
         readme_content,
+        health_score: None,
     };
 
     ImportResult {

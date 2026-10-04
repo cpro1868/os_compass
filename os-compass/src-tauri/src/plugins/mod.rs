@@ -26,6 +26,8 @@ pub struct ProjectData {
     pub latest_commit: Option<String>,
     pub latest_release: Option<String>,
     pub readme_content: Option<String>,
+    #[serde(default)]
+    pub health_score: Option<f64>,
 }
 
 impl Default for ProjectData {
@@ -45,6 +47,7 @@ impl Default for ProjectData {
             latest_commit: None,
             latest_release: None,
             readme_content: None,
+            health_score: None,
         }
     }
 }

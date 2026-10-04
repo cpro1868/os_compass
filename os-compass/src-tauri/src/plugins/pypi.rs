@@ -116,6 +116,18 @@ pub async fn fetch_pypi_project(url: &str, proxy: Option<&str>) -> ImportResult 
 
     let yanked = package.info.yanked.unwrap_or(false);
 
+    let has_documentation = package.info.project_urls.as_ref()
+        .and_then(|urls| urls.get("Documentation"))
+        .is_some();
+    let health_score = calculate_pypi_health_score(
+        release_count,
+        classifier_count,
+        has_documentation,
+        repository_url.is_some(),
+        package.info.license.as_deref(),
+        yanked,
+    );
+
     let project_data = ProjectData {
         name: package.info.name.clone(),
         url: format!("https://pypi.org/project/{}", package_name),
@@ -131,6 +143,7 @@ pub async fn fetch_pypi_project(url: &str, proxy: Option<&str>) -> ImportResult 
         latest_commit: None,
         latest_release: Some(package.info.version.clone()),
         readme_content: package.info.description.clone(),
+        health_score: Some(health_score),
     };
 
     ImportResult {

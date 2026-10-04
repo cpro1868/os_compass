@@ -196,8 +196,8 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
                 let conn = db.get_connection();
                 let insert_result = conn.execute(
                     r#"INSERT INTO projects
-                       (name, url, source, source_id, description, languages, stars, forks, open_issues, license, homepage, latest_commit, readme_content, created_at, updated_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))"#,
+                       (name, url, source, source_id, description, languages, stars, forks, open_issues, license, homepage, latest_commit, readme_content, health_score, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))"#,
                     rusqlite::params![
                         data.name,
                         data.url,
@@ -212,6 +212,7 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
                         data.homepage,
                         data.latest_commit,
                         data.readme_content,
+                        data.health_score,
                     ],
                 );
 

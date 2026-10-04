@@ -105,6 +105,7 @@ pub async fn fetch_gitee_project(url: &str, token: Option<&str>) -> ImportResult
         latest_commit: repo.pushed_at,
         latest_release: None,
         readme_content,
+        health_score: None,
     };
 
     ImportResult {
