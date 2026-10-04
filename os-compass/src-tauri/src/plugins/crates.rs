@@ -33,6 +33,7 @@ struct CratesVersion {
 
 fn build_client(proxy: Option<&str>) -> reqwest::Client {
     let mut builder = reqwest::Client::builder()
+        .user_agent(concat!("os-compass/", env!("CARGO_PKG_VERSION")))
         .timeout(std::time::Duration::from_secs(30));
     if let Some(p) = proxy {
         if !p.trim().is_empty() {
