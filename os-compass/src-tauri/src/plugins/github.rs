@@ -122,6 +122,7 @@ pub async fn fetch_github_project(url: &str, token: Option<&str>, proxy: Option<
         latest_commit: repo.pushed_at,
         latest_release: None,
         readme_content,
+        health_score: None,
     };
 
     ImportResult {

@@ -84,6 +84,7 @@ pub async fn fetch_with_crawler(url: &str) -> ImportResult {
                             latest_commit: None,
                             latest_release: None,
                             readme_content: Some(markdown),
+                            health_score: None,
                         }),
                         readme_variants: None,
                     };

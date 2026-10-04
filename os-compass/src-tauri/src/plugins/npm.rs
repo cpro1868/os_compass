@@ -131,6 +131,16 @@ pub async fn fetch_npm_project(url: &str, proxy: Option<&str>) -> ImportResult {
     let repository_url = extract_repository_from_versions(&package.versions, &latest_version);
 
     let dependency_count = count_dependencies(&package.versions, &latest_version);
+    let version_count = package.versions.as_object().map(|o| o.len()).unwrap_or(0);
+
+    let health_score = calculate_npm_health_score(
+        downloads,
+        version_count,
+        dependency_count,
+        homepage.is_some(),
+        repository_url.is_some(),
+        package.license.as_deref(),
+    );
 
     let project_data = ProjectData {
         name: package.name.clone(),
@@ -147,6 +157,7 @@ pub async fn fetch_npm_project(url: &str, proxy: Option<&str>) -> ImportResult {
         latest_commit: None,
         latest_release: Some(latest_version),
         readme_content: package.readme,
+        health_score: Some(health_score),
     };
 
     ImportResult {

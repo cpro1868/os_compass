@@ -114,9 +114,17 @@ pub async fn fetch_crates_project(url: &str, proxy: Option<&str>) -> ImportResul
         + crate_data.crate_info.keywords.as_ref().map(|k| k.len()).unwrap_or(0);
 
     let latest_version = crate_data.crate_info.max_version.clone();
-    let rust_version = get_latest_rust_version(&crate_data.versions);
 
     let readme_content = fetch_crates_readme(crate_name, &latest_version, &client).await;
+
+    let health_score = calculate_crates_health_score(
+        downloads,
+        recent_downloads,
+        crate_data.crate_info.documentation.is_some(),
+        repository_url.is_some(),
+        category_count,
+        crate_data.crate_info.license.as_deref(),
+    );
 
     let project_data = ProjectData {
         name: crate_data.crate_info.name.clone(),
@@ -125,14 +133,15 @@ pub async fn fetch_crates_project(url: &str, proxy: Option<&str>) -> ImportResul
         source_id: crate_name.to_string(),
         description: crate_data.crate_info.description.clone(),
         languages: Some("Rust".to_string()),
-        stars: downloads as i32,
+        stars: 0,
         forks: 0,
         open_issues: 0,
         license: crate_data.crate_info.license.clone(),
         homepage,
-        latest_commit: rust_version,
+        latest_commit: None,
         latest_release: Some(latest_version),
         readme_content,
+        health_score: Some(health_score),
     };
 
     ImportResult {
@@ -155,13 +164,6 @@ async fn fetch_crates_readme(crate_name: &str, version: &str, client: &reqwest::
         Ok(resp) if resp.status().is_success() => resp.text().await.ok().filter(|t| !t.trim().is_empty()),
         _ => None,
     }
-}
-
-fn get_latest_rust_version(versions: &Option<Vec<CratesVersion>>) -> Option<String> {
-    versions
-        .as_ref()
-        .and_then(|v| v.first())
-        .and_then(|ver| ver.rust_version.clone())
 }
 
 pub fn calculate_crates_health_score(
