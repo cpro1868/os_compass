@@ -174,22 +174,26 @@ pub fn extract_source_id(url: &str, platform: Platform) -> Option<String> {
             let url_lower = url.to_lowercase();
             if url_lower.contains("npmjs.com") || url_lower.contains("registry.npmjs") {
                 if let Some(idx) = url_lower.rfind("package/") {
-                    let name = &url[idx + 8..];
-                    let name = name.trim_end_matches('/');
-                    if !name.is_empty() && !name.contains('/') {
+                    // 保留 scoped 包完整名（@scope/name），剥查询串与尾斜杠
+                    let name = url[idx + 8..].split(['?', '#']).next().unwrap_or("").trim_end_matches('/');
+                    if !name.is_empty() {
                         return Some(name.to_string());
                     }
                 }
-                let parts: Vec<&str> = url.split('/').collect();
-                if let Some(name) = parts.last() {
-                    let name = name.trim_end_matches('/');
+                // registry 直链：https://registry.npmjs.org/<name>
+                if let Some(idx) = url_lower.find("registry.npmjs.org/") {
+                    let name = url[idx + 19..].split(['?', '#']).next().unwrap_or("").trim_end_matches('/');
                     if !name.is_empty() {
                         return Some(name.to_string());
                     }
                 }
             }
-            if !url.contains('/') {
-                return Some(url.trim().to_string());
+            // 裸包名（含 @scope/name）：不含 "://" 即视为包名
+            if !url.contains("://") {
+                let name = url.trim().trim_matches('/');
+                if !name.is_empty() {
+                    return Some(name.to_string());
+                }
             }
             None
         }
@@ -226,5 +230,103 @@ pub fn extract_source_id(url: &str, platform: Platform) -> Option<String> {
             None
         }
         Platform::Unknown => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn github_url() {
+        assert_eq!(
+            extract_source_id("https://github.com/tauri-apps/tauri", Platform::GitHub),
+            Some("tauri-apps/tauri".to_string())
+        );
+        assert_eq!(
+            extract_source_id("https://github.com/tauri-apps/tauri/", Platform::GitHub),
+            Some("tauri-apps/tauri".to_string())
+        );
+    }
+
+    #[test]
+    fn gitee_url() {
+        assert_eq!(
+            extract_source_id("https://gitee.com/oschina/git-osc", Platform::Gitee),
+            Some("oschina/git-osc".to_string())
+        );
+    }
+
+    #[test]
+    fn npm_plain_package() {
+        assert_eq!(
+            extract_source_id("https://www.npmjs.com/package/left-pad", Platform::NPM),
+            Some("left-pad".to_string())
+        );
+    }
+
+    #[test]
+    fn npm_scoped_package() {
+        assert_eq!(
+            extract_source_id("https://www.npmjs.com/package/@types/node", Platform::NPM),
+            Some("@types/node".to_string())
+        );
+        // 裸 scoped 包名
+        assert_eq!(
+            extract_source_id("@types/node", Platform::NPM),
+            Some("@types/node".to_string())
+        );
+        // 带查询串
+        assert_eq!(
+            extract_source_id("https://www.npmjs.com/package/@types/node?activeTab=readme", Platform::NPM),
+            Some("@types/node".to_string())
+        );
+    }
+
+    #[test]
+    fn npm_registry_direct_link() {
+        assert_eq!(
+            extract_source_id("https://registry.npmjs.org/react", Platform::NPM),
+            Some("react".to_string())
+        );
+    }
+
+    #[test]
+    fn npm_bare_name() {
+        assert_eq!(
+            extract_source_id("lodash", Platform::NPM),
+            Some("lodash".to_string())
+        );
+    }
+
+    #[test]
+    fn pypi_url_and_bare_name() {
+        assert_eq!(
+            extract_source_id("https://pypi.org/project/requests/", Platform::PyPI),
+            Some("requests".to_string())
+        );
+        assert_eq!(
+            extract_source_id("requests", Platform::PyPI),
+            Some("requests".to_string())
+        );
+    }
+
+    #[test]
+    fn crates_url_and_bare_name() {
+        assert_eq!(
+            extract_source_id("https://crates.io/crates/serde", Platform::Crates),
+            Some("serde".to_string())
+        );
+        assert_eq!(
+            extract_source_id("serde", Platform::Crates),
+            Some("serde".to_string())
+        );
+    }
+
+    #[test]
+    fn invalid_input_returns_none() {
+        assert_eq!(extract_source_id("", Platform::NPM), None);
+        assert_eq!(extract_source_id("https://example.com/foo", Platform::GitHub), None);
+        assert_eq!(extract_source_id("anything", Platform::Unknown), None);
     }
 }
