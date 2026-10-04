@@ -1,7 +1,7 @@
 use crate::plugins::{extract_source_id, ImportResult, Platform, ProjectData};
 use base64::Engine;
 
-pub async fn fetch_gitee_project(url: &str, token: Option<&str>) -> ImportResult {
+pub async fn fetch_gitee_project(url: &str, token: Option<&str>, proxy: Option<&str>) -> ImportResult {
     let platform = Platform::Gitee;
     let source_id = match extract_source_id(url, platform) {
         Some(id) => id,
@@ -33,7 +33,16 @@ pub async fn fetch_gitee_project(url: &str, token: Option<&str>) -> ImportResult
         owner, repo_name
     );
 
-    let client = reqwest::Client::new();
+    let mut builder = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30));
+    if let Some(p) = proxy {
+        if !p.trim().is_empty() {
+            if let Ok(proxy_obj) = reqwest::Proxy::all(p.trim()) {
+                builder = builder.proxy(proxy_obj);
+            }
+        }
+    }
+    let client = builder.build().unwrap_or_else(|_| reqwest::Client::new());
     
     let mut request = client.get(&api_url)
         .query(&[("owner", owner), ("repo", repo_name)]);

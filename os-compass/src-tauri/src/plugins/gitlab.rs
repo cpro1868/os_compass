@@ -16,12 +16,18 @@ struct GitLabProject {
     last_activity_at: Option<String>,
 }
 
-fn build_client() -> reqwest::Client {
-    reqwest::Client::builder()
+fn build_client(proxy: Option<&str>) -> reqwest::Client {
+    let mut builder = reqwest::Client::builder()
         .user_agent(concat!("os-compass/", env!("CARGO_PKG_VERSION")))
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .unwrap_or_else(|_| reqwest::Client::new())
+        .timeout(std::time::Duration::from_secs(30));
+    if let Some(p) = proxy {
+        if !p.trim().is_empty() {
+            if let Ok(proxy_obj) = reqwest::Proxy::all(p.trim()) {
+                builder = builder.proxy(proxy_obj);
+            }
+        }
+    }
+    builder.build().unwrap_or_else(|_| reqwest::Client::new())
 }
 
 fn err_result(msg: String) -> ImportResult {
@@ -34,13 +40,13 @@ fn err_result(msg: String) -> ImportResult {
     }
 }
 
-pub async fn fetch_gitlab_project(url: &str, token: Option<&str>) -> ImportResult {
+pub async fn fetch_gitlab_project(url: &str, token: Option<&str>, proxy: Option<&str>) -> ImportResult {
     let source_id = match extract_source_id(url, Platform::GitLab) {
         Some(id) => id,
         None => return err_result("Invalid GitLab URL".to_string()),
     };
 
-    let client = build_client();
+    let client = build_client(proxy);
     let api_url = format!(
         "https://gitlab.com/api/v4/projects/{}",
         urlencoding::encode(&source_id)

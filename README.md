@@ -188,6 +188,8 @@ OS-Compass 将“发现项目、理解项目、验证项目、管理项目”整
 
 如需配置 Token：进入 **设置 → 系统变量**，填写 `github_token` / `gitee_token` / `gitlab_token` 即可，所有凭据均以 AES-256-GCM 加密存储在本地系统库中。
 
+**网络代理**：在 **设置 → 系统变量** 中配置 `network_proxy`（如 `http://127.0.0.1:7890`）后，所有平台的 API 请求都会走该代理。GitHub 另有专用变量 `github_proxy`，优先级高于 `network_proxy`（保留给 GitHub 单独走不同出口的场景）；其余平台（Gitee / GitLab / NPM / PyPI / Crates.io）统一使用 `network_proxy`。
+
 ### 一个完整的使用流程
 
 ```text

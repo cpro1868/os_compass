@@ -98,6 +98,7 @@ impl SystemDb {
             INSERT OR IGNORE INTO system_variables (key, encrypted_value, is_secret) VALUES
             ('github_token', '', 1),
             ('github_proxy', '', 0),
+            ('network_proxy', '', 0),
             ('gitee_token', '', 1),
             ('gitlab_token', '', 1)
             "#,

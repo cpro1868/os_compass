@@ -156,7 +156,7 @@ fn fetch_github_releases(url: &str, token: Option<&str>, proxy: Option<&str>) ->
     result
 }
 
-fn fetch_gitee_releases(url: &str, token: Option<&str>) -> Result<Vec<Release>, String> {
+fn fetch_gitee_releases(url: &str, token: Option<&str>, proxy: Option<&str>) -> Result<Vec<Release>, String> {
     let owner_repo = url
         .trim_end_matches('/')
         .trim_end_matches("/releases");
@@ -172,7 +172,18 @@ fn fetch_gitee_releases(url: &str, token: Option<&str>) -> Result<Vec<Release>, 
 
     let runtime = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     let result = runtime.block_on(async {
-        let mut req = reqwest::Client::new()
+        let mut builder = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30));
+        if let Some(p) = proxy {
+            if !p.trim().is_empty() {
+                if let Ok(proxy_obj) = reqwest::Proxy::all(p.trim()) {
+                    builder = builder.proxy(proxy_obj);
+                }
+            }
+        }
+        let mut req = builder
+            .build()
+            .map_err(|e| e.to_string())?
             .get(&api_url);
 
         if let Some(t) = token {
@@ -212,7 +223,7 @@ struct GitLabRelease {
     description: Option<String>,
 }
 
-fn fetch_gitlab_releases(url: &str, token: Option<&str>) -> Result<Vec<Release>, String> {
+fn fetch_gitlab_releases(url: &str, token: Option<&str>, proxy: Option<&str>) -> Result<Vec<Release>, String> {
     let source_id = crate::plugins::extract_source_id(url, crate::plugins::Platform::GitLab)
         .ok_or("Invalid GitLab URL")?;
     let encoded = urlencoding::encode(&source_id);
@@ -220,9 +231,17 @@ fn fetch_gitlab_releases(url: &str, token: Option<&str>) -> Result<Vec<Release>,
 
     let runtime = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     let result = runtime.block_on(async {
-        let mut req = reqwest::Client::builder()
+        let mut builder = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
-            .user_agent(concat!("os-compass/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!("os-compass/", env!("CARGO_PKG_VERSION")));
+        if let Some(p) = proxy {
+            if !p.trim().is_empty() {
+                if let Ok(proxy_obj) = reqwest::Proxy::all(p.trim()) {
+                    builder = builder.proxy(proxy_obj);
+                }
+            }
+        }
+        let mut req = builder
             .build()
             .map_err(|e| e.to_string())?
             .get(&api_url);
@@ -284,16 +303,16 @@ pub fn fetch_releases(project_id: i64) -> Result<Vec<Release>, String> {
     let releases = match platform.as_str() {
         "github" => {
             let token = crate::commands::variables::get_variable_value_internal("github_token");
-            let proxy = crate::commands::variables::get_variable_value_internal("github_proxy");
+            let proxy = crate::commands::variables::get_platform_proxy("github_proxy");
             fetch_github_releases(&url, token.as_deref(), proxy.as_deref())?
         },
         "gitee" => {
             let token = crate::commands::variables::get_variable_value_internal("gitee_token");
-            fetch_gitee_releases(&url, token.as_deref())?
+            fetch_gitee_releases(&url, token.as_deref(), crate::commands::variables::get_network_proxy().as_deref())?
         },
         "gitlab" => {
             let token = crate::commands::variables::get_variable_value_internal("gitlab_token");
-            fetch_gitlab_releases(&url, token.as_deref())?
+            fetch_gitlab_releases(&url, token.as_deref(), crate::commands::variables::get_network_proxy().as_deref())?
         },
         _ => return Err("PLATFORM_NOT_SUPPORTED".to_string()),
     };
