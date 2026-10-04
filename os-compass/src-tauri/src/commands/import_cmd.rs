@@ -1,6 +1,6 @@
 use crate::crawler_service;
 use crate::db::DATABASE;
-use crate::plugins::{self, crawler, gitee, github, npm, pypi, crates, ImportResult, Platform, ProjectData};
+use crate::plugins::{self, crawler, gitee, gitlab, github, npm, pypi, crates, ImportResult, Platform, ProjectData};
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use log;
@@ -136,6 +136,20 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
             let token = input.gitee_token
                 .or_else(|| get_variable_value("gitee_token"));
             let api_result = gitee::fetch_gitee_project(url, token.as_deref()).await;
+            if !api_result.success {
+                let fallback_result = start_crawler_and_fetch(url).await;
+                if fallback_result.success {
+                    fallback_result
+                } else {
+                    api_result
+                }
+            } else {
+                api_result
+            }
+        }
+        Platform::GitLab => {
+            let token = get_variable_value("gitlab_token");
+            let api_result = gitlab::fetch_gitlab_project(url, token.as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {
@@ -285,6 +299,20 @@ pub async fn preview_import(url: String) -> ImportResult {
         Platform::Gitee => {
             let token = get_variable_value("gitee_token");
             let api_result = gitee::fetch_gitee_project(url, token.as_deref()).await;
+            if !api_result.success {
+                let fallback_result = start_crawler_and_fetch(url).await;
+                if fallback_result.success {
+                    fallback_result
+                } else {
+                    api_result
+                }
+            } else {
+                api_result
+            }
+        }
+        Platform::GitLab => {
+            let token = get_variable_value("gitlab_token");
+            let api_result = gitlab::fetch_gitlab_project(url, token.as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {

@@ -2,7 +2,7 @@ use crate::db::DATABASE;
 use std::collections::HashMap;
 use crate::models::{ReadmeVariant, Translation};
 use crate::plugins;
-use crate::plugins::{npm, pypi, crates};
+use crate::plugins::{gitlab, npm, pypi, crates};
 use log;
 
 #[tauri::command]
@@ -29,6 +29,10 @@ pub async fn refresh_project_readme(project_id: i64) -> Result<RefreshReadmeResu
         plugins::Platform::Gitee => {
             let token = crate::commands::variables::get_variable_value_internal("gitee_token");
             crate::plugins::gitee::fetch_gitee_project(&url, token.as_deref()).await
+        }
+        plugins::Platform::GitLab => {
+            let token = crate::commands::variables::get_variable_value_internal("gitlab_token");
+            gitlab::fetch_gitlab_project(&url, token.as_deref()).await
         }
         plugins::Platform::NPM => {
             npm::fetch_npm_project(&url, None).await
