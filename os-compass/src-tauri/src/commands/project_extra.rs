@@ -23,25 +23,25 @@ pub async fn refresh_project_readme(project_id: i64) -> Result<RefreshReadmeResu
     let result = match platform {
         plugins::Platform::GitHub => {
             let token = crate::commands::variables::get_variable_value_internal("github_token");
-            let proxy = crate::commands::variables::get_variable_value_internal("github_proxy");
+            let proxy = crate::commands::variables::get_platform_proxy("github_proxy");
             crate::plugins::github::fetch_github_project(&url, token.as_deref(), proxy.as_deref()).await
         }
         plugins::Platform::Gitee => {
             let token = crate::commands::variables::get_variable_value_internal("gitee_token");
-            crate::plugins::gitee::fetch_gitee_project(&url, token.as_deref()).await
+            crate::plugins::gitee::fetch_gitee_project(&url, token.as_deref(), crate::commands::variables::get_network_proxy().as_deref()).await
         }
         plugins::Platform::GitLab => {
             let token = crate::commands::variables::get_variable_value_internal("gitlab_token");
-            gitlab::fetch_gitlab_project(&url, token.as_deref()).await
+            gitlab::fetch_gitlab_project(&url, token.as_deref(), crate::commands::variables::get_network_proxy().as_deref()).await
         }
         plugins::Platform::NPM => {
-            npm::fetch_npm_project(&url, None).await
+            npm::fetch_npm_project(&url, crate::commands::variables::get_network_proxy().as_deref()).await
         }
         plugins::Platform::PyPI => {
-            pypi::fetch_pypi_project(&url, None).await
+            pypi::fetch_pypi_project(&url, crate::commands::variables::get_network_proxy().as_deref()).await
         }
         plugins::Platform::Crates => {
-            crates::fetch_crates_project(&url, None).await
+            crates::fetch_crates_project(&url, crate::commands::variables::get_network_proxy().as_deref()).await
         }
         plugins::Platform::Unknown => {
             return Err("不支持的平台，无法刷新 README".to_string());

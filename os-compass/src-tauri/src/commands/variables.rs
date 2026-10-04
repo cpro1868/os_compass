@@ -95,6 +95,18 @@ pub fn get_variable_value_internal(key: &str) -> Option<String> {
     system_db::get_system_variable(key)
 }
 
+/// 统一网络代理：所有平台默认走此代理（系统变量 network_proxy）。
+pub fn get_network_proxy() -> Option<String> {
+    get_variable_value_internal("network_proxy").filter(|s| !s.trim().is_empty())
+}
+
+/// 平台代理解析：平台专用代理优先，未配置或为空时回落到统一网络代理。
+pub fn get_platform_proxy(specific_key: &str) -> Option<String> {
+    get_variable_value_internal(specific_key)
+        .filter(|s| !s.trim().is_empty())
+        .or_else(get_network_proxy)
+}
+
 /// 将旧版仓库库 system_variables 中的非空变量合并进系统库。
 /// 仅当系统库中该 key 不存在或为空时合并，不覆盖系统库已有配置。
 /// 仓库库表不存在（新仓库）时静默跳过。

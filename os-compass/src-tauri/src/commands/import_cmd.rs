@@ -119,7 +119,7 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
         Platform::GitHub => {
             let token = input.github_token
                 .or_else(|| get_variable_value("github_token"));
-            let proxy = get_variable_value("github_proxy");
+            let proxy = crate::commands::variables::get_platform_proxy("github_proxy");
             let api_result = github::fetch_github_project(url, token.as_deref(), proxy.as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
@@ -135,7 +135,7 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
         Platform::Gitee => {
             let token = input.gitee_token
                 .or_else(|| get_variable_value("gitee_token"));
-            let api_result = gitee::fetch_gitee_project(url, token.as_deref()).await;
+            let api_result = gitee::fetch_gitee_project(url, token.as_deref(), crate::commands::variables::get_network_proxy().as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {
@@ -149,7 +149,7 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
         }
         Platform::GitLab => {
             let token = get_variable_value("gitlab_token");
-            let api_result = gitlab::fetch_gitlab_project(url, token.as_deref()).await;
+            let api_result = gitlab::fetch_gitlab_project(url, token.as_deref(), crate::commands::variables::get_network_proxy().as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {
@@ -162,7 +162,7 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
             }
         }
         Platform::NPM => {
-            let api_result = npm::fetch_npm_project(url, None).await;
+            let api_result = npm::fetch_npm_project(url, crate::commands::variables::get_network_proxy().as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {
@@ -175,7 +175,7 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
             }
         }
         Platform::PyPI => {
-            let api_result = pypi::fetch_pypi_project(url, None).await;
+            let api_result = pypi::fetch_pypi_project(url, crate::commands::variables::get_network_proxy().as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {
@@ -188,7 +188,7 @@ pub async fn import_project(input: ImportInput) -> ImportResponse {
             }
         }
         Platform::Crates => {
-            let api_result = crates::fetch_crates_project(url, None).await;
+            let api_result = crates::fetch_crates_project(url, crate::commands::variables::get_network_proxy().as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {
@@ -314,7 +314,7 @@ pub async fn preview_import(url: String) -> ImportResult {
     match plugins::identify_platform(url) {
         Platform::GitHub => {
             let token = get_variable_value("github_token");
-            let proxy = get_variable_value("github_proxy");
+            let proxy = crate::commands::variables::get_platform_proxy("github_proxy");
             let api_result = github::fetch_github_project(url, token.as_deref(), proxy.as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
@@ -329,7 +329,7 @@ pub async fn preview_import(url: String) -> ImportResult {
         }
         Platform::Gitee => {
             let token = get_variable_value("gitee_token");
-            let api_result = gitee::fetch_gitee_project(url, token.as_deref()).await;
+            let api_result = gitee::fetch_gitee_project(url, token.as_deref(), crate::commands::variables::get_network_proxy().as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {
@@ -343,7 +343,7 @@ pub async fn preview_import(url: String) -> ImportResult {
         }
         Platform::GitLab => {
             let token = get_variable_value("gitlab_token");
-            let api_result = gitlab::fetch_gitlab_project(url, token.as_deref()).await;
+            let api_result = gitlab::fetch_gitlab_project(url, token.as_deref(), crate::commands::variables::get_network_proxy().as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {
@@ -356,7 +356,7 @@ pub async fn preview_import(url: String) -> ImportResult {
             }
         }
         Platform::NPM => {
-            let api_result = npm::fetch_npm_project(url, None).await;
+            let api_result = npm::fetch_npm_project(url, crate::commands::variables::get_network_proxy().as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {
@@ -369,7 +369,7 @@ pub async fn preview_import(url: String) -> ImportResult {
             }
         }
         Platform::PyPI => {
-            let api_result = pypi::fetch_pypi_project(url, None).await;
+            let api_result = pypi::fetch_pypi_project(url, crate::commands::variables::get_network_proxy().as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {
@@ -382,7 +382,7 @@ pub async fn preview_import(url: String) -> ImportResult {
             }
         }
         Platform::Crates => {
-            let api_result = crates::fetch_crates_project(url, None).await;
+            let api_result = crates::fetch_crates_project(url, crate::commands::variables::get_network_proxy().as_deref()).await;
             if !api_result.success {
                 let fallback_result = start_crawler_and_fetch(url).await;
                 if fallback_result.success {
