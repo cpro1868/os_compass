@@ -12,6 +12,7 @@ struct PyPIInfo {
     name: String,
     version: String,
     summary: Option<String>,
+    description: Option<String>,
     home_page: Option<String>,
     project_urls: Option<serde_json::Value>,
     license: Option<String>,
@@ -129,7 +130,7 @@ pub async fn fetch_pypi_project(url: &str, proxy: Option<&str>) -> ImportResult 
         homepage,
         latest_commit: None,
         latest_release: Some(package.info.version.clone()),
-        readme_content: None,
+        readme_content: package.info.description.clone(),
     };
 
     ImportResult {

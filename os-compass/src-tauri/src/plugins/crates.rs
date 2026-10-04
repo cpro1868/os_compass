@@ -116,6 +116,8 @@ pub async fn fetch_crates_project(url: &str, proxy: Option<&str>) -> ImportResul
     let latest_version = crate_data.crate_info.max_version.clone();
     let rust_version = get_latest_rust_version(&crate_data.versions);
 
+    let readme_content = fetch_crates_readme(crate_name, &latest_version, &client).await;
+
     let project_data = ProjectData {
         name: crate_data.crate_info.name.clone(),
         url: format!("https://crates.io/crates/{}", crate_name),
@@ -130,7 +132,7 @@ pub async fn fetch_crates_project(url: &str, proxy: Option<&str>) -> ImportResul
         homepage,
         latest_commit: rust_version,
         latest_release: Some(latest_version),
-        readme_content: None,
+        readme_content,
     };
 
     ImportResult {
@@ -139,6 +141,19 @@ pub async fn fetch_crates_project(url: &str, proxy: Option<&str>) -> ImportResul
         error: None,
         project_data: Some(project_data),
         readme_variants: None,
+    }
+}
+
+async fn fetch_crates_readme(crate_name: &str, version: &str, client: &reqwest::Client) -> Option<String> {
+    let readme_url = format!(
+        "https://crates.io/api/v1/crates/{}/{}/readme",
+        urlencoding::encode(crate_name),
+        urlencoding::encode(version)
+    );
+
+    match client.get(&readme_url).send().await {
+        Ok(resp) if resp.status().is_success() => resp.text().await.ok().filter(|t| !t.trim().is_empty()),
+        _ => None,
     }
 }
 
