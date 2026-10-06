@@ -39,6 +39,15 @@ fn extract_link_from_href(xml: &str) -> Option<String> {
         .map(|m| m.as_str().to_string())
 }
 
+/// 将 RSS 正文 HTML 中的 <img> 标签转换为 Markdown 图片语法，
+/// 避免图片被丢弃，同时让前端可以识别并渲染缩略图。
+fn html_imgs_to_markdown(html: &str) -> String {
+    let img_re = regex::Regex::new(r#"<img[^>]+src=["']([^"']+)["'][^>]*/?>"#).unwrap();
+    img_re.replace_all(html, "
+![img]($1)
+").to_string()
+}
+
 fn extract_rss_items(xml: &str) -> Vec<RawContent> {
     let mut results = Vec::new();
 
@@ -71,7 +80,8 @@ fn extract_rss_items(xml: &str) -> Vec<RawContent> {
                     let content = extract_cdata(item_content, "description")
                         .or_else(|| extract_cdata(item_content, "content:encoded"))
                         .or_else(|| extract_text(item_content, "description"))
-                        .or_else(|| extract_text(item_content, "content:encoded"));
+                        .or_else(|| extract_text(item_content, "content:encoded"))
+                        .map(|c| html_imgs_to_markdown(&c));
 
                     let published_at = extract_text(item_content, "pubDate")
                         .or_else(|| extract_text(item_content, "published"))

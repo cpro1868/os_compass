@@ -61,64 +61,77 @@ impl TelegramAdapter {
             .map(|dt| dt.with_timezone(&chrono::Utc))
     }
 
-    fn extract_messages(&self, html: &str, time_range: Option<&str>, first_page: bool) -> (Vec<RawContent>, Option<i64>, bool) {
-        let decoded = self.decode_html_entities(html);
-        
-        // 提取所有消息ID
-        let msg_id_re = Regex::new(r#"data-post="[^/]+/(\d+)""#).unwrap();
-        let msg_ids: Vec<i64> = msg_id_re.captures_iter(&decoded)
-            .filter_map(|cap| cap[1].parse().ok())
-            .collect();
-        
-        // 提取所有时间（按 HTML 顺序）
-        let time_re = Regex::new(r#"<time datetime="([^"]+)""#).unwrap();
-        let all_times: Vec<String> = time_re.captures_iter(&decoded)
+    /// 提取正文中的链接。正文字符集排除 @，避免把链接后面紧跟的
+    /// Telegram 用户名（如 https://pan.quark.cn/s/xxx@meiriyishu）吞进 URL。
+    fn extract_urls(text: &str) -> Vec<String> {
+        let url_re = Regex::new(r#"https?://[^\s<>"'@]+[^<>\s.,;:!?@。，；：！？”）】]"#).unwrap();
+        url_re.find_iter(text)
+            .filter_map(|m| {
+                let url = m.as_str();
+                if url.contains("telegram.org") || url.contains("t.me/iyouport") {
+                    None
+                } else {
+                    Some(url.to_string())
+                }
+            })
+            .collect()
+    }
+
+    /// 提取消息块中的图片：照片/视频缩略图（background-image 形式）。
+    /// 消息正文里的 <img> 是 emoji 表情，不属于内容图片，不提取。
+    fn extract_images(block: &str) -> Vec<String> {
+        let wrap_re = Regex::new(r#"tgme_widget_message_(?:photo|video)_wrap[^>]*?background-image:url\('([^']+)'\)"#).unwrap();
+        wrap_re.captures_iter(block)
             .map(|cap| cap[1].to_string())
-            .collect();
-        
-        // 确定翻页用的 ID（最小ID = 最旧的消息）
-        let next_last_id = msg_ids.iter().min().copied();
-        
-        // 确定时间范围
-        let max_seconds = Self::get_time_range_seconds(time_range);
-        
-        // HTML 中顺序是：旧的在前，新的在后
-        // first_page = true 时，all_times[0] 是最旧的，all_times[last] 是最新的
-        
-        // 提取消息内容
+            .collect()
+    }
+
+    fn extract_messages(&self, html: &str, time_range: Option<&str>, _first_page: bool) -> (Vec<RawContent>, Option<i64>, bool) {
+        let decoded = self.decode_html_entities(html);
+
+        // 按消息块切分；类名前缀需排除 tgme_widget_message_date 等衍生类名。
+        // Rust regex 不支持 lookahead，改为先找所有块起始位置再切片。
+        let marker_re = Regex::new(r#"<div class="tgme_widget_message[\s"]"#).unwrap();
+        let starts: Vec<usize> = marker_re.find_iter(&decoded).map(|m| m.start()).collect();
+        let msg_id_re = Regex::new(r#"data-post="[^/]+/(\d+)""#).unwrap();
+        let time_re = Regex::new(r#"<time datetime="([^"]+)""#).unwrap();
         let text_re = Regex::new(r#"class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)</div>"#).unwrap();
+
+        let max_seconds = Self::get_time_range_seconds(time_range);
+
         let mut results = Vec::new();
-        let mut earliest_time_in_page: Option<chrono::DateTime<chrono::Utc>> = None;
+        let mut all_msg_ids: Vec<i64> = Vec::new();
         let mut exceeds_range = false;
-        
-        // 时间数组的索引
-        let mut time_idx = 0;
-        
-        for cap in text_re.captures_iter(&decoded) {
-            let raw_text = &cap[1];
-            let text = self.strip_html_tags(raw_text);
-            
-            if text.len() < 10 {
+
+        // HTML 中顺序是：旧的在前，新的在后
+        for (i, &start) in starts.iter().enumerate() {
+            let end = starts.get(i + 1).copied().unwrap_or(decoded.len());
+            let block = &decoded[start..end];
+
+            if let Some(id_cap) = msg_id_re.captures(block) {
+                if let Ok(id) = id_cap[1].parse::<i64>() {
+                    all_msg_ids.push(id);
+                }
+            }
+
+            let text = text_re.captures(block)
+                .map(|c| self.strip_html_tags(&c[1]))
+                .unwrap_or_default();
+            let images = Self::extract_images(block);
+
+            // 纯图片消息（正文过短但有图）也保留
+            if text.len() < 10 && images.is_empty() {
                 continue;
             }
-            
-            // 获取对应的时间
-            let published_at = if time_idx < all_times.len() {
-                let utc_time = &all_times[time_idx];
-                if let Some(dt) = Self::parse_rfc3339(utc_time) {
-                    earliest_time_in_page = Some(dt);
-                    Some(dt.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S").to_string())
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
-            time_idx += 1;
-            
+
+            let msg_dt = time_re.captures(block).and_then(|c| Self::parse_rfc3339(&c[1]));
+            let published_at = msg_dt.map(|dt| {
+                dt.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S").to_string()
+            });
+
             // 时间范围检查
             if let Some(max_sec) = max_seconds {
-                if let Some(ref dt) = earliest_time_in_page {
+                if let Some(ref dt) = msg_dt {
                     let now = chrono::Utc::now();
                     let diff = now.signed_duration_since(*dt);
                     if diff.num_seconds() > max_sec {
@@ -127,38 +140,49 @@ impl TelegramAdapter {
                     }
                 }
             }
-            
-            // 提取链接
-            let url_re = Regex::new(r#"https?://[^\s<>"']+[^<>\s.,;:!?]""#).unwrap();
-            let urls: Vec<String> = url_re.find_iter(&text)
-                .filter_map(|m| {
-                    let url = m.as_str();
-                    if url.contains("telegram.org") || url.contains("t.me/iyouport") {
-                        None
-                    } else {
-                        Some(url.to_string())
-                    }
-                })
-                .collect();
-            
-            // 标题取第一行
+
+            let urls = Self::extract_urls(&text);
+
+            // 标题取第一行；纯图片消息退化为图片地址，避免空标题被去重合并
             let title = text.lines()
                 .next()
                 .map(|l| l.chars().take(80).collect::<String>())
-                .unwrap_or_default();
-            
+                .filter(|l| !l.is_empty())
+                .unwrap_or_else(|| images.first().cloned().unwrap_or_default());
+
+            // 图片以 Markdown 语法附在正文末尾，前端识别后渲染缩略图
+            let content = if images.is_empty() {
+                text.clone()
+            } else {
+                let img_md = images.iter()
+                    .map(|u| format!("![]({})", u))
+                    .collect::<Vec<_>>()
+                    .join("
+");
+                if text.is_empty() {
+                    img_md
+                } else {
+                    format!("{}
+
+{}", text, img_md)
+                }
+            };
+
             results.push(RawContent {
                 title,
                 url: urls.join(", "),
-                content: Some(text),
+                content: Some(content),
                 published_at,
             });
-            
+
             if results.len() >= 30 {
                 break;
             }
         }
-        
+
+        // 翻页用的 ID（最小ID = 最旧的消息），不受时间过滤影响
+        let next_last_id = all_msg_ids.iter().min().copied();
+
         (results, next_last_id, exceeds_range)
     }
 
@@ -304,5 +328,73 @@ impl SourceAdapter for TelegramAdapter {
 
         log::debug!("[telegram] Total: {} messages", all_results.len());
         Ok(all_results)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_urls_splits_trailing_telegram_mention() {
+        let text = "每日一书 分享 https://pan.quark.cn/s/e0ea9b70ef05@meiriyishu 欢迎关注";
+        let urls = TelegramAdapter::extract_urls(text);
+        assert_eq!(urls, vec!["https://pan.quark.cn/s/e0ea9b70ef05".to_string()]);
+    }
+
+    #[test]
+    fn extract_urls_keeps_multiple_clean_urls() {
+        let text = "项目地址 https://github.com/foo/bar 和镜像 https://gitee.com/foo/bar。";
+        let urls = TelegramAdapter::extract_urls(text);
+        assert_eq!(urls, vec![
+            "https://github.com/foo/bar".to_string(),
+            "https://gitee.com/foo/bar".to_string(),
+        ]);
+    }
+
+    #[test]
+    fn extract_urls_filters_telegram_org() {
+        let text = "见 https://telegram.org/blog 和 https://example.com/a";
+        let urls = TelegramAdapter::extract_urls(text);
+        assert_eq!(urls, vec!["https://example.com/a".to_string()]);
+    }
+
+    #[test]
+    fn extract_images_from_photo_wrap() {
+        let block = r#"<a class="tgme_widget_message_photo_wrap" style="width:1200px;padding-top:56.3%;background-image:url('https://cdn4.cdn-telegram.org/file/abc123.jpg')"></a>"#;
+        let imgs = TelegramAdapter::extract_images(block);
+        assert_eq!(imgs, vec!["https://cdn4.cdn-telegram.org/file/abc123.jpg".to_string()]);
+    }
+
+    #[test]
+    fn extract_images_multiple_and_ignore_userpic() {
+        let block = r#"<div class="tgme_widget_message_userpic"><i style="background-image:url('https://cdn4.cdn-telegram.org/file/avatar.jpg')"></i></div>
+<a class="tgme_widget_message_photo_wrap" style="background-image:url('https://cdn1.cdn-telegram.org/file/p1.jpg')"></a>
+<a class="tgme_widget_message_photo_wrap" style="background-image:url('https://cdn1.cdn-telegram.org/file/p2.jpg')"></a>"#;
+        let imgs = TelegramAdapter::extract_images(block);
+        assert_eq!(imgs, vec![
+            "https://cdn1.cdn-telegram.org/file/p1.jpg".to_string(),
+            "https://cdn1.cdn-telegram.org/file/p2.jpg".to_string(),
+        ]);
+    }
+
+    #[test]
+    fn extract_messages_keeps_image_only_message() {
+        let html = r#"<div class="tgme_widget_message js-widget_message" data-post="chan/101"><div class="tgme_widget_message_text"></div><a class="tgme_widget_message_photo_wrap" style="background-image:url('https://cdn4.cdn-telegram.org/file/pic.jpg')"></a><time datetime="2099-01-01T00:00:00+00:00"></time></div>"#;
+        let adapter = TelegramAdapter::new();
+        let (results, next_id, _) = adapter.extract_messages(html, None, true);
+        assert_eq!(next_id, Some(101));
+        assert_eq!(results.len(), 1);
+        assert!(results[0].content.as_deref().unwrap().contains("![](https://cdn4.cdn-telegram.org/file/pic.jpg)"));
+        assert_eq!(results[0].title, "https://cdn4.cdn-telegram.org/file/pic.jpg");
+    }
+
+    #[test]
+    fn extract_messages_splits_mention_from_url_in_text() {
+        let html = r#"<div class="tgme_widget_message js-widget_message" data-post="chan/102"><div class="tgme_widget_message_text">每日一书推荐 https://pan.quark.cn/s/e0ea9b70ef05@meiriyishu</div><time datetime="2099-01-01T00:00:00+00:00"></time></div>"#;
+        let adapter = TelegramAdapter::new();
+        let (results, _, _) = adapter.extract_messages(html, None, true);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].url, "https://pan.quark.cn/s/e0ea9b70ef05");
     }
 }
