@@ -46,6 +46,26 @@ impl TelegramAdapter {
         result.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 
+    /// 将消息 HTML 中的 <a> 链接转换为保留边界的文本形式，避免剥标签后
+    /// URL 与紧随其后的文本（如 "AI探索"）粘连丢失边界：
+    /// - t.me 的 @/# 提及 → 只保留锚文本
+    /// - 锚文本与 href 相同（客户端自动链接的 URL）→ 两侧补空格
+    /// - 其他 → Markdown 链接 [锚文本](href)
+    fn html_links_to_text(&self, html: &str) -> String {
+        let a_re = Regex::new(r#"<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)</a>"#).unwrap();
+        a_re.replace_all(html, |caps: &regex::Captures| {
+            let href = caps[1].trim();
+            let inner = self.strip_html_tags(&caps[2]);
+            if href.contains("t.me/") && (inner.starts_with('@') || inner.starts_with('#')) {
+                return inner;
+            }
+            if inner == href {
+                return format!(" {} ", href);
+            }
+            format!("[{}]({})", inner, href)
+        }).to_string()
+    }
+
     fn get_time_range_seconds(time_range: Option<&str>) -> Option<i64> {
         match time_range {
             Some("1d") => Some(86400),
@@ -64,7 +84,7 @@ impl TelegramAdapter {
     /// 提取正文中的链接。正文字符集排除 @，避免把链接后面紧跟的
     /// Telegram 用户名（如 https://pan.quark.cn/s/xxx@meiriyishu）吞进 URL。
     fn extract_urls(text: &str) -> Vec<String> {
-        let url_re = Regex::new(r#"https?://[^\s<>"'@]+[^<>\s.,;:!?@。，；：！？”）】]"#).unwrap();
+        let url_re = Regex::new(r#"https?://[^\s<>"'@\u{3000}-\u{30ff}\u{3400}-\u{4dbf}\u{4e00}-\u{9fff}\uff00-\uffef]+[^<>\s.,;:!?@)。，；：！？”）】\u{3000}-\u{30ff}\u{3400}-\u{4dbf}\u{4e00}-\u{9fff}\uff00-\uffef]"#).unwrap();
         url_re.find_iter(text)
             .filter_map(|m| {
                 let url = m.as_str();
@@ -115,7 +135,7 @@ impl TelegramAdapter {
             }
 
             let text = text_re.captures(block)
-                .map(|c| self.strip_html_tags(&c[1]))
+                .map(|c| self.strip_html_tags(&self.html_links_to_text(&c[1])))
                 .unwrap_or_default();
             let images = Self::extract_images(block);
 
@@ -387,6 +407,33 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert!(results[0].content.as_deref().unwrap().contains("![](https://cdn4.cdn-telegram.org/file/pic.jpg)"));
         assert_eq!(results[0].title, "https://cdn4.cdn-telegram.org/file/pic.jpg");
+    }
+
+    #[test]
+    fn extract_urls_stops_at_cjk() {
+        let text = "项目地址 https://example.com/abc探索频道 欢迎关注";
+        let urls = TelegramAdapter::extract_urls(text);
+        assert_eq!(urls, vec!["https://example.com/abc".to_string()]);
+    }
+
+    #[test]
+    fn extract_messages_uses_anchor_boundary_for_url() {
+        // Telegram 自动链接的 URL 在 HTML 中是 <a> 标签，边界以标签为准：
+        // VoiceStudio 是链接，后面的 "AI探索" 是正文
+        let html = r#"<div class="tgme_widget_message js-widget_message" data-post="chan/103"><div class="tgme_widget_message_text">推荐 <a href="https://github.com/debpalash/VoiceStudio">https://github.com/debpalash/VoiceStudio</a>AI探索 项目</div><time datetime="2099-01-01T00:00:00+00:00"></time></div>"#;
+        let adapter = TelegramAdapter::new();
+        let (results, _, _) = adapter.extract_messages(html, None, true);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].url, "https://github.com/debpalash/VoiceStudio");
+        let content = results[0].content.as_deref().unwrap();
+        assert!(content.contains("https://github.com/debpalash/VoiceStudio AI探索"));
+    }
+
+    #[test]
+    fn html_links_to_text_keeps_mention_text_only() {
+        let adapter = TelegramAdapter::new();
+        let out = adapter.html_links_to_text(r#"链接 <a href="https://t.me/meiriyishu">@meiriyishu</a> 尾"#);
+        assert_eq!(out, "链接 @meiriyishu 尾");
     }
 
     #[test]
