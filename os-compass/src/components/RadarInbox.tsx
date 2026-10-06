@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { listRadarSources, addRadarSource, updateRadarSource, deleteRadarSource, getRadarItems, triggerRadarScan, radarItemAction, clearRadarAll, getSupportedPlatformDomains, RadarSource, RadarItem, RadarSourceInput, getRadarSchedule, updateRadarSchedule, RadarSchedule, RadarScheduleUpdate } from '../api/radar';
 import { useToastStore } from '../stores/toastStore';
@@ -146,8 +146,9 @@ export function RadarInbox() {
 
   const findSupportedUrls = (description: string | null): string[] => {
     if (!description || supportedDomains.length === 0) return [];
-    const urlRegex = /https?:\/\/[^\s<>"']+/g;
-    const matches = description.match(urlRegex) || [];
+    const urlRegex = /https?:\/\/[^\s<>"'@]+/g;
+    const matches = (description.match(urlRegex) || [])
+      .map((u) => u.replace(/[.,;:!?。，；：！？”）】\]]+$/, ""));
     return matches.filter(url => {
       const lower = url.toLowerCase();
       return supportedDomains.some(domain => lower.includes(domain.toLowerCase()));
@@ -403,17 +404,48 @@ export function RadarInbox() {
     }
   };
 
-  const highlightLinks = (text: string) => {
-    const urlRegex = /(https?:\/\/[^\s<]+)/g;
+  const highlightLinks = (text: string, keyPrefix = "") => {
+    // 字符集排除 @：避免把 URL 后紧跟的 Telegram 用户名（如 url@channel）吞进链接
+    const urlRegex = /(https?:\/\/[^\s<>"'@]+)/g;
+    const urlTest = /^https?:\/\/[^\s<>"'@]+$/;
     const parts = text.split(urlRegex);
-    return parts.map((part, i) =>
-      urlRegex.test(part) ? (
-        <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+    return parts.flatMap((part, i) => {
+      if (!urlTest.test(part)) return [part];
+      // 剥掉尾随中英文标点（如 。，）】），它们不属于链接本身
+      const m = part.match(/^(.*?)([.,;:!?。，；：！？”）】\]]+)$/);
+      const url = m ? m[1] : part;
+      const tail = m ? m[2] : "";
+      return [
+        <a key={`${keyPrefix}${i}`} href={url} target="_blank" rel="noopener noreferrer"
           className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">
-          {part}
+          {url}
+        </a>,
+        tail,
+      ];
+    });
+  };
+
+  // 识别正文中的 Markdown 图片语法 ![](url) 并渲染为缩略图，其余文本走链接高亮
+  const renderContent = (text: string) => {
+    const imgRegex = /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g;
+    const parts: ReactNode[] = [];
+    let last = 0;
+    for (const m of text.matchAll(imgRegex)) {
+      if (m.index > last) {
+        parts.push(...highlightLinks(text.slice(last, m.index), `t${last}-`));
+      }
+      parts.push(
+        <a key={`img${m.index}`} href={m[2]} target="_blank" rel="noopener noreferrer">
+          <img src={m[2]} alt={m[1] || "image"} loading="lazy"
+            className="mt-1.5 max-h-48 rounded-lg border border-gray-200 dark:border-gray-700 hover:opacity-90" />
         </a>
-      ) : part
-    );
+      );
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) {
+      parts.push(...highlightLinks(text.slice(last), `t${last}-`));
+    }
+    return parts;
   };
 
   const detectSourceType = (url: string): string => {
@@ -726,12 +758,12 @@ export function RadarInbox() {
                               </button>
                             </div>
                             <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                              {highlightLinks(translatedContent[item.id])}
+                              {renderContent(translatedContent[item.id])}
                             </p>
                           </div>
                         ) : (
                           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
-                            {highlightLinks(item.description || t('radar.noDescription'))}
+                            {renderContent(item.description || t('radar.noDescription'))}
                           </p>
                         )}
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
