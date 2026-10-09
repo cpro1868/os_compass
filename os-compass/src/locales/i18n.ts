@@ -21,7 +21,8 @@ i18n
       escapeValue: false,
     },
     detection: {
-      order: ["localStorage", "navigator"],
+      // 不探测浏览器/系统语言：产品默认中文，用户切换后由 localStorage 记住
+      order: ["localStorage"],
       caches: ["localStorage"],
     },
   });

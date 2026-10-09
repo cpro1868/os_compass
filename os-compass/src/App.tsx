@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import "./locales/i18n";
+import i18n from "./locales/i18n";
 import { useAppStore } from "./stores/appStore";
 import { useTheme } from "./hooks/useTheme";
 import { getSettings } from "./api";
@@ -45,7 +45,12 @@ function App() {
   const [theme, setTheme] = useState<string>("dark");
 
   useEffect(() => {
-    getSettings().then((s) => setTheme(s.theme)).catch(() => {});
+    getSettings().then((s) => {
+      setTheme(s.theme);
+      if (s.default_language && s.default_language !== i18n.language) {
+        i18n.changeLanguage(s.default_language);
+      }
+    }).catch(() => {});
   }, []);
 
   useTheme(theme);
