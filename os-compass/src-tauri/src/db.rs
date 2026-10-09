@@ -265,8 +265,7 @@ CREATE TABLE IF NOT EXISTS project_releases (
 CREATE INDEX IF NOT EXISTS idx_projects_category ON projects(category_id);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(lifecycle_status, data_status);
 CREATE INDEX IF NOT EXISTS idx_project_notes_project ON project_notes(project_id);
-CREATE INDEX IF NOT EXISTS idx_variables_secret ON system_variables(is_secret);
-CREATE INDEX IF NOT EXISTS idx_plugins_enabled ON source_plugins(enabled);
+-- NOTE: idx_variables_secret / idx_plugins_enabled 已随表迁至 system_settings.db（V2.0），不可在此创建（#011）
 CREATE INDEX IF NOT EXISTS idx_releases_project ON project_releases(project_id);
 CREATE INDEX IF NOT EXISTS idx_releases_published ON project_releases(published_at DESC);
 
