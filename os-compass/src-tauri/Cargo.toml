@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "os-compass"
 version = "0.2.0"
 description = "OS-Compass: 开源项目全生命周期管理与决策系统"
@@ -33,7 +33,7 @@ async-trait = "0.1"
 sha2 = "0.10"
 hex = "0.4"
 regex = "1"
-zip = "2"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 walkdir = "2"
 once_cell = "1"
 encoding_rs = "0.8"
