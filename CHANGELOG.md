@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - 安装包缺失 DLL 导致新机无法启动：zip 关闭默认特性移除 liblzma 动态依赖；WebView2Loader.dll 随 NSIS/MSI 安装到 exe 同目录
+- 全新仓库建库失败：删除引用已迁走表（system_variables/source_plugins）的孤儿索引
+- 新机默认英文：i18n 探测去掉 navigator，启动时应用后端 default_language
 
 ## [0.2.0] - 2026-10-09
 
