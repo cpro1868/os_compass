@@ -39,7 +39,8 @@
     },
     "resources": {
       "../../scripts/init_schema.sql": "init_schema.sql",
-      "../../scripts/preset_categories.txt": "preset_categories.txt"
+      "../../scripts/preset_categories.txt": "preset_categories.txt",
+      "resources/WebView2Loader.dll": "WebView2Loader.dll"
     },
     "icon": [
       "icons/32x32.png",
