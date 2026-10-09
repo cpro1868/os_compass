@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- 安装包缺失 DLL 导致新机无法启动：zip 关闭默认特性移除 liblzma 动态依赖；WebView2Loader.dll 随 NSIS/MSI 安装到 exe 同目录
+
 ## [0.2.0] - 2026-10-09
 
 ### Added
