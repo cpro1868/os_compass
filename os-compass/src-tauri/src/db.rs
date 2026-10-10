@@ -21,15 +21,17 @@ impl Database {
     pub fn init_schema(&self) -> Result<()> {
         let conn = self.conn.lock().unwrap();
 
-        // 优先从外部脚本文件加载（exe 同级 scripts/init_schema.sql）
+        // 优先从外部脚本文件加载（exe 同级 scripts/init_schema.sql）；
+        // 外部脚本失败时必须真正回退到内嵌脚本，不能把错误抛给用户（#011 教训）
+        let mut initialized = false;
         if let Some(sql) = load_external_init_script() {
             log::debug!("[db] Initializing schema from external script");
-            conn.execute_batch(&sql).map_err(|e| {
-                log::warn!("[db] External script failed: {}, falling back to embedded", e);
-                e
-            })?;
-        } else {
-            // 兜底：使用内嵌的脚本（防止脚本文件丢失导致无法启动）
+            match conn.execute_batch(&sql) {
+                Ok(_) => initialized = true,
+                Err(e) => log::warn!("[db] External script failed: {}, falling back to embedded", e),
+            }
+        }
+        if !initialized {
             log::debug!("[db] Initializing schema from embedded SQL");
             conn.execute_batch(INIT_SCHEMA_SQL)?;
         }
@@ -127,212 +129,9 @@ fn load_external_init_script() -> Option<String> {
     std::fs::read_to_string(script_path).ok()
 }
 
-/// 内嵌兜底脚本（与 scripts/init_schema.sql 内容一致）
-/// 仅在外部脚本文件丢失时使用，保证程序可启动
-const INIT_SCHEMA_SQL: &str = r#"
-CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    parent_id INTEGER REFERENCES categories(id),
-    sort_order INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-
-CREATE TABLE IF NOT EXISTS tags (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    color TEXT DEFAULT '#6366f1',
-    source TEXT DEFAULT 'user',
-    created_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-
-CREATE TABLE IF NOT EXISTS projects (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    url TEXT,
-    source TEXT NOT NULL,
-    source_id TEXT,
-    description TEXT,
-    languages TEXT,
-    stars INTEGER DEFAULT 0,
-    forks INTEGER DEFAULT 0,
-    open_issues INTEGER DEFAULT 0,
-    license TEXT,
-    homepage TEXT,
-    latest_commit TEXT,
-    latest_release TEXT,
-    readme_content TEXT,
-    readme_lang TEXT DEFAULT 'en',
-    health_score REAL,
-    ai_summary TEXT,
-    ai_use_cases TEXT,
-    ai_risks TEXT,
-    ai_dependencies TEXT,
-    translated_summary TEXT,
-    translated_use_cases TEXT,
-    translated_risks TEXT,
-    translated_dependencies TEXT,
-    translated_description TEXT,
-    readme_translation TEXT,
-    category_id INTEGER REFERENCES categories(id),
-    lifecycle_status TEXT DEFAULT 'TO_EXPLORE',
-    data_status TEXT DEFAULT 'ACTIVE',
-    is_downloaded INTEGER DEFAULT 0,
-    local_path TEXT,
-    runbook TEXT,
-    archived_at TEXT,
-    deleted_at TEXT,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-
-CREATE TABLE IF NOT EXISTS project_tags (
-    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
-    PRIMARY KEY (project_id, tag_id)
-);
-
-CREATE TABLE IF NOT EXISTS project_notes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-
--- NOTE: system_variables and app_settings moved to system_settings.db (V2.0)
-
-CREATE TABLE IF NOT EXISTS project_embeddings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER NOT NULL UNIQUE,
-    embedding BLOB NOT NULL,
-    dimension INTEGER NOT NULL DEFAULT 1536,
-    created_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-CREATE INDEX IF NOT EXISTS idx_embeddings_project ON project_embeddings(project_id);
-
-CREATE TABLE IF NOT EXISTS readme_variants (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER NOT NULL,
-    file_name TEXT NOT NULL,
-    language TEXT NOT NULL,
-    content TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    UNIQUE(project_id, file_name)
-);
-
-CREATE TABLE IF NOT EXISTS translations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER NOT NULL,
-    field_name TEXT NOT NULL,
-    language TEXT NOT NULL,
-    content TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT DEFAULT (datetime('now', 'localtime')),
-    UNIQUE(project_id, field_name, language)
-);
-
-CREATE TABLE IF NOT EXISTS project_clone (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER NOT NULL UNIQUE,
-    cloned_path TEXT,
-    cloned_at TEXT,
-    proxy_enabled INTEGER DEFAULT 0,
-    proxy_protocol TEXT DEFAULT 'http',
-    proxy_host TEXT,
-    proxy_port INTEGER DEFAULT 0,
-    proxy_username TEXT,
-    proxy_password TEXT,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-
-CREATE TABLE IF NOT EXISTS project_releases (
-    id TEXT PRIMARY KEY,
-    project_id INTEGER NOT NULL,
-    tag_name TEXT NOT NULL,
-    published_at TEXT,
-    body TEXT,
-    body_zh TEXT,
-    download_urls TEXT,
-    source TEXT,
-    fetched_at TEXT,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_projects_category ON projects(category_id);
-CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(lifecycle_status, data_status);
-CREATE INDEX IF NOT EXISTS idx_project_notes_project ON project_notes(project_id);
--- NOTE: idx_variables_secret / idx_plugins_enabled 已随表迁至 system_settings.db（V2.0），不可在此创建（#011）
-CREATE INDEX IF NOT EXISTS idx_releases_project ON project_releases(project_id);
-CREATE INDEX IF NOT EXISTS idx_releases_published ON project_releases(published_at DESC);
-
-INSERT OR IGNORE INTO categories (id, name, sort_order) VALUES (1, '未分类', 0);
-
--- NOTE: source_plugins moved to system_settings.db (V2.0)
--- NOTE: system_variables moved to system_settings.db (V2.0)
-
-CREATE TABLE IF NOT EXISTS feature_plugins (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    plugin_type TEXT NOT NULL,
-    enabled INTEGER DEFAULT 0,
-    config TEXT,
-    version TEXT,
-    db_mode TEXT DEFAULT 'none',
-    db_path_template TEXT,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_feature_plugins_enabled ON feature_plugins(enabled);
-
-INSERT OR IGNORE INTO feature_plugins (id, name, plugin_type, enabled, version, db_mode, db_path_template) VALUES
-('radar', '情报雷达', 'radar', 0, '1.0.0', 'vault', '${vault_dir}/plugin_${plugin_id}.db'),
-('search', '意图搜索', 'search', 0, '1.0.0', 'vault', '${vault_dir}/plugin_${plugin_id}.db');
-
--- 向量搜索表（sqlite-vss）
-CREATE TABLE IF NOT EXISTS project_embeddings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER NOT NULL UNIQUE,
-    embedding BLOB NOT NULL,
-    dimension INTEGER NOT NULL DEFAULT 1536,
-    created_at TEXT DEFAULT (datetime('now', 'localtime'))
-);
-CREATE INDEX IF NOT EXISTS idx_embeddings_project ON project_embeddings(project_id);
-
--- 项目探索表组（M24）
-CREATE TABLE IF NOT EXISTS explore_sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    title TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-);
-
-CREATE TABLE IF NOT EXISTS explore_messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id INTEGER NOT NULL REFERENCES explore_sessions(id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK(role IN ('user','assistant')),
-    content TEXT NOT NULL,
-    sources TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-);
-CREATE INDEX IF NOT EXISTS idx_explore_messages_session ON explore_messages(session_id);
-
-CREATE TABLE IF NOT EXISTS project_readme_chunks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    chunk_index INTEGER NOT NULL,
-    content TEXT NOT NULL,
-    embedding TEXT,
-    readme_hash TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-);
-CREATE INDEX IF NOT EXISTS idx_readme_chunks_project ON project_readme_chunks(project_id);
-"#;
+/// 内嵌脚本：编译期从 scripts/init_schema.sql 引入（单一事实来源，禁止双份维护）。
+/// 运行时优先执行 exe 同级 scripts/init_schema.sql（启动时从资源目录同步），失败回退到本常量。
+const INIT_SCHEMA_SQL: &str = include_str!("../../../scripts/init_schema.sql");
 
 pub fn switch_database(path: PathBuf) -> Result<(), String> {
     let db_path_for_log = path.clone();

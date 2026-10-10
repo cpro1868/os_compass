@@ -372,10 +372,12 @@ pub fn run() {
                         let mut project_dir = PROJECT_DIR.lock().unwrap();
                         *project_dir = Some(git_root);
                     }
-                    // 确保 scripts/init_schema.sql 存在于 exe 同级目录
+                    // 同步 scripts/init_schema.sql 到 exe 同级目录。
+                    // 必须每次启动都覆盖：旧版本安装包复制的脚本可能有缺陷（#011），
+                    // 只在不存在时复制会让旧脚本永远残留。
                     let scripts_dir = parent.join("scripts");
                     let target_script = scripts_dir.join("init_schema.sql");
-                    if !target_script.exists() {
+                    {
                         std::fs::create_dir_all(&scripts_dir).ok();
                         // 优先从 Tauri 资源目录复制（安装版）
                         let mut copied = false;
@@ -384,7 +386,7 @@ pub fn run() {
                             if res_script.exists() {
                                 if std::fs::copy(&res_script, &target_script).is_ok() {
                                     copied = true;
-                                    log::info!("Copied init_schema.sql from resource dir");
+                                    log::info!("Synced init_schema.sql from resource dir");
                                 }
                             }
                         }
@@ -394,7 +396,7 @@ pub fn run() {
                                 let dev_script = proj_dir.join("scripts").join("init_schema.sql");
                                 if dev_script.exists() {
                                     if std::fs::copy(&dev_script, &target_script).is_ok() {
-                                        log::info!("Copied init_schema.sql from project dir");
+                                        log::info!("Synced init_schema.sql from project dir");
                                     }
                                 }
                             }
