@@ -73,6 +73,10 @@ checkpoints/
 .claude/
 .opencode/
 *.agent.md
+test_*.rs
+test_*.js
+test_*.ps1
+*.db
 
 # === Sensitive Documentation (per docs/安全工程方法论.md) ===
 # 内部事件记录（含 SEC-* 安全事件、Bug 复盘等）
