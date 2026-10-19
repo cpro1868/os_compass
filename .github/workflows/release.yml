@@ -46,6 +46,7 @@ jobs:
           Write-Host "Checking for leaked secrets or hardcoded endpoints..."
           $violations = @()
           $files = Get-ChildItem -Path @("src", "src-tauri/src") -Recurse -File -Include *.ts, *.tsx, *.rs
+          $files += Get-ChildItem -Path "." -File -Include *.ps1, *.js, *.py, *.sh
           foreach ($f in $files) {
             $content = Get-Content $f.FullName -Raw
             if ($content -match 'sk-[a-zA-Z0-9]{24,}') {
