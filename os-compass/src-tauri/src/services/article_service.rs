@@ -136,7 +136,7 @@ impl ArticleService {
         style: &str,
     ) -> Result<String, String> {
         let readme_excerpt = if readme.len() > 2000 {
-            format!("{}...", &readme[..2000])
+            format!("{}...", Self::truncate_at_char_boundary(&readme, 2000))
         } else {
             readme.to_string()
         };
@@ -165,13 +165,20 @@ impl ArticleService {
             .replace("{word_count}", word_count_text)
             .replace("{style}", style_name);
         
-        let preview = if final_prompt.len() > 2000 {
-            final_prompt[..2000].to_string()
-        } else {
-            final_prompt.clone()
-        };
+        let preview = Self::truncate_at_char_boundary(&final_prompt, 2000);
         log::info!("[Article] Generated prompt (len={}):\n{}", final_prompt.len(), preview);
         
         Ok(final_prompt)
+    }
+
+    fn truncate_at_char_boundary(s: &str, max_bytes: usize) -> &str {
+        if s.len() <= max_bytes {
+            return s;
+        }
+        let mut end = max_bytes;
+        while end > 0 && !s.is_char_boundary(end) {
+            end -= 1;
+        }
+        &s[..end]
     }
 }

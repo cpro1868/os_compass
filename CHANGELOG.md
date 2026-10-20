@@ -5,6 +5,14 @@ All notable changes to OS-Compass are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-10-20
+
+### Fixed
+- 文章生成一直转圈无响应：README 超过 2000 字节时按字节硬切片截在多字节字符中间导致 Rust panic，Tauri 命令永不返回（改为字符边界安全截断）
+- 雷达定时调度时区计算错误：last_run 本地时间被当 UTC 解析，elapsed 下溢为 u64 巨值，导致扫描背靠背无限循环（改为本地朴素时间比较 + 负值钳零）
+- 安全：清除 git 公开历史中泄漏的 API Key（filter-repo 重写历史），CI 安全扫描范围扩大到根目录脚本
+- 依赖治理：补登 react-markdown（幻影依赖导致 CI 干净构建失败）
+
 ## [0.2.1] - 2026-10-14
 
 ### Fixed

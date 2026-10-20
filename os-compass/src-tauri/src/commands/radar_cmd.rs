@@ -564,10 +564,9 @@ async fn scheduler_loop(app: tauri::AppHandle) {
         log::info!("[radar_scheduler] interval={} seconds, last_run={:?}", interval, schedule.last_run_at);
 
         if let Some(last_run) = &schedule.last_run_at {
-            let now = chrono::Local::now();
+            let now = chrono::Local::now().naive_local();
             if let Ok(last) = chrono::NaiveDateTime::parse_from_str(last_run, "%Y-%m-%d %H:%M:%S") {
-                let last_dt = chrono::DateTime::<chrono::Local>::from_naive_utc_and_offset(last, *now.offset());
-                let elapsed = (now - last_dt).num_seconds() as u64;
+                let elapsed = (now - last).num_seconds().max(0) as u64;
                 log::info!("[radar_scheduler] elapsed={} seconds", elapsed);
                 if elapsed < interval {
                     let wait_time = interval - elapsed;
