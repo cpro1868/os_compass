@@ -168,12 +168,14 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
           name: formData.name,
           parent_id: formData.parent_id,
           sort_order: formData.sort_order,
+          explain: formData.explain || null,
         });
       } else {
         await api.createCategory({
           name: formData.name,
           parent_id: formData.parent_id,
           sort_order: formData.sort_order,
+          explain: formData.explain || null,
         });
       }
       setEditingCategory(null);
@@ -204,6 +206,7 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
       sort_order: cat.sort_order || 0,
       explain: cat.explain || "",
     });
+    setShowNewForm(true);
   };
 
   const openNewCategory = (parentId: number | null = null) => {
@@ -683,6 +686,21 @@ export function CategoryManager({ onBack }: CategoryManagerProps) {
               <option value="">{t("category.form.topLevel") || "无（顶级分类）"}</option>
               {renderParentOptions(categories.filter((c) => c.parent_id === null))}
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+              {t("category.form.desc") || "分类说明"}
+            </label>
+            <textarea
+              value={formData.explain}
+              onChange={(e) => setFormData({ ...formData, explain: e.target.value })}
+              rows={3}
+              placeholder={t("category.form.descPlaceholder") || ""}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {t("category.form.descTip") || ""}
+            </p>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
             <button

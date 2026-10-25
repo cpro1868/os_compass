@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS categories (
     name TEXT NOT NULL,
     parent_id INTEGER REFERENCES categories(id),
     sort_order INTEGER DEFAULT 0,
+    explain TEXT,
     created_at TEXT DEFAULT (datetime('now', 'localtime')),
     updated_at TEXT DEFAULT (datetime('now', 'localtime'))
 );

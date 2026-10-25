@@ -5,6 +5,12 @@ All notable changes to OS-Compass are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-10-25
+
+### Fixed
+- 分类管理：点击"编辑"图标无反应（openEditCategory 漏了打开表单弹窗的 setShowNewForm）
+- 分类管理：新增/编辑分类补上设计中的"分类说明"（explain）字段——categories 表加列、老库启动时自动 ALTER TABLE 补列、后端读写贯通、表单渲染说明输入框
+
 ## [0.2.2] - 2026-10-20
 
 ### Fixed

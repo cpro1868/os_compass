@@ -109,6 +109,28 @@ impl Database {
             }
         }
 
+        // 老库补列：SQLite 的 ADD COLUMN 不支持 IF NOT EXISTS，先查 PRAGMA 再加
+        let ensure_columns: [(&str, &str, &str); 1] = [
+            ("categories", "explain", "TEXT"),
+        ];
+        for (table, column, col_type) in &ensure_columns {
+            let exists: bool = conn
+                .prepare(&format!("PRAGMA table_info({})", table))
+                .and_then(|mut s| {
+                    let rows = s.query_map([], |r| r.get::<_, String>(1))?;
+                    Ok(rows.filter_map(|r| r.ok()).collect::<Vec<String>>())
+                })
+                .map(|names| names.iter().any(|n| n == column))
+                .unwrap_or(true);
+            if !exists {
+                log::info!("[db] Adding missing column: {}.{}", table, column);
+                conn.execute(
+                    &format!("ALTER TABLE {} ADD COLUMN {} {}", table, column, col_type),
+                    [],
+                ).ok();
+            }
+        }
+
         Ok(())
     }
 

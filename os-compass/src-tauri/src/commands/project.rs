@@ -250,7 +250,7 @@ pub fn get_categories() -> Result<Vec<Category>, String> {
     let mut stmt = conn
         .prepare(
             "SELECT c.id, c.name, c.parent_id, c.sort_order, c.created_at, c.updated_at, \
-             (SELECT COUNT(*) FROM projects p WHERE p.category_id = c.id AND p.data_status = 'ACTIVE') \
+             (SELECT COUNT(*) FROM projects p WHERE p.category_id = c.id AND p.data_status = 'ACTIVE'), c.explain \
              FROM categories c ORDER BY c.sort_order, c.name",
         )
         .map_err(|e| e.to_string())?;
@@ -261,7 +261,7 @@ pub fn get_categories() -> Result<Vec<Category>, String> {
                 id,
                 name: row.get(1)?,
                 path: format!("/{}", row.get::<_, String>(1).unwrap_or_default()),
-                explain: None,
+                explain: row.get(7).unwrap_or(None),
                 sort_order: row.get(3)?,
                 parent_id: row.get(2)?,
                 is_system: id == 1,
@@ -532,7 +532,7 @@ pub fn get_category(id: i64) -> Result<Option<Category>, String> {
     let mut stmt = conn
         .prepare(
             "SELECT c.id, c.name, c.parent_id, c.sort_order, c.created_at, c.updated_at, \
-             (SELECT COUNT(*) FROM projects p WHERE p.category_id = c.id AND p.data_status = 'ACTIVE') \
+             (SELECT COUNT(*) FROM projects p WHERE p.category_id = c.id AND p.data_status = 'ACTIVE'), c.explain \
              FROM categories c WHERE c.id = ?",
         )
         .map_err(|e| e.to_string())?;
@@ -543,7 +543,7 @@ pub fn get_category(id: i64) -> Result<Option<Category>, String> {
                 id: cid,
                 name: row.get(1)?,
                 path: format!("/{}", row.get::<_, String>(1).unwrap_or_default()),
-                explain: None,
+                explain: row.get(7).unwrap_or(None),
                 sort_order: row.get(3)?,
                 parent_id: row.get(2)?,
                 is_system: cid == 1,
@@ -564,6 +564,7 @@ pub fn create_category(input: serde_json::Value) -> Result<i64, String> {
     let name: String = serde_json::from_value(input.get("name").unwrap_or(&serde_json::Value::Null).clone()).map_err(|e| e.to_string())?;
     let parent_id: Option<i64> = serde_json::from_value(input.get("parent_id").unwrap_or(&serde_json::Value::Null).clone()).ok();
     let sort_order: i32 = serde_json::from_value(input.get("sort_order").unwrap_or(&serde_json::Value::Null).clone()).unwrap_or(0);
+    let explain: Option<String> = serde_json::from_value(input.get("explain").unwrap_or(&serde_json::Value::Null).clone()).ok();
 
     // 系统分类（未分类 id=1）不能作为父分类
     if parent_id == Some(1) {
@@ -571,8 +572,8 @@ pub fn create_category(input: serde_json::Value) -> Result<i64, String> {
     }
 
     conn.execute(
-        "INSERT INTO categories (name, parent_id, sort_order, created_at, updated_at) VALUES (?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))",
-        rusqlite::params![name, parent_id, sort_order],
+        "INSERT INTO categories (name, parent_id, sort_order, explain, created_at, updated_at) VALUES (?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))",
+        rusqlite::params![name, parent_id, sort_order, explain],
     )
     .map_err(|e| e.to_string())?;
     Ok(conn.last_insert_rowid())
@@ -595,8 +596,8 @@ pub fn update_category(input: Category) -> Result<(), String> {
     }
 
     conn.execute(
-        "UPDATE categories SET name = ?, parent_id = ?, sort_order = ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
-        rusqlite::params![input.name, input.parent_id, input.sort_order, input.id],
+        "UPDATE categories SET name = ?, parent_id = ?, sort_order = ?, explain = ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
+        rusqlite::params![input.name, input.parent_id, input.sort_order, input.explain, input.id],
     )
     .map_err(|e| e.to_string())?;
     Ok(())
