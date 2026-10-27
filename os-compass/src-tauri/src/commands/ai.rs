@@ -823,7 +823,7 @@ pub fn clear_translations(id: i64) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn test_llm_connection(provider: String, api_base: String, api_key: String, model: String) -> Result<(), String> {
+pub fn test_llm_connection(provider: String, api_base: String, api_key: String, model: String, proxy_url: Option<String>) -> Result<(), String> {
     if api_key.is_empty() {
         return Err("API Key 不能为空".to_string());
     }
@@ -834,10 +834,14 @@ pub fn test_llm_connection(provider: String, api_base: String, api_key: String, 
         return Err("模型名称不能为空".to_string());
     }
 
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .map_err(|e| e.to_string())?;
+    let mut builder = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(30));
+    if let Some(url) = proxy_url.filter(|u| !u.trim().is_empty()) {
+        let proxy = reqwest::Proxy::all(url.trim())
+            .map_err(|e| format!("代理地址无效: {}", e))?;
+        builder = builder.proxy(proxy);
+    }
+    let client = builder.build().map_err(|e| e.to_string())?;
     
     let url = format!("{}/chat/completions", api_base.trim_end_matches('/'));
 
@@ -858,7 +862,18 @@ pub fn test_llm_connection(provider: String, api_base: String, api_key: String, 
     if response.status().is_success() {
         Ok(())
     } else {
-        Err(format!("API 返回错误: {}", response.status()))
+        let status = response.status();
+        let body = response.text().unwrap_or_default();
+        let snippet: String = body.chars().take(200).collect();
+        if status.as_u16() == 401 {
+            Err("API Key 无效或已过期 (401)".to_string())
+        } else if status.as_u16() == 404 {
+            Err(format!("接口或模型不存在 (404)，请检查 API Base URL 是否以 /v1 结尾、模型名是否正确: {}", snippet))
+        } else if status.as_u16() == 429 {
+            Err("请求频率超限或余额不足 (429)".to_string())
+        } else {
+            Err(format!("API 返回错误 ({}): {}", status, snippet))
+        }
     }
 }
 

@@ -425,7 +425,9 @@ pub fn save_embedding_settings(settings: EmbeddingSettings) -> Result<(), String
 }
 
 #[command]
-pub fn test_embedding_connection() -> Result<bool, String> {
+pub async fn test_embedding_connection() -> Result<bool, String> {
+    // 发送一次真实的 embedding 请求，验证地址/密钥/模型名是否可用
+    crate::embedding::generate_embedding("connection test").await?;
     Ok(true)
 }
 

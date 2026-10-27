@@ -5,6 +5,12 @@ All notable changes to OS-Compass are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-10-27
+
+### Fixed
+- LLM「测试连接」按钮失效：前端误调 `analyze_project(-1)`，后端对不存在的项目返回 `Ok` 导致恒显示成功；改为调用真实的 `test_llm_connection` 命令（发送真实请求，支持 LLM 代理参数，401/404/429 返回具体原因并在界面展示错误详情）
+- Embedding「测试连接」为恒真桩函数：后端 `test_embedding_connection` 改为真实调用一次 `generate_embedding` 验证连通性，失败时界面展示具体错误
+
 ## [0.2.3] - 2026-10-25
 
 ### Fixed

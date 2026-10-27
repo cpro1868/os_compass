@@ -67,6 +67,7 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "failed" | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [variables, setVariables] = useState<SystemVariable[]>([]);
@@ -187,11 +188,22 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
   const handleTestLLM = async () => {
     setTesting(true);
     setTestResult(null);
+    setTestError(null);
     try {
-      await invoke("analyze_project", { id: -1 });
+      const proxyUrl = settings.llm_proxy_enabled && settings.llm_proxy_host
+        ? `${settings.llm_proxy_protocol}://${settings.llm_proxy_username ? `${settings.llm_proxy_username}:${settings.llm_proxy_password}@` : ""}${settings.llm_proxy_host}:${settings.llm_proxy_port}`
+        : null;
+      await invoke("test_llm_connection", {
+        provider: settings.llm_provider,
+        apiBase: settings.llm_api_base,
+        apiKey: settings.llm_api_key,
+        model: settings.llm_model,
+        proxyUrl,
+      });
       setTestResult("success");
-    } catch {
+    } catch (e) {
       setTestResult("failed");
+      setTestError(String(e));
     } finally {
       setTesting(false);
     }
@@ -528,6 +540,9 @@ export function SettingsDialog({ open, onClose, onThemeChange }: SettingsDialogP
                       </span>
                     )}
                   </div>
+                  {testResult === "failed" && testError && (
+                    <p className="text-xs text-red-500 mt-2 break-all">{testError}</p>
+                  )}
                 </div>
 
                 <div className="border-t border-gray-100 pt-6 mt-6 dark:border-gray-700">
@@ -1562,6 +1577,7 @@ function VectorSettings({}: VectorSettingsProps) {
   const [modelError, setModelError] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'failed' | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -1603,12 +1619,14 @@ function VectorSettings({}: VectorSettingsProps) {
   const handleTest = async () => {
     setTesting(true);
     setTestResult(null);
+    setTestError(null);
     try {
       await invoke('save_embedding_settings', { settings });
       const result = await invoke<boolean>('test_embedding_connection');
       setTestResult(result ? 'success' : 'failed');
-    } catch {
+    } catch (e) {
       setTestResult('failed');
+      setTestError(String(e));
     } finally {
       setTesting(false);
     }
@@ -1789,6 +1807,9 @@ function VectorSettings({}: VectorSettingsProps) {
             </span>
           )}
         </div>
+        {testResult === 'failed' && testError && (
+          <p className="text-xs text-red-500 break-all">{testError}</p>
+        )}
       </div>
     </div>
   );
