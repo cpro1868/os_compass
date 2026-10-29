@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS-Compass - 相似项目</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .card-scroll::-webkit-scrollbar { width: 6px; }
+    .card-scroll::-webkit-scrollbar-track { background: transparent; }
+    .card-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .card-enter { animation: slideUp 0.25s ease-out; }
+    .similarity-bar { transition: width 0.6s ease-out; }
+  </style>
+</head>
+<body class="bg-gray-200 text-gray-900 h-screen overflow-hidden flex items-center justify-center p-6">
+
+  <!-- 模拟项目详情弹窗 -->
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-full flex flex-col overflow-hidden">
+
+    <!-- 弹窗头部 -->
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center gap-4 flex-shrink-0">
+      <div class="w-12 h-12 bg-cyan-100 rounded-xl flex items-center justify-center">
+        <i class="fa-brands fa-react text-cyan-500 text-2xl"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-xl font-bold">facebook / react</h1>
+        <p class="text-sm text-gray-500 truncate">用于构建用户界面的 JavaScript 库</p>
+      </div>
+      <div class="flex items-center gap-3 text-sm text-gray-500">
+        <span><i class="fa-solid fa-star text-yellow-500"></i> 219k</span>
+        <span><i class="fa-solid fa-code-branch"></i> 45.7k</span>
+        <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">GitHub</span>
+      </div>
+      <button class="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <!-- 选项卡导航 -->
+    <div class="border-b border-gray-200 flex-shrink-0 px-6">
+      <nav class="flex gap-1 -mb-px overflow-x-auto">
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm whitespace-nowrap">概览</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm whitespace-nowrap">AI 分析</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm whitespace-nowrap">Runbook</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm whitespace-nowrap">README</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm whitespace-nowrap"><i class="fa-solid fa-code-branch mr-1"></i>克隆</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm whitespace-nowrap"><i class="fa-solid fa-tag mr-1"></i>Releases</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm whitespace-nowrap">本地笔记</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm whitespace-nowrap"><i class="fa-solid fa-lock mr-1"></i>用户信息</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm whitespace-nowrap"><i class="fa-solid fa-file-alt mr-1"></i>文章生成</button>
+        <button class="px-4 py-3 border-b-2 border-transparent text-gray-500 hover:text-blue-600 text-sm whitespace-nowrap"><i class="fa-solid fa-comments mr-1"></i>项目探索</button>
+        <button class="px-4 py-3 border-b-2 border-blue-600 text-blue-600 font-medium text-sm whitespace-nowrap"><i class="fa-solid fa-layer-group mr-1"></i>相似项目</button>
+      </nav>
+    </div>
+
+    <!-- 相似项目内容区 -->
+    <div class="flex-1 flex flex-col min-h-0">
+
+      <!-- 顶部工具条 -->
+      <div class="px-6 py-3 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs">
+          <i class="fa-solid fa-brain"></i> 向量语义检索已启用
+        </span>
+        <span class="text-xs text-gray-400">
+          <i class="fa-solid fa-clock mr-1"></i>网络结果缓存于 2026-10-22 14:30（7 天有效）
+        </span>
+        <div class="flex-1"></div>
+        <button onclick="refreshNetwork(this)" class="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 text-gray-600 flex items-center gap-2 transition">
+          <i class="fa-solid fa-rotate-right"></i>刷新网络结果
+        </button>
+      </div>
+
+      <!-- 双区块滚动区 -->
+      <div class="flex-1 overflow-y-auto card-scroll px-6 py-4 space-y-6">
+
+        <!-- ===== 区块一：库内相似项目 ===== -->
+        <section>
+          <div class="flex items-center gap-2 mb-3">
+            <h2 class="font-semibold text-sm flex items-center gap-2">
+              <i class="fa-solid fa-database text-amber-500"></i>库内相似项目
+            </h2>
+            <span class="text-xs text-gray-400">基于向量语义匹配 · 4 个结果</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3" id="localGrid">
+
+            <!-- 本地相似卡片 -->
+            <div class="card-enter border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer group" onclick="showToast('已切换到该项目详情（原型演示）')">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i class="fa-brands fa-vuejs text-emerald-500"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="font-medium text-sm truncate group-hover:text-blue-600">vuejs / core</p>
+                    <p class="text-xs text-gray-400">Vue 3 核心库</p>
+                  </div>
+                </div>
+                <span class="flex-shrink-0 px-2 py-0.5 bg-blue-600 text-white rounded-full text-xs font-medium">92%</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-2 line-clamp-2">渐进式 JavaScript 框架，用于构建用户界面，与 React 生态定位高度重合</p>
+              <div class="mt-2">
+                <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+                  <span><i class="fa-solid fa-star text-yellow-500"></i> 47.8k</span>
+                  <span>JavaScript</span>
+                </div>
+                <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="similarity-bar h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full" style="width: 92%"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-enter border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer group" onclick="showToast('已切换到该项目详情（原型演示）')">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-bolt text-orange-500"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="font-medium text-sm truncate group-hover:text-blue-600">preactjs / preact</p>
+                    <p class="text-xs text-gray-400">轻量 React 替代品</p>
+                  </div>
+                </div>
+                <span class="flex-shrink-0 px-2 py-0.5 bg-blue-500 text-white rounded-full text-xs font-medium">88%</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-2 line-clamp-2">仅 3kB 的 React 兼容替代方案，API 一致但体积大幅缩小</p>
+              <div class="mt-2">
+                <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+                  <span><i class="fa-solid fa-star text-yellow-500"></i> 36.2k</span>
+                  <span>JavaScript</span>
+                </div>
+                <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="similarity-bar h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full" style="width: 88%"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-enter border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer group" onclick="showToast('已切换到该项目详情（原型演示）')">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-s text-purple-500"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="font-medium text-sm truncate group-hover:text-blue-600">sveltejs / svelte</p>
+                    <p class="text-xs text-gray-400">编译时前端框架</p>
+                  </div>
+                </div>
+                <span class="flex-shrink-0 px-2 py-0.5 bg-blue-400 text-white rounded-full text-xs font-medium">81%</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-2 line-clamp-2">将组件编译为高效原生 JS，无虚拟 DOM，运行时开销极低</p>
+              <div class="mt-2">
+                <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+                  <span><i class="fa-solid fa-star text-yellow-500"></i> 80.1k</span>
+                  <span>TypeScript</span>
+                </div>
+                <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="similarity-bar h-full bg-gradient-to-r from-blue-400 to-blue-300 rounded-full" style="width: 81%"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-enter border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition cursor-pointer group" onclick="showToast('已切换到该项目详情（原型演示）')">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-cube text-gray-500"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="font-medium text-sm truncate group-hover:text-blue-600">solidjs / solid</p>
+                    <p class="text-xs text-gray-400">细粒度响应式框架</p>
+                  </div>
+                </div>
+                <span class="flex-shrink-0 px-2 py-0.5 bg-gray-400 text-white rounded-full text-xs font-medium">76%</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-2 line-clamp-2">类 React 语法但基于细粒度响应式，性能接近原生</p>
+              <div class="mt-2">
+                <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+                  <span><i class="fa-solid fa-star text-yellow-500"></i> 32.5k</span>
+                  <span>TypeScript</span>
+                </div>
+                <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="similarity-bar h-full bg-gradient-to-r from-gray-400 to-gray-300 rounded-full" style="width: 76%"></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ===== 区块二：网络相似项目 ===== -->
+        <section>
+          <div class="flex items-center gap-2 mb-3">
+            <h2 class="font-semibold text-sm flex items-center gap-2">
+              <i class="fa-solid fa-globe text-blue-500"></i>网络相似项目
+            </h2>
+            <span class="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">GitHub Search · topic:ui-framework + language:javascript</span>
+          </div>
+
+          <!-- 网络加载态（默认隐藏，刷新时显示） -->
+          <div id="networkLoading" class="hidden border border-dashed border-gray-300 rounded-xl p-8 text-center">
+            <i class="fa-solid fa-spinner fa-spin text-blue-500 text-xl"></i>
+            <p class="text-sm text-gray-400 mt-2">正在查询 GitHub Search API...</p>
+          </div>
+
+          <div class="space-y-2" id="networkList">
+
+            <!-- 网络结果卡片 -->
+            <div class="card-enter border border-gray-200 rounded-xl p-4 flex items-center gap-4 hover:border-blue-300 hover:shadow-sm transition">
+              <div class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i class="fa-brands fa-github text-white"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <p class="font-medium text-sm">facebook / react-native</p>
+                  <span class="text-xs px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded">topic 匹配</span>
+                </div>
+                <p class="text-xs text-gray-500 truncate mt-0.5">使用 React 构建原生移动应用的框架</p>
+                <div class="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                  <span><i class="fa-solid fa-star text-yellow-500"></i> 119k</span>
+                  <span>JavaScript</span>
+                  <span>topics: react, mobile, ui-framework</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <button onclick="showToast('已在系统浏览器打开（原型演示）')" class="px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-50 text-gray-600 transition">
+                  <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>打开
+                </button>
+                <button onclick="importProject(this)" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                  <i class="fa-solid fa-download mr-1"></i>导入仓库
+                </button>
+              </div>
+            </div>
+
+            <div class="card-enter border border-gray-200 rounded-xl p-4 flex items-center gap-4 hover:border-blue-300 hover:shadow-sm transition">
+              <div class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i class="fa-brands fa-github text-white"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <p class="font-medium text-sm">mithriljs / mithril.js</p>
+                  <span class="text-xs px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded">topic 匹配</span>
+                </div>
+                <p class="text-xs text-gray-500 truncate mt-0.5">现代化的客户端 MVC 框架，轻量且快速</p>
+                <div class="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                  <span><i class="fa-solid fa-star text-yellow-500"></i> 13.7k</span>
+                  <span>JavaScript</span>
+                  <span>topics: framework, mvc, ui-framework</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <button onclick="showToast('已在系统浏览器打开（原型演示）')" class="px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-50 text-gray-600 transition">
+                  <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>打开
+                </button>
+                <button onclick="importProject(this)" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                  <i class="fa-solid fa-download mr-1"></i>导入仓库
+                </button>
+              </div>
+            </div>
+
+            <!-- 已入库状态卡片 -->
+            <div class="card-enter border border-emerald-200 bg-emerald-50/50 rounded-xl p-4 flex items-center gap-4">
+              <div class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i class="fa-brands fa-github text-white"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <p class="font-medium text-sm">alpinejs / alpine</p>
+                  <span class="text-xs px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium"><i class="fa-solid fa-check mr-1"></i>已入库</span>
+                </div>
+                <p class="text-xs text-gray-500 truncate mt-0.5">极简的 JavaScript 行为框架，直接在 HTML 中写交互</p>
+                <div class="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                  <span><i class="fa-solid fa-star text-yellow-500"></i> 28.9k</span>
+                  <span>JavaScript</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <button onclick="showToast('已打开该项目详情（原型演示）')" class="px-3 py-1.5 text-xs border border-emerald-300 text-emerald-700 rounded-lg hover:bg-emerald-100 transition">
+                  <i class="fa-solid fa-eye mr-1"></i>查看详情
+                </button>
+              </div>
+            </div>
+
+            <!-- LLM 兜底区域 -->
+            <div class="border border-dashed border-purple-200 bg-purple-50/40 rounded-xl p-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-wand-magic-sparkles text-purple-500"></i>
+                  <p class="text-sm text-purple-700">平台搜索结果不够？试试 LLM 知识推荐</p>
+                </div>
+                <button onclick="llmRecommend(this)" class="px-3 py-1.5 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                  <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>LLM 推荐
+                </button>
+              </div>
+              <div id="llmResults" class="hidden mt-3 space-y-2"></div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ===== 降级态演示（折叠说明） ===== -->
+        <section class="border border-amber-200 bg-amber-50/60 rounded-xl p-4">
+          <button onclick="document.getElementById('degradedDemo').classList.toggle('hidden')" class="w-full flex items-center justify-between text-left">
+            <span class="text-sm font-medium text-amber-800"><i class="fa-solid fa-triangle-exclamation mr-2"></i>点击查看：降级态 / 空态演示</span>
+            <i class="fa-solid fa-chevron-down text-amber-500 text-xs"></i>
+          </button>
+          <div id="degradedDemo" class="hidden mt-4 space-y-4">
+            <!-- 规则降级提示条 -->
+            <div class="flex items-start gap-2 bg-amber-100 border border-amber-300 rounded-lg p-3">
+              <i class="fa-solid fa-circle-info text-amber-600 mt-0.5"></i>
+              <div class="text-xs text-amber-800">
+                <p class="font-medium">语义检索未启用，以下本地结果基于规则匹配（语言 + 标签 + 分类）</p>
+                <p class="mt-1">配置 Embedding 向量模型后可获得更准确的语义相似度。<a href="#" class="underline">前往设置</a></p>
+              </div>
+            </div>
+            <!-- LLM 未配置态 -->
+            <div class="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-lg p-3 text-xs text-gray-600">
+              <i class="fa-solid fa-robot text-gray-400"></i>
+              <span>LLM 未配置，无法使用「LLM 推荐」兜底。<a href="#" class="text-blue-600 underline">前往设置</a> 配置大模型后可用。</span>
+            </div>
+            <!-- 网络失败态 -->
+            <div class="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg p-3">
+              <div class="flex items-center gap-2 text-xs text-red-700">
+                <i class="fa-solid fa-circle-xmark"></i>
+                <span>网络请求失败：GitHub API 限流（403），请配置 github_token 或稍后重试</span>
+              </div>
+              <button class="px-3 py-1 text-xs border border-red-300 text-red-700 rounded-lg hover:bg-red-100">重试</button>
+            </div>
+            <!-- 本地空态 -->
+            <div class="text-center py-6 text-gray-400">
+              <i class="fa-solid fa-box-open text-3xl mb-2"></i>
+              <p class="text-sm">仓库内暂无相似项目</p>
+              <p class="text-xs mt-1">向量相似度阈值较高，可在设置中调整</p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 hidden items-center gap-2 bg-gray-800 text-white px-4 py-2.5 rounded-lg shadow-lg text-sm z-50">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toastText"></span>
+  </div>
+
+  <script>
+    function showToast(text) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastText').textContent = text;
+      toast.classList.remove('hidden');
+      toast.classList.add('flex');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+        toast.classList.remove('flex');
+      }, 2200);
+    }
+
+    function refreshNetwork(btn) {
+      const loading = document.getElementById('networkLoading');
+      const list = document.getElementById('networkList');
+      loading.classList.remove('hidden');
+      list.classList.add('opacity-40', 'pointer-events-none');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>刷新中...';
+      setTimeout(() => {
+        loading.classList.add('hidden');
+        list.classList.remove('opacity-40', 'pointer-events-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i>刷新网络结果';
+        showToast('网络结果已刷新（原型演示）');
+      }, 1500);
+    }
+
+    function importProject(btn) {
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>导入中...';
+      btn.disabled = true;
+      setTimeout(() => {
+        const card = btn.closest('.card-enter');
+        card.classList.remove('border-gray-200');
+        card.classList.add('border-emerald-200', 'bg-emerald-50/50');
+        btn.outerHTML = '<button onclick="showToast(\'已打开该项目详情（原型演示）\')" class="px-3 py-1.5 text-xs border border-emerald-300 text-emerald-700 rounded-lg hover:bg-emerald-100 transition"><i class="fa-solid fa-eye mr-1"></i>查看详情</button>';
+        showToast('已导入仓库');
+      }, 1200);
+    }
+
+    function llmRecommend(btn) {
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>推荐中...';
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i>重新推荐';
+        btn.disabled = false;
+        const box = document.getElementById('llmResults');
+        box.classList.remove('hidden');
+        box.innerHTML = `
+          <div class="bg-white border border-purple-200 rounded-lg p-3 flex items-center gap-3">
+            <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="text-sm font-medium">facebookexperimental / Recoil</p>
+                <span class="text-xs px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded">已验证存在</span>
+              </div>
+              <p class="text-xs text-gray-500 truncate">React 状态管理库</p>
+            </div>
+            <button onclick="showToast('已在系统浏览器打开（原型演示）')" class="px-2.5 py-1 text-xs border rounded-lg hover:bg-gray-50 text-gray-600">打开</button>
+          </div>
+          <div class="bg-white border border-purple-200 rounded-lg p-3 flex items-center gap-3 opacity-70">
+            <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="text-sm font-medium text-gray-500">some-org / unknown-lib</p>
+                <span class="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">未验证</span>
+              </div>
+              <p class="text-xs text-gray-400 truncate">LLM 推荐但未能验证其存在，请自行甄别</p>
+            </div>
+            <button onclick="showToast('已在系统浏览器打开（原型演示）')" class="px-2.5 py-1 text-xs border rounded-lg hover:bg-gray-50 text-gray-500">打开</button>
+          </div>
+          <p class="text-xs text-purple-500 mt-1"><i class="fa-solid fa-circle-info mr-1"></i>以上结果由 LLM 知识生成并逐个校验，请自行甄别</p>`;
+        showToast('LLM 推荐完成，已校验仓库存在性');
+      }, 1800);
+    }
+  </script>
+</body>
+</html>
