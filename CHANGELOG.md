@@ -5,6 +5,17 @@ All notable changes to OS-Compass are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2026-10-29
+
+### Added
+- M28 相似项目：项目详情新增相似项目选项卡，支持本地向量相似度匹配、GitHub/Gitee/GitLab/NPM/Crates.io 免费网络搜索、7 天仓库缓存和手动 LLM 推荐兜底；LLM 推荐仅使用项目名称、描述和语言，不读取用户信息。
+
+### Improved
+- 项目详情 URL 支持截断显示、超链接和一键复制。
+- 看板分类筛选支持层级多选及父子级联。
+- 列表搜索扩展到名称、描述、URL、语言和 AI 摘要。
+- 用户笔记纳入项目向量文本，笔记保存、修改、删除后自动刷新项目向量。
+
 ## [0.2.4] - 2026-10-27
 
 ### Fixed

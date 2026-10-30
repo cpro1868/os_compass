@@ -763,42 +763,64 @@ pub fn get_project_notes(project_id: i64) -> Result<Vec<ProjectNote>, String> {
 }
 
 #[tauri::command]
-pub fn create_note(input: serde_json::Value) -> Result<i64, String> {
-    let db = DATABASE.lock().map_err(|e| e.to_string())?;
-    let db = db.as_ref().ok_or("Database not initialized")?;
-    let conn = db.get_connection();
+pub async fn create_note(input: serde_json::Value) -> Result<i64, String> {
     let project_id: i64 = serde_json::from_value(input.get("project_id").unwrap_or(&serde_json::Value::Null).clone()).map_err(|e| e.to_string())?;
     let content: String = serde_json::from_value(input.get("content").unwrap_or(&serde_json::Value::Null).clone()).map_err(|e| e.to_string())?;
-    conn.execute(
-        "INSERT INTO project_notes (project_id, content, created_at, updated_at) VALUES (?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))",
-        rusqlite::params![project_id, content],
-    )
-    .map_err(|e| e.to_string())?;
-    Ok(conn.last_insert_rowid())
+    let note_id = {
+        let db = DATABASE.lock().map_err(|e| e.to_string())?;
+        let db = db.as_ref().ok_or("Database not initialized")?;
+        let conn = db.get_connection();
+        conn.execute(
+            "INSERT INTO project_notes (project_id, content, created_at, updated_at) VALUES (?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))",
+            rusqlite::params![project_id, content],
+        )
+        .map_err(|e| e.to_string())?;
+        conn.last_insert_rowid()
+    };
+    if let Err(e) = crate::embedding::generate_project_embeddings(project_id).await {
+        log::warn!("[notes] failed to refresh project embedding after create: {}", e);
+    }
+    Ok(note_id)
 }
 
 #[tauri::command]
-pub fn update_note(input: serde_json::Value) -> Result<(), String> {
-    let db = DATABASE.lock().map_err(|e| e.to_string())?;
-    let db = db.as_ref().ok_or("Database not initialized")?;
-    let conn = db.get_connection();
+pub async fn update_note(input: serde_json::Value) -> Result<(), String> {
     let id: i64 = serde_json::from_value(input.get("id").unwrap_or(&serde_json::Value::Null).clone()).map_err(|e| e.to_string())?;
     let content: String = serde_json::from_value(input.get("content").unwrap_or(&serde_json::Value::Null).clone()).map_err(|e| e.to_string())?;
-    conn.execute(
-        "UPDATE project_notes SET content = ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
-        rusqlite::params![content, id],
-    )
-    .map_err(|e| e.to_string())?;
+    let project_id = {
+        let db = DATABASE.lock().map_err(|e| e.to_string())?;
+        let db = db.as_ref().ok_or("Database not initialized")?;
+        let conn = db.get_connection();
+        let project_id: i64 = conn.query_row("SELECT project_id FROM project_notes WHERE id = ?", [id], |row| row.get(0))
+            .map_err(|e| e.to_string())?;
+        conn.execute(
+            "UPDATE project_notes SET content = ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
+            rusqlite::params![content, id],
+        )
+        .map_err(|e| e.to_string())?;
+        project_id
+    };
+    if let Err(e) = crate::embedding::generate_project_embeddings(project_id).await {
+        log::warn!("[notes] failed to refresh project embedding after update: {}", e);
+    }
     Ok(())
 }
 
 #[tauri::command]
-pub fn delete_note(id: i64) -> Result<(), String> {
-    let db = DATABASE.lock().map_err(|e| e.to_string())?;
-    let db = db.as_ref().ok_or("Database not initialized")?;
-    let conn = db.get_connection();
-    conn.execute("DELETE FROM project_notes WHERE id = ?", [id])
-        .map_err(|e| e.to_string())?;
+pub async fn delete_note(id: i64) -> Result<(), String> {
+    let project_id = {
+        let db = DATABASE.lock().map_err(|e| e.to_string())?;
+        let db = db.as_ref().ok_or("Database not initialized")?;
+        let conn = db.get_connection();
+        let project_id: i64 = conn.query_row("SELECT project_id FROM project_notes WHERE id = ?", [id], |row| row.get(0))
+            .map_err(|e| e.to_string())?;
+        conn.execute("DELETE FROM project_notes WHERE id = ?", [id])
+            .map_err(|e| e.to_string())?;
+        project_id
+    };
+    if let Err(e) = crate::embedding::generate_project_embeddings(project_id).await {
+        log::warn!("[notes] failed to refresh project embedding after delete: {}", e);
+    }
     Ok(())
 }
 

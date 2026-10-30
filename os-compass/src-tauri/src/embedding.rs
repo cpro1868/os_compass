@@ -277,12 +277,13 @@ pub(crate) fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     (dot / denom) as f32
 }
 
-/// 项目名称、描述、语言拼装成单一文本，用于生成 embedding 向量。
+/// 项目名称、描述、语言和用户笔记拼装成单一文本，用于生成 embedding 向量。
 /// 必须包含 language 字段，否则 “地图类工具” 这类跨语言搜索会因为关键词缺失而无法定位到目标项目。
 pub(crate) fn build_project_embedding_text(
     name: &str,
     description: Option<&str>,
     languages: Option<&str>,
+    notes: Option<&str>,
 ) -> String {
     let mut parts: Vec<String> = Vec::new();
     let name = name.trim();
@@ -298,6 +299,13 @@ pub(crate) fn build_project_embedding_text(
     if let Some(langs) = languages {
         if let Some(primary) = crate::plugins::search::primary_language(Some(langs.to_string())) {
             parts.push(format!("language: {}", primary));
+        }
+    }
+    if let Some(note_text) = notes {
+        let note = note_text.trim();
+        if !note.is_empty() {
+            let summary: String = note.chars().take(500).collect();
+            parts.push(format!("user notes: {}", summary));
         }
     }
     parts.join("\n")
@@ -411,12 +419,12 @@ pub async fn generate_embedding_for_text(text: String) -> Result<Vec<f32>, Strin
 
 #[command]
 pub async fn generate_project_embeddings(project_id: i64) -> Result<usize, String> {
-    let (name, description, languages) = {
+    let (name, description, languages, notes) = {
         let db_guard = DATABASE.lock().unwrap();
         let db = db_guard.as_ref().ok_or("Database not initialized")?;
         let conn = db.get_connection();
 
-        conn.query_row(
+        let project = conn.query_row(
             "SELECT name, description, languages FROM projects WHERE id = ?",
             params![project_id],
             |row| Ok((
@@ -424,10 +432,16 @@ pub async fn generate_project_embeddings(project_id: i64) -> Result<usize, Strin
                 row.get::<_, Option<String>>(1)?,
                 row.get::<_, Option<String>>(2)?,
             )),
-        ).map_err(|e| e.to_string())?
+        ).map_err(|e| e.to_string())?;
+        let notes = conn.query_row(
+            "SELECT COALESCE(group_concat(content, char(10)), '') FROM project_notes WHERE project_id = ?",
+            params![project_id],
+            |row| row.get::<_, String>(0),
+        ).unwrap_or_default();
+        (project.0, project.1, project.2, notes)
     };
 
-    let text = build_project_embedding_text(&name, description.as_deref(), languages.as_deref());
+    let text = build_project_embedding_text(&name, description.as_deref(), languages.as_deref(), Some(&notes));
     let embedding = generate_embedding(&text).await?;
     store_embeddings(project_id, &embedding)?;
 
@@ -460,12 +474,12 @@ pub async fn rebuild_embeddings(project_id: Option<i64>) -> Result<i64, String> 
 
     let mut count = 0i64;
     for pid in project_ids {
-        let (name, description, languages) = {
+        let (name, description, languages, notes) = {
             let db_guard = DATABASE.lock().unwrap();
             let db = db_guard.as_ref().ok_or("Database not initialized")?;
             let conn = db.get_connection();
 
-            conn.query_row(
+            let project = conn.query_row(
                 "SELECT name, description, languages FROM projects WHERE id = ?",
                 params![pid],
                 |row| Ok((
@@ -473,7 +487,13 @@ pub async fn rebuild_embeddings(project_id: Option<i64>) -> Result<i64, String> 
                     row.get::<_, Option<String>>(1)?,
                     row.get::<_, Option<String>>(2)?,
                 )),
-            ).unwrap_or_else(|_| ("".to_string(), None, None))
+            ).unwrap_or_else(|_| ("".to_string(), None, None));
+            let notes = conn.query_row(
+                "SELECT COALESCE(group_concat(content, char(10)), '') FROM project_notes WHERE project_id = ?",
+                params![pid],
+                |row| row.get::<_, String>(0),
+            ).unwrap_or_default();
+            (project.0, project.1, project.2, notes)
         };
 
         if name.is_empty() {
@@ -485,6 +505,7 @@ pub async fn rebuild_embeddings(project_id: Option<i64>) -> Result<i64, String> 
             &name,
             description.as_deref(),
             languages.as_deref(),
+            Some(&notes),
         );
         log::info!("[embedding] Generating embedding for project {}: {}", pid, name);
 

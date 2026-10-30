@@ -1,6 +1,6 @@
 [package]
 name = "os-compass"
-version = "0.2.4"
+version = "0.2.5"
 description = "OS-Compass: 开源项目全生命周期管理与决策系统"
 authors = ["you"]
 edition = "2021"

@@ -124,8 +124,15 @@ export function ListView({ projects, onProjectClick, onBatchMoveCategory, onBatc
 
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
-      if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
+      if (searchQuery) {
+        const query = searchQuery.trim().toLowerCase();
+        const searchableText = [p.name, p.description, p.url, p.languages, p.ai_summary]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!searchableText.includes(query)) {
+          return false;
+        }
       }
       if (filterStatus && p.lifecycle_status !== filterStatus) {
         return false;

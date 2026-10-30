@@ -74,6 +74,14 @@ CREATE TABLE IF NOT EXISTS project_notes (
     updated_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 
+CREATE TABLE IF NOT EXISTS similar_projects_cache (
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    channel TEXT NOT NULL,
+    results_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    PRIMARY KEY (project_id, channel)
+);
+
 -- NOTE: system_variables, app_settings, source_plugins moved to system_settings.db (V2.0)
 
 -- 5. README variants

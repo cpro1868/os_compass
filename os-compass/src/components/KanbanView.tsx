@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import type { Project, LifecycleStatus, Category } from "../types";
@@ -35,7 +35,7 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
   const [dragOverColumn, setDragOverColumn] = useState<LifecycleStatus | null>(null);
   const [showFilter, setShowFilter] = useState(false);
   const [showSort, setShowSort] = useState(false);
-  const [filterCategory, setFilterCategory] = useState<number | null>(null);
+  const [filterCategories, setFilterCategories] = useState<Set<number>>(new Set());
   const [filterLanguage, setFilterLanguage] = useState<string>("");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -186,10 +186,38 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
     return Array.from(langSet).sort();
   }, [projects]);
 
+  const categoryDescendants = useMemo(() => {
+    const children = new Map<number | null, Category[]>();
+    categories.forEach((category) => {
+      const siblings = children.get(category.parent_id) || [];
+      siblings.push(category);
+      children.set(category.parent_id, siblings);
+    });
+
+    const collect = (categoryId: number): number[] => {
+      const descendants: number[] = [];
+      for (const child of children.get(categoryId) || []) {
+        descendants.push(child.id, ...collect(child.id));
+      }
+      return descendants;
+    };
+
+    return new Map(categories.map((category) => [category.id, collect(category.id)]));
+  }, [categories]);
+
+  const filterCategoryIds = useMemo(() => {
+    const ids = new Set<number>();
+    filterCategories.forEach((categoryId) => {
+      ids.add(categoryId);
+      (categoryDescendants.get(categoryId) || []).forEach((id) => ids.add(id));
+    });
+    return ids;
+  }, [filterCategories, categoryDescendants]);
+
   const filteredProjects = useMemo(() => {
     let result = [...projects];
-    if (filterCategory) {
-      result = result.filter((p) => p.category_id === filterCategory);
+    if (filterCategoryIds.size > 0) {
+      result = result.filter((p) => p.category_id !== null && filterCategoryIds.has(p.category_id));
     }
     if (filterLanguage) {
       result = result.filter((p) => parseLanguages(p.languages).includes(filterLanguage));
@@ -205,7 +233,7 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
       return sortOrder === "asc" ? comparison : -comparison;
     });
     return result;
-  }, [projects, filterCategory, filterLanguage, sortField, sortOrder]);
+  }, [projects, filterCategoryIds, filterLanguage, sortField, sortOrder]);
 
   const groupedProjects = useMemo(() => {
     const groups: Record<LifecycleStatus, Project[]> = {
@@ -243,11 +271,42 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
   };
 
   const clearFilters = () => {
-    setFilterCategory(null);
+    setFilterCategories(new Set());
     setFilterLanguage("");
   };
 
-  const hasActiveFilters = filterCategory !== null || filterLanguage !== "";
+  const hasActiveFilters = filterCategories.size > 0 || filterLanguage !== "";
+
+  const toggleCategoryFilter = (categoryId: number) => {
+    const next = new Set(filterCategories);
+    const relatedIds = [categoryId, ...(categoryDescendants.get(categoryId) || [])];
+    if (next.has(categoryId)) {
+      relatedIds.forEach((id) => next.delete(id));
+    } else {
+      relatedIds.forEach((id) => next.add(id));
+    }
+    setFilterCategories(next);
+  };
+
+  const renderCategoryFilter = (parentId: number | null, depth = 0): ReactElement[] => {
+    return categories
+      .filter((category) => category.parent_id === parentId)
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name))
+      .flatMap((category) => [
+        <label key={category.id} className="flex items-center gap-2 py-1 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded px-1">
+          <input
+            type="checkbox"
+            checked={filterCategories.has(category.id)}
+            onChange={() => toggleCategoryFilter(category.id)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="truncate dark:text-gray-300" style={{ paddingLeft: `${depth * 14}px` }}>
+            {category.name}
+          </span>
+        </label>,
+        ...renderCategoryFilter(category.id, depth + 1),
+      ]);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -271,24 +330,29 @@ export function KanbanView({ projects, onProjectClick, onStatusChange, selectedI
               {t("kanban.filter")}
               {hasActiveFilters && (
                 <span className="ml-1 w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
-                  {(filterCategory ? 1 : 0) + (filterLanguage ? 1 : 0)}
+                  {(filterCategories.size > 0 ? 1 : 0) + (filterLanguage ? 1 : 0)}
                 </span>
               )}
             </button>
             {showFilter && (
               <div className="absolute right-0 top-full mt-2 w-64 bg-white border rounded-lg shadow-lg z-10 p-4">
                 <div className="mb-3">
-                  <label className="block text-sm font-medium mb-1">{t("kanban.category")}</label>
-                  <select
-                    value={filterCategory ?? ""}
-                    onChange={(e) => setFilterCategory(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full px-3 py-2 border rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-                  >
-                    <option value="">{t("kanban.all")}</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium">{t("kanban.category")}</label>
+                    {filterCategories.size > 0 && (
+                      <button onClick={() => setFilterCategories(new Set())} className="text-xs text-blue-600 hover:underline">
+                        {t("kanban.clearCategoryFilter") || t("kanban.clearFilter")}
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-48 overflow-y-auto border rounded-lg p-2 dark:border-gray-600">
+                    {categories.length === 0 ? (
+                      <p className="text-xs text-gray-400 py-2">{t("kanban.all")}</p>
+                    ) : (
+                      renderCategoryFilter(null)
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">{t("kanban.categoryFilterHint") || "可多选，选择上级分类会包含所有下级分类"}</p>
                 </div>
                 <div className="mb-3">
                   <label className="block text-sm font-medium mb-1">{t("kanban.language")}</label>

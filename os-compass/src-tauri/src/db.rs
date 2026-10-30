@@ -62,6 +62,15 @@ impl Database {
                 );
                 CREATE INDEX IF NOT EXISTS idx_embeddings_project ON project_embeddings(project_id);
             "#),
+            ("similar_projects_cache", r#"
+                CREATE TABLE IF NOT EXISTS similar_projects_cache (
+                    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                    channel TEXT NOT NULL,
+                    results_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+                    PRIMARY KEY (project_id, channel)
+                );
+            "#),
             ("explore_sessions", r#"
                 CREATE TABLE IF NOT EXISTS explore_sessions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,

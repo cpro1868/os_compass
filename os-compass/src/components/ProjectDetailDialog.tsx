@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import type { Project, Category } from "../types";
 import { parseLanguages } from "../types";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { refreshProjectReadme, getProjectUserInfo, addProjectUserInfo, updateProjectUserInfo, deleteProjectUserInfo, type ProjectUserInfo } from "../api";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { MarkdownRenderer } from "./MarkdownRenderer";
@@ -12,6 +13,7 @@ import { ClonePanel } from "./ClonePanel";
 import { ReleasesPanel } from "./ReleasesPanel";
 import { ArticleGenerationPanel } from "./ArticleGenerationPanel";
 import { ExplorePanel } from "./ExplorePanel";
+import { SimilarPanel } from "./SimilarPanel";
 import { useTranslation } from "react-i18next";
 import { exportRunbookAsMarkdown } from "../utils/runbookExport";
 
@@ -21,6 +23,7 @@ interface ProjectDetailDialogProps {
   onClose: () => void;
   onUpdate: () => void;
   onDeleted?: () => void;
+  onOpenProject?: (projectId: number) => void;
 }
 
 interface AiResult {
@@ -40,11 +43,11 @@ const STATUS_CONFIG: Record<string, { emoji: string; label: string }> = {
   ABANDONED: { emoji: "🗑️", label: "弃用/避坑" },
 };
 
-export function ProjectDetailDialog({ project: initialProject, open, onClose, onUpdate, onDeleted }: ProjectDetailDialogProps) {
+export function ProjectDetailDialog({ project: initialProject, open, onClose, onUpdate, onDeleted, onOpenProject }: ProjectDetailDialogProps) {
   const { t } = useTranslation();
   const [project, setProject] = useState<Project>(initialProject);
   useEffect(() => { setProject(initialProject); }, [initialProject]);
-  const [tab, setTab] = useState<"overview" | "ai" | "runbook" | "readme" | "clone" | "releases" | "notes" | "user" | "article" | "explore">("overview");
+  const [tab, setTab] = useState<"overview" | "ai" | "runbook" | "readme" | "clone" | "releases" | "notes" | "user" | "article" | "explore" | "similar">("overview");
   const [analyzing, setAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const [runbookContent, setRunbookContent] = useState<string | null>(null);
@@ -63,6 +66,7 @@ export function ProjectDetailDialog({ project: initialProject, open, onClose, on
   const [projectTags, setProjectTags] = useState<Tag[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [showTagSelector, setShowTagSelector] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
   const [isGeneratingTags, setIsGeneratingTags] = useState(false);
   const [readmeTranslation, setReadmeTranslation] = useState<string | null>(null);
   const [isTranslatingReadme, setIsTranslatingReadme] = useState(false);
@@ -603,6 +607,26 @@ const handleAnalyze = useCallback(async () => {
     }
   };
 
+  const handleCopyUrl = async () => {
+    if (!project.url) return;
+    try {
+      await navigator.clipboard.writeText(project.url);
+      setUrlCopied(true);
+      setTimeout(() => setUrlCopied(false), 1500);
+    } catch (e) {
+      showToast(`复制失败: ${String(e)}`, "error");
+    }
+  };
+
+  const handleOpenUrl = async () => {
+    if (!project.url) return;
+    try {
+      await openUrl(project.url);
+    } catch (e) {
+      showToast(`打开链接失败: ${String(e)}`, "error");
+    }
+  };
+
   const handleStartEdit = () => {
     setEditName(project.name);
     setEditCategoryId(project.category_id ?? null);
@@ -695,6 +719,7 @@ const handleAnalyze = useCallback(async () => {
     { id: "user" as const, label: t("detail.user"), icon: "lock" },
     { id: "article" as const, label: t("detail.article"), icon: "newspaper" },
     { id: "explore" as const, label: t("detail.explore"), icon: "comments" },
+    { id: "similar" as const, label: t("detail.similar"), icon: "layer-group" },
   ];
 
   return (
@@ -724,12 +749,37 @@ const handleAnalyze = useCallback(async () => {
                     autoFocus
                   />
                 ) : (
-                  <h1 className="text-xl font-bold dark:text-gray-100">{project.name}</h1>
+                  <h1 className="text-xl font-bold dark:text-gray-100 truncate" title={project.name}>{project.name}</h1>
                 )}
-                <p className="text-sm text-gray-500 dark:text-gray-400">{project.url}</p>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <a
+                    href={project.url || undefined}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleOpenUrl();
+                    }}
+                    title={project.url || ""}
+                    className="text-sm text-blue-500 dark:text-blue-400 hover:underline truncate cursor-pointer"
+                  >
+                    {project.url}
+                  </a>
+                  {project.url && (
+                    <button
+                      onClick={handleCopyUrl}
+                      title={t("detail.copyUrl") || "复制链接"}
+                      className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition"
+                    >
+                      {urlCopied ? (
+                        <i className="fa-solid fa-check text-emerald-500 text-xs"></i>
+                      ) : (
+                        <i className="fa-regular fa-copy text-xs"></i>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-shrink-0">
               {(project as any).is_downloaded && (project as any).local_path ? (
                 <div className="flex items-center gap-2">
                   {localPathExists === false && (
@@ -1730,6 +1780,7 @@ const handleAnalyze = useCallback(async () => {
           )}
 
           {tab === "explore" && <ExplorePanel projectId={project.id} projectName={project.name} />}
+          {tab === "similar" && <SimilarPanel projectId={project.id} onOpenProject={onOpenProject} />}
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import { useAppStore } from "./stores/appStore";
 import { useTheme } from "./hooks/useTheme";
 import { getSettings } from "./api";
 import { type Project, type LifecycleStatus } from "./types";
-import { restoreProject, getArchivedProjects, batchArchiveProjects, batchDeleteProjects, batchRestoreProjects, batchMoveCategory } from "./api";
+import { restoreProject, getProject, getArchivedProjects, batchArchiveProjects, batchDeleteProjects, batchRestoreProjects, batchMoveCategory } from "./api";
 import { Sidebar } from "./components/Sidebar";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { VaultDialog } from "./components/VaultDialog";
@@ -474,6 +474,11 @@ function App() {
           onClose={() => setSelectedProject(null)}
           onUpdate={() => {
             fetchProjects();
+          }}
+          onOpenProject={(projectId) => {
+            void getProject(projectId).then((nextProject) => {
+              if (nextProject) setSelectedProject(nextProject);
+            });
           }}
           onDeleted={() => {
             setSelectedProject(null);
