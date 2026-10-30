@@ -5,6 +5,14 @@ All notable changes to OS-Compass are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6] - 2026-10-30
+
+### Fixed
+- 修复 GitHub Actions Ubuntu Rust 检查因缺少 Tauri Linux 系统依赖而失败的问题，并固定 CI Rust 检查环境为 Ubuntu 22.04。
+
+### Improved
+- 本地相似项目优先展示 AI 一句话摘要，语言字段不再显示原始 JSON 数组，并限制摘要长度。
+
 ## [0.2.5] - 2026-10-29
 
 ### Added
